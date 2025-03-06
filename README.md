@@ -4,12 +4,10 @@ A Digital Therapy Assistant, crafted to assist in therapeutic and mental health 
 ## Frontend
 This is the **frontend** for the CBT Therapy Assistant, built with **React, Vite, TypeScript, and Redux Toolkit**.
 
-## Getting Started
-Follow these steps to set up the frontend locally.
+## One-Command Setup
+Run this inside the `frontend/` directory to set up the frontend locally:
 ```sh
-cd frontend
-npm install
-npm run dev
+./setup.sh
 ```
 
 The app will be available at [**http://localhost:5173**](http://localhost:5173).
@@ -17,6 +15,7 @@ The app will be available at [**http://localhost:5173**](http://localhost:5173).
 ## Frontend Tech Stack
 
 - **React + Vite** → Fast frontend development
+- **TailwindCSS** → Utility-first CSS framework for efficient styling  
 - **TypeScript** → Type safety for better development
 - **Redux Toolkit** → State management
 - **Axios** → API calls to the backend
