@@ -11,12 +11,15 @@ import Dashboard from "./pages/Dashboard";
 
 const App: React.FC = () => {
   return (
-    <Routes>
-      <Route path="/" element={<Dashboard />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/login" element={<Login />} />
-    </Routes>
+    <div data-theme="calming">
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    </div>
   );
 };
+
 
 export default App;
