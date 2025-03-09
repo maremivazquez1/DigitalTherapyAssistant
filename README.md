@@ -1,7 +1,3 @@
-# Digital Therapy Assistant - Setup and Installation Guide
-
-This guide provides step-by-step instructions to set up your development environment and run the Digital Therapy Assistant application.
-
 ## Prerequisites
 
 * **Operating System:** macOS (Homebrew instructions are specific to macOS)
