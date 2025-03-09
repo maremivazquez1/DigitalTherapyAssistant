@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: harvard.capstone.digitaltherapy.CbtApplicationTests
 -------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.011 s -- in harvard.capstone.digitaltherapy.CbtApplicationTests
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.797 s -- in harvard.capstone.digitaltherapy.CbtApplicationTests
