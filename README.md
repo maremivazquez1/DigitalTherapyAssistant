@@ -1,95 +1,125 @@
-## Prerequisites
+# 🧠 Digital Therapy Assistant
 
-* **Operating System:** macOS (Homebrew instructions are specific to macOS)
+A full-stack web application that provides Cognitive Behavioral Therapy (CBT) sessions using AI-driven interactions. The app includes multimodal analysis of voice, burnout assessments, AI-guided journaling, and daily check-ins.
 
-## Step 1: Install Essential Tools
+## 🚀 Project Structure
 
-1.  **Java JDK:**
-    * Download and install the latest JDK from [Oracle](https://www.oracle.com/java/technologies/javase-downloads.html) or [OpenJDK](https://openjdk.java.net/).
-    * Verify installation: `java -version`
+```
+DIGITALTHERAPYASSISTANT/
+│── backend/          # Backend (Spring Boot)
+│   ├── src/         # Java source code
+│   ├── target/      # Compiled files (ignored in Git)
+│   ├── pom.xml      # Maven configuration
+│── frontend/         # Frontend (React + Vite)
+│   ├── src/         # React source code
+│   ├── public/      # Static assets
+│   ├── node_modules/ # Dependencies (ignored in Git)
+│   ├── package.json  # Project configuration
+│── .gitignore        # Git ignore rules
+│── README.md         # Project documentation
+```
 
-2.  **IntelliJ IDEA Community Edition:**
-    * Download and install from [JetBrains](https://www.jetbrains.com/idea/download/).
+---
 
-3.  **Homebrew (if not already installed):**
-    * `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
-    * Verify installation: `brew --version`
+## 🛠️ Prerequisites
 
-4.  **Maven:**
-    * `brew install maven`
-    * Verify installation: `mvn -version`
+- **Operating System**: macOS
+- **Java JDK** (latest version)
+- **Node.js** (latest LTS version)
+- **Maven**
+- **MySQL**
+- **Homebrew** (for macOS)
 
-5.  **MySQL:**
-    * `brew install mysql`
-    * `brew services start mysql`
+---
 
+## ⚙️ Setup Instructions
 
-## Step 2: Configure MySQL
-
-1.  **Login to MySQL:**
-    * `mysql -u root -p` (enter your MySQL root password when prompted)
-
-2.  **Create Database:**
-    * `CREATE DATABASE cbt;`
-
-3.  **Use Database:**
-    * `USE cbt;`
-
-4.  **Create Users Table:**
-    ```sql
-    CREATE TABLE users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(255) NOT NULL UNIQUE,
-        password VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL UNIQUE,
-        first_name VARCHAR(255),
-        last_name VARCHAR(255),
-        phone_number VARCHAR(20),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    );
-    ```
-
-## Step 3: Set Up the Application
-
-1.  **Clone Repository:**
-    * `git clone https://github.com/maremivazquez1/DigitalTherapyAssistant.git`
-
-2.  **Import into IntelliJ IDEA:**
-    * Open IntelliJ IDEA and import the cloned project.
-
-
-## Step 4: Run and Test
-
-1.  **Build Project:**
-    * `mvn clean install`
-
-2.  **Run Application:**
-    * `mvn spring-boot:run`
-
-3.  **Test Endpoints:**
-    * **Root:** `http://localhost:8080/` (should display "Spring Boot is running!")
-    * **Registration:** `http://localhost:8080/api/register` (should display "Registration implementation coming soon!")
-
-## Summary of Commands
+To quickly set up both the backend and frontend, run the provided `setup.sh` script:
 
 ```bash
-# Install tools
-/bin/bash -c "$(curl -fsSL [https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh](https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh))"
-brew install maven
-brew install mysql
-brew services start mysql
+chmod +x setup.sh  # Grant execution permissions
+./setup.sh         # Run the setup script
+```
 
-# MySQL setup
+This script will:
+- Install necessary dependencies (Java, Node.js, Maven, MySQL)
+- Set up the backend and frontend environments
+- Configure the database
+- Install required frontend libraries (Tailwind CSS, DaisyUI, Vite)
+
+If you prefer to install everything manually, follow the steps below.
+
+### 1️⃣ Manual Backend Setup (if not using setup.sh)
+#### **Install Dependencies**
+```bash
+brew install openjdk maven mysql
+brew services start mysql
+```
+#### **Database Setup**
+```bash
 mysql -u root -p
 CREATE DATABASE cbt;
 USE cbt;
-# (Create users table - see SQL code above)
-
-# Application setup
-git clone [https://github.com/maremivazquez1/DigitalTherapyAssistant.git](https://github.com/maremivazquez1/DigitalTherapyAssistant.git)
-# (Configure application.properties - see instructions above)
-
-# Run and test
+```
+#### **Run Backend**
+```bash
+cd backend
 mvn clean install
 mvn spring-boot:run
+```
+
+---
+
+### 2️⃣ Manual Frontend Setup (if not using setup.sh)
+#### **Install Dependencies**
+```bash
+cd frontend
+npm install
+npm install tailwindcss @tailwindcss/vite daisyui
+```
+#### **Run Frontend**
+```bash
+npm run dev
+```
+
+---
+
+## 🔥 Features
+
+- 📊 **AI-powered CBT sessions**
+- 🗣️ **Voice-based interaction**
+- 📔 **Guided journaling**
+- 📉 **Burnout assessment**
+- 📅 **Daily check-ins**
+
+---
+
+## 🛠️ Tech Stack
+
+### **Backend:**
+- 🖥 **Spring Boot** (Java)
+- 🛢 **MySQL** (Database)
+- ⚙ **Maven** (Build tool)
+
+### **Frontend:**
+- ⚛ **React + Vite** (JS Framework)
+- 🎨 **Tailwind CSS** (Styling)
+- 🌼 **DaisyUI** (UI Components)
+
+---
+
+## 🚀 Deployment
+
+_Coming soon..._
+
+---
+
+## 🤝 Contributing
+
+Want to contribute? Fork this repo and submit a pull request! 
+
+---
+
+## 📄 License
+
+MIT License

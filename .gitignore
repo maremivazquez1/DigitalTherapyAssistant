@@ -1,0 +1,50 @@
+# Ignore IDE files
+.idea/
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Compiled Java files
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven build artifacts
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+dependency-reduced-pom.xml
+release.properties
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+
+# Node.js & Frontend-related files
+node_modules/
+npm-debug.log
+yarn.lock
+.pnpm-lock.yaml
+
+# Build output
+dist/
+out/
+.vite
+.cache
+coverage/
+
+# Miscellaneous
+*.swp        # Swap files from text editors like Vim
+*.swo
