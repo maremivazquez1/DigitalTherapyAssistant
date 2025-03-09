@@ -2,9 +2,13 @@
 
 // Request payloads
 export interface RegisterData {
-    username: string;
+    first_name: string;
+    last_name: string;
     email: string;
     password: string;
+    confirm_password: string;
+    phone: string;
+    date_of_birth: string;
   }
   
   export interface LoginData {
@@ -15,11 +19,8 @@ export interface RegisterData {
   // Response payloads (adjust based on your API contract)
   export interface AuthResponse {
     token: string;
-    user: {
-      id: number;
-      username: string;
-      email: string;
-    };
+    status: 'success' | 'error';
+    message: string;
   }
   
   // In case errors are structured:
