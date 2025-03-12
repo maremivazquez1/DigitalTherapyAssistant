@@ -1,7 +1,7 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { register as registerService } from '../services/authService';
-import { RegisterData } from '../types/auth';
+import { RegisterData } from '../types/auth/auth';
 
 const RegistrationForm: React.FC = () => {
   // Local state matches RegisterData exactly

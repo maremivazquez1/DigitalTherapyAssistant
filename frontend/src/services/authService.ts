@@ -1,6 +1,6 @@
 // src/services/authService.ts
 import api from './axiosConfig';
-import { RegisterData, LoginData, AuthResponse } from '../types/auth';
+import { RegisterData, LoginData, AuthResponse } from '../types/auth/auth';
 
 export const register = async (userData: RegisterData): Promise<AuthResponse> => {
   try {
