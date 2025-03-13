@@ -53,17 +53,20 @@ const RegistrationForm: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-center text-gray-800">Register</h2>
+    <div data-theme="calming" className="flex flex-col items-center justify-center min-h-screen bg-base-200 p-4">
+      <h1 className="text-4xl font-bold text-primary text-center">Welcome to Digital Therapy Assistant</h1>
+      <p className="text-lg text-base-content/70 text-center">Experience personalized mental health support - anytime, anywhere.</p>
+      <div className="w-full max-w-md p-8 mt-8 space-y-6 bg-base-100 rounded-lg shadow-md">
+      
+        <h2 className="text-2xl font-bold text-center text-base-content">Register</h2>
 
-        {error && <p className="text-sm text-center text-red-500">{error}</p>}
-        {success && <p className="text-sm text-center text-green-500">{success}</p>}
+        {error && <p className="text-sm text-center text-error">{error}</p>}
+        {success && <p className="text-sm text-center text-success">{success}</p>}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 mt-6">
           {/* First Name */}
           <div>
-            <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="first_name" className="block text-sm font-medium text-base-content">
               First Name
             </label>
             <input
@@ -74,13 +77,13 @@ const RegistrationForm: React.FC = () => {
               required
               value={formData.first_name}
               onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
 
           {/* Last Name */}
           <div>
-            <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="last_name" className="block text-sm font-medium text-base-content">
               Last Name
             </label>
             <input
@@ -91,13 +94,13 @@ const RegistrationForm: React.FC = () => {
               required
               value={formData.last_name}
               onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
 
           {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-medium text-base-content">
               Email
             </label>
             <input
@@ -108,13 +111,13 @@ const RegistrationForm: React.FC = () => {
               required
               value={formData.email}
               onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
 
           {/* Password */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-medium text-base-content">
               Password
             </label>
             <input
@@ -125,13 +128,13 @@ const RegistrationForm: React.FC = () => {
               required
               value={formData.password}
               onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
 
           {/* Confirm Password */}
           <div>
-            <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="confirm_password" className="block text-sm font-medium text-base-content">
               Confirm Password
             </label>
             <input
@@ -142,13 +145,13 @@ const RegistrationForm: React.FC = () => {
               required
               value={formData.confirm_password}
               onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
 
           {/* Phone */}
           <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="phone" className="block text-sm font-medium text-base-content">
               Phone
             </label>
             <input
@@ -158,13 +161,13 @@ const RegistrationForm: React.FC = () => {
               placeholder="Enter your phone number"
               value={formData.phone}
               onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
 
           {/* Date of Birth */}
           <div>
-            <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="date_of_birth" className="block text-sm font-medium text-base-content">
               Date of Birth
             </label>
             <input
@@ -173,21 +176,20 @@ const RegistrationForm: React.FC = () => {
               name="date_of_birth"
               value={formData.date_of_birth}
               onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
 
-
-          <div>
-            <button data-testid="submit-button" type="submit" className="btn btn-wide btn-primary w-full">
-              Register
+          <div className="flex justify-center">
+            <button data-testid="submit-button" type="submit" className="btn btn-wide btn-primary">
+            Register
             </button>
           </div>
         </form>
 
-        <p className="text-sm text-center text-gray-600">
-          Already have an account?{' '}
-          <Link to="/login" className="text-blue-500 hover:underline">
+        <p className="text-sm text-center text-base-content">
+          Already have an account?{" "}
+          <Link to="/login" className="text-primary hover:underline">
             Login
           </Link>
         </p>

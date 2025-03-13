@@ -1,0 +1,59 @@
+import React, { useState, ChangeEvent, FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+
+
+const LoginForm: React.FC = () => {
+    return(
+
+<div data-theme="calming" className="flex h-screen flex-col items-center justify-center gap-4 bg-base-200 p-4">
+      <h1 className="text-4xl font-bold text-primary">Welcome to Digital Therapy Assistant</h1>
+      <p className="text-lg text-base-content/70">Experience personalized mental health support - anytime, anywhere.</p>
+      <div className="w-full max-w-md p-6 bg-base-100 rounded-lg shadow-lg">
+        <h2 className="text-2xl font-bold text-center text-base-content">Login</h2>
+        <form className="space-y-6 mt-6">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-base-content">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              placeholder="Enter your email"
+              required
+              className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-base-content">
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Enter your password"
+              required
+              className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <button
+              type="submit"
+              className="w-full py-2 px-4 bg-primary text-white font-semibold rounded-md hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-primary-focus focus:ring-offset-2"
+            >
+              Login
+            </button>
+          </div>
+        </form>
+        <p className="text-sm text-center text-base-content mt-4">
+          {"Don't have an account? "}
+          <Link to="/register" className="text-primary hover:underline">
+            Register
+          </Link>
+        </p>
+      </div>
+    </div>
+
+    )
+};
+
+export default LoginForm;
