@@ -1,6 +1,6 @@
 // src/components/RegistrationFormRender.test.tsx
 import '@testing-library/jest-dom';
-import { describe, it, expect, vi, Mock, MockedFunction } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import RegistrationForm from './RegistrationForm';
