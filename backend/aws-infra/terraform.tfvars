@@ -1,0 +1,5 @@
+repo_url = "https://github.com/your-username/your-frontend-repo"
+api_url  = "https://api.yourbackend.com"
+key_name = "your-ssh-key"
+db_name  = "mydatabase"
+oauth_token = "ghp_xxxxyyyyzzzz"
