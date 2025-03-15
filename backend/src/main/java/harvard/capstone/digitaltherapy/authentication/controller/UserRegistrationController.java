@@ -2,18 +2,17 @@ package harvard.capstone.digitaltherapy.authentication.controller;
 
 import harvard.capstone.digitaltherapy.authentication.model.ApiResponse;
 import harvard.capstone.digitaltherapy.authentication.model.Users;
-import harvard.capstone.digitaltherapy.authentication.service.UserService;
+import harvard.capstone.digitaltherapy.authentication.service.UserRegistrationService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
-public class UserController {
-    private final UserService userService;
+public class UserRegistrationController {
+    private final UserRegistrationService userService;
 
-    public UserController(UserService userService) {
+    public UserRegistrationController(UserRegistrationService userService) {
         this.userService = userService;
     }
 

@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class UserService {
+public class UserRegistrationService {
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -23,9 +23,6 @@ public class UserService {
         if (isEmailExists(user.getEmail())) {
             throw new UserAlreadyExistsException("Email already exists: " + user.getEmail());
         }
-        System.out.println("Incoming firstName: " + user.getFirstName());
-        System.out.println("Incoming lastName: " + user.getLastName());
-        System.out.println("Incoming dateOfBirth: " + user.getDateOfBirth());
         String hashedPassword = passwordEncoderService.encodePassword(user.getPassword());
         user.setPassword(hashedPassword);
         entityManager.persist(user); // Directly persist user
