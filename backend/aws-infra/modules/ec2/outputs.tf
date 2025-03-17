@@ -1,4 +1,4 @@
-output "backend_private_ip" {
+output "api_url" {
   value = aws_instance.springboot_backend.private_ip
 }
 
