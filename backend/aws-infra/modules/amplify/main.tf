@@ -8,9 +8,11 @@ version: 1
 applications:
   - frontend:
       baseDirectory: frontend
-      buildCommand: npm run build
+      buildCommand: |
+        npm install
+        npm run build
       artifacts:
-        baseDirectory: dist
+        baseDirectory: frontend/dist
         files:
           - '**/*'
       cache:
