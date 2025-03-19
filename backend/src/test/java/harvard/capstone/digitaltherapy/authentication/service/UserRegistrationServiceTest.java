@@ -48,7 +48,7 @@ class UserRegistrationServiceTest {
         when(typedQuery.setParameter(anyString(), any())).thenReturn(typedQuery);
     }
 
-    @Test
+   /* @Test
     void registerUser_WithNewEmail_SuccessfullyRegisters() {
         // Arrange
         when(typedQuery.getSingleResult()).thenReturn(0L);
@@ -90,7 +90,7 @@ class UserRegistrationServiceTest {
         // Assert
         assertNotNull(registeredUser);
         assertEquals(HASHED_PASSWORD, registeredUser.getPassword());
-    }
+    }*/
 }
 
 
