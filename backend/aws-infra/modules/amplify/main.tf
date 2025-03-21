@@ -10,7 +10,7 @@ frontend:
     preBuild:
       commands:
         - cd frontend
-        - npm ci
+        - npm cihjkl
     build:
       commands:
         - npm run build
