@@ -4,7 +4,7 @@ import { describe, it, expect, vi, Mock, MockedFunction } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import RegistrationForm from './RegistrationForm';
-import { register as mockRegister } from '../services/authService';
+import { register as mockRegister } from '../services/auth//authService';
 
 
 // Mock the authService to prevent actual API calls
