@@ -1,4 +1,27 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
+<<<<<<< HEAD
+import { Link } from 'react-router-dom';
+
+
+const LoginForm: React.FC = () => {
+    return(
+
+<div data-theme="calming" className="flex h-screen flex-col items-center justify-center gap-4 bg-base-200 p-4">
+      <h1 className="text-4xl font-bold text-primary">Welcome to Digital Therapy Assistant</h1>
+      <p className="text-lg text-base-content/70">Experience personalized mental health support - anytime, anywhere.</p>
+      <div className="w-full max-w-md p-6 bg-base-100 rounded-lg shadow-lg">
+        <h2 className="text-2xl font-bold text-center text-base-content">Login</h2>
+        <form className="space-y-6 mt-6">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-base-content">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              placeholder="Enter your email"
+              required
+=======
 import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../services/auth/authService'; // Adjust the path if needed
 
@@ -56,6 +79,7 @@ const LoginForm: React.FC = () => {
               required
               value={username}
               onChange={handleInputChange}
+>>>>>>> origin/main
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
@@ -68,12 +92,18 @@ const LoginForm: React.FC = () => {
               id="password"
               placeholder="Enter your password"
               required
+<<<<<<< HEAD
+              className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+            />
+          </div>
+=======
               value={password}
               onChange={handleInputChange}
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
           {error && <div className="text-red-500 text-sm">{error}</div>}
+>>>>>>> origin/main
           <div>
             <button
               type="submit"
@@ -91,7 +121,12 @@ const LoginForm: React.FC = () => {
         </p>
       </div>
     </div>
+<<<<<<< HEAD
+
+    )
+=======
   );
+>>>>>>> origin/main
 };
 
 export default LoginForm;
