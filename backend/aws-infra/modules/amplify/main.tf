@@ -2,7 +2,7 @@ resource "aws_amplify_app" "frontend" {
   name        = "local-frontend"
   repository  = var.repo_url
   oauth_token = var.oauth_token  # Use Terraform Cloud secrets for security
-  build_spec = file("./.amplify/buildspec.yml")
+  build_spec = file(".amplify.yml")
 
   environment_variables = {
     REACT_APP_API_URL = var.api_url
