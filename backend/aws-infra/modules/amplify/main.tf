@@ -7,11 +7,14 @@ resource "aws_amplify_app" "frontend" {
 version: 1
 applications:
   - frontend:
+      baseDirectory: frontend
       buildCommand: |
-        cd frontend
         npm install
         npm run build
+        ls
+        ls ..
       artifacts:
+        baseDirectory: dist
         files:
           - '**/*'
       cache:
