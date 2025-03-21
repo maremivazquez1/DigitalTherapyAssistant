@@ -3,24 +3,25 @@ resource "aws_amplify_app" "frontend" {
   repository  = var.repo_url
   oauth_token = var.oauth_token  # Use Terraform Cloud secrets for security
 
-  build_spec = <<EOF
+  build_spec = <<EOT
 version: 1
-applications:
-  - frontend:
-      baseDirectory: frontend
-      buildCommand: |
-        npm install
-        npm run build
-        ls
-        ls ..
-      artifacts:
-        baseDirectory: dist
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - frontend/node_modules/**/*
-EOF
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd frontend
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: frontend/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - frontend/node_modules/**/*
+EOT
 
   environment_variables = {
     REACT_APP_API_URL = var.api_url
