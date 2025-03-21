@@ -2,13 +2,13 @@
 
 // Request payloads
 export interface RegisterData {
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
     email: string;
     password: string;
-    confirm_password: string;
+    confirmPassword: string;
     phone: string;
-    date_of_birth: string;
+    dateOfBirth: string;
   }
   
   export interface LoginData {
@@ -28,4 +28,3 @@ export interface RegisterData {
     message: string;
     // Add more fields if your API returns more info
   }
-  
