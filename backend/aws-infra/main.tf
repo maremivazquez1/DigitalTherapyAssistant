@@ -45,7 +45,7 @@ module "ec2" {
   key_name      = var.key_name
   repo_url      = var.repo_url
   oauth_token   = var.oauth_token
-  depends_on = [aws_key_pair.my_ssh_key]
+  depends_on    = [aws_key_pair.my_ssh_key]
 }
 
 module "rds" {
