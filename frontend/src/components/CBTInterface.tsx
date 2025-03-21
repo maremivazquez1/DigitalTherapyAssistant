@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import therapyRoom from "../assets/therapy-room-1.svg";
-import { FaMicrophone, FaVideo } from "react-icons/fa";
+import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash } from "react-icons/fa";
 import hark from "hark";
 import testWav from '../assets/harvard.wav';
 
@@ -57,6 +57,7 @@ class FakeWebSocket {
 }
 
 const CBTInterface: React.FC = () => {
+// --------------------- STATE ---------------------
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: Date.now(),
@@ -68,27 +69,42 @@ const CBTInterface: React.FC = () => {
 
   const [sessionActive, setSessionActive] = useState(false);
   const [micMuted, setMicMuted] = useState(false);
-
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const micStreamRef = useRef<MediaStream | null>(null);
-  const socketRef = useRef<FakeWebSocket | null>(null);
-
-  const harkRef = useRef<any>(null);
-  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
-
+  const [cameraOn, setCameraOn] = useState(true); // camera is on by default
   // Track if user is speaking (for UI or logs)
   const [isSpeaking, setIsSpeaking] = useState(false);
 
+// --------------------- REFS ---------------------
+  // 1) The combined stream with audio+video
+  const combinedStreamRef = useRef<MediaStream | null>(null);
+
+  // 2) Separate recorders for audio & video
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const videoRecorderRef = useRef<MediaRecorder | null>(null);
+
+  // For Hark speech detection
+  const harkRef = useRef<any>(null);
+
+  // For the FakeWebSocket
+  const socketRef = useRef<FakeWebSocket | null>(null);
+
+  // For scrolling the chat
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom on new messages
+  // For showing user’s video in the avatar
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+
+
+  // --------------------- SCROLL TO BOTTOM OF CHAT ---------------------
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [chatMessages]);
 
-  // Handle server messages
+  // --------------------- HANDLE SERVER MESSAGES ---------------------
   useEffect(() => {
     const handleServerMessage = (event: MessageEvent) => {
       console.log("[handleServerMessage] Received message from server:", event.data);
@@ -138,8 +154,9 @@ const CBTInterface: React.FC = () => {
     }
   }, [sessionActive]);
 
-  // Start session: get mic, set up Hark, set up MediaRecorder
+  // --------------------- START SESSION ---------------------
   const startSession = async () => {
+
     if (sessionActive) return;
     console.log("[startSession] Starting session...");
     setSessionActive(true);
@@ -149,14 +166,24 @@ const CBTInterface: React.FC = () => {
     mockSocket.open();
 
     try {
-      console.log("[startSession] Requesting microphone...");
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      micStreamRef.current = stream;
+      console.log("[startSession] Requesting microphone + camera...");
+      const combinedStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true,
+      });
+      combinedStreamRef.current = combinedStream; // store in ref
 
-      console.log("[startSession] Microphone acquired. Setting up Hark + MediaRecorder...");
+      // 2) Split into audio-only and video-only
+      const audioTrack = combinedStream.getAudioTracks()[0];
+      const videoTrack = combinedStream.getVideoTracks()[0];
+      const audioOnlyStream = new MediaStream([audioTrack]);
+      const videoOnlyStream = new MediaStream([videoTrack]);
+
+      console.log("[startSession] Audio & video tracks acquired.");
+
       
-      // 1) Use Hark
-      const speechEvents = hark(stream, {
+      // Use Hark
+      const speechEvents = hark(audioOnlyStream, {
         interval: 50,   // how often to check volume
         threshold: -50, // decibels, tweak as needed
       });
@@ -179,9 +206,11 @@ const CBTInterface: React.FC = () => {
         finalizeUserSpeech();
       });
 
-      // 2) MediaRecorder to send audio chunks
-      const recorder = new MediaRecorder(stream);
-      recorder.ondataavailable = (e) => {
+      // MediaRecorder to send audio chunks
+      const audioRecorder = new MediaRecorder(audioOnlyStream);
+      audioRecorderRef.current = audioRecorder;
+
+      audioRecorder.ondataavailable = (e) => {
         console.log(`[ondataavailable] chunk size: ${e.data.size}, type: ${e.data.type}`);
         if (micMuted) {
           console.log("[ondataavailable] micMuted, skipping chunk.");
@@ -192,14 +221,37 @@ const CBTInterface: React.FC = () => {
           socketRef.current.send(e.data);
         }
       };
-      recorder.start(500);
-      mediaRecorderRef.current = recorder;
-    } catch (err) {
-      console.error("[startSession] Mic access error:", err);
-    }
-  };
+      audioRecorder.start(500);
 
-  // finalize user speech immediately
+      // 5) Create a MediaRecorder for video
+      const videoRecorder = new MediaRecorder(videoOnlyStream);
+      videoRecorderRef.current = videoRecorder;
+
+      videoRecorder.ondataavailable = (e) => {
+        console.log(`[videoRecorder] chunk size: ${e.data.size}, type: ${e.data.type}`);
+        if (e.data.size > 0 && socketRef.current) {
+          console.log("[videoRecorder] Sending video chunk to server...");
+          socketRef.current.send(e.data);
+        }
+      };
+      videoRecorder.start(500);
+
+      console.log("[startSession] Audio & video recorders started.");
+
+      // 6) (Optional) Display user's camera in the avatar
+      if (videoRef.current) {
+          videoRef.current.srcObject = videoOnlyStream;
+          videoRef.current.play().catch((err) => {
+          console.warn("[Video] Autoplay might be blocked or error:", err);
+          });
+      }
+
+      } catch (err) {
+      console.error("[startSession] Mic/camera access error:", err);
+      }
+    };
+
+  // --------------------- FINALIZE USER SPEECH ---------------------
   const finalizeUserSpeech = () => {
     console.log("[finalizeUserSpeech] We'll add a user bubble, then server responds w/ audio.");
 
@@ -217,6 +269,7 @@ const CBTInterface: React.FC = () => {
     }
   };
 
+  // --------------------- STOP SESSION ---------------------
   const stopSession = () => {
     console.log("[stopSession] Ending session...");
     setSessionActive(false);
@@ -228,18 +281,32 @@ const CBTInterface: React.FC = () => {
         ttsAudioRef.current = null;
     }
 
-    // 1) Stop the MediaRecorder
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+    // 1) Stop the audio
+    if (audioRecorderRef.current && audioRecorderRef.current.state !== "inactive") {
         console.log("[stopSession] Stopping MediaRecorder...");
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current = null;
+        audioRecorderRef.current?.stop();
+        audioRecorderRef.current = null;
     }
 
-    // 2) Stop the mic stream tracks
-    if (micStreamRef.current) {
-        console.log("[stopSession] Stopping all mic tracks...");
-        micStreamRef.current.getTracks().forEach(track => track.stop());
-        micStreamRef.current = null;
+    // 3) Stop video recorder
+    if (videoRecorderRef.current && videoRecorderRef.current.state !== "inactive") {
+        console.log("[stopSession] Stopping video recorder...");
+        videoRecorderRef.current.stop();
+        videoRecorderRef.current = null;
+    }
+
+    // Clear the camera feed
+    if (videoRef.current) {
+        console.log("[stopSession] Clearing camera box...");
+        videoRef.current.pause();
+        videoRef.current.srcObject = null; 
+    }
+
+    // 5) Stop all tracks in the combined stream
+    if (combinedStreamRef.current) {
+        console.log("[stopSession] Stopping all mic+cam tracks...");
+        combinedStreamRef.current.getTracks().forEach((track) => track.stop());
+        combinedStreamRef.current = null;
     }
 
     // 3) (Optional) If you're using Hark and stored it in a ref, stop it:
@@ -256,13 +323,15 @@ const CBTInterface: React.FC = () => {
       socketRef.current = null;
     }
     setIsSpeaking(false);
+    setMicMuted(false);
   };
 
+  // --------------------- TOGGLE MIC ---------------------
   const toggleMic = () => {
     console.log("[toggleMic] toggling mic");
-    if (!micStreamRef.current) return;
+    if (!audioRecorderRef.current) return;
   
-    const track = micStreamRef.current.getAudioTracks()[0];
+    const track = combinedStreamRef.current?.getAudioTracks()[0];
     if (track) {
       track.enabled = !track.enabled; // flip track.enabled
       console.log("[toggleMic]", track.enabled ? "unmuted" : "muted");
@@ -270,10 +339,22 @@ const CBTInterface: React.FC = () => {
     setMicMuted(!micMuted);
   };
 
+  // --------------------- CAMERA CLICK ---------------------
   const handleCamClick = () => {
-    console.log("[handleCamClick] Camera button clicked (not implemented).");
+    console.log("[handleCamClick] Toggling camera");
+    if (!combinedStreamRef.current) return; // If there's no combined stream, do nothing
+  
+    // Get the video track
+    const videoTrack = combinedStreamRef.current.getVideoTracks()[0];
+    if (videoTrack) {
+      // Flip the .enabled property
+      videoTrack.enabled = !videoTrack.enabled;
+      console.log("[handleCamClick]", videoTrack.enabled ? "Camera ON" : "Camera OFF");
+    }
+    setCameraOn(!cameraOn);
   };
 
+  // --------------------- RENDER ---------------------
   return (
     <div
       className="hero h-screen relative bg-base-100"
@@ -336,33 +417,39 @@ const CBTInterface: React.FC = () => {
         </div>
       )}
 
-      {/* Microphone & Camera */}
-      {sessionActive && (
-        <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 flex items-center gap-4">
-          <button
-            onClick={toggleMic}
-            className={`btn btn-circle btn-sm ${
-              micMuted ? "bg-red-700" : "bg-neutral"
-            }`}
-          >
-            <span className="text-neutral-content">
-              <FaMicrophone />
-            </span>
-          </button>
-          <button
-            onClick={handleCamClick}
-            className="btn btn-circle btn-sm bg-neutral hover:bg-neutral-focus"
-          >
-            <FaVideo />
-          </button>
-        </div>
-      )}
+    <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 flex items-center gap-4">
+    {/* Mic Button */}
+    <button
+        onClick={toggleMic}
+        className={`btn btn-circle btn-sm ${
+        micMuted ? "bg-warning" : "bg-neutral"
+        }`}
+    >
+        <span className="text-neutral-content">
+        {micMuted ? <FaMicrophoneSlash /> : <FaMicrophone />}
+        </span>
+    </button>
+
+    {/* Camera Button */}
+    <button
+        onClick={handleCamClick}
+        className={`btn btn-circle btn-sm ${
+        cameraOn ? "bg-neutral" : "bg-warning"
+        }`}
+    >
+        <span className="text-neutral-content">
+        {cameraOn ? <FaVideo /> : <FaVideoSlash />}
+        </span>
+    </button>
+    </div>
 
       <div className="absolute bottom-5 right-5 avatar">
-        <div className="w-38 rounded border-4 border-neutral">
-          <img
-            src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"
-            alt="User Avatar"
+        <div className="w-38 h-38 rounded border-4 border-neutral overflow-hidden">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            className="object-cover w-full h-full"
           />
         </div>
       </div>
