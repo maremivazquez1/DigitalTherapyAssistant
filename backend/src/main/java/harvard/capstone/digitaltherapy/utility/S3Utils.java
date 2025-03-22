@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.core.retry.backoff.BackoffStrategy;
 import software.amazon.awssdk.core.retry.conditions.RetryCondition;
@@ -12,19 +13,22 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.model.*;
-
+import java.nio.file.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 
 @Service
-public class S3FileUploadUtil {
-    private static final Logger logger = LoggerFactory.getLogger(S3FileUploadUtil.class);
+public class S3Utils {
+    private static final Logger logger = LoggerFactory.getLogger(S3Utils.class);
     private final S3Client s3Client;
     private final String bucketName;
 
-    public S3FileUploadUtil(@Value("${aws.s3.bucketName}") String bucketName,
-                           @Value("${aws.region}") String region) {
+    public S3Utils(@Value("${aws.s3.bucketName}") String bucketName,
+                   @Value("${aws.region}") String region) {
         this.bucketName = bucketName;
         RetryPolicy retryPolicy = RetryPolicy.builder()
                 .numRetries(3)
@@ -66,6 +70,25 @@ public class S3FileUploadUtil {
             logger.error("Error uploading file to S3: {}", e.getMessage());
             throw new RuntimeException("Failed to upload file to S3: " + e.getMessage());
         }
+    }
+
+    // Method to retrieve file from S3 and save it locally
+    public File downloadFileFromS3(String bucketName, String fileKey) throws IOException {
+        // Build the GetObjectRequest
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucketName)    // The S3 bucket name
+                .key(fileKey)          // The file's key (path in the bucket)
+                .build();
+
+        // Retrieve the file from S3
+        ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(getObjectRequest);
+
+        // Create a temporary file to store the file locally
+        Path tempFilePath = Files.createTempFile("downloaded-file-", ".tmp");
+        Files.copy(s3Object, tempFilePath, StandardCopyOption.REPLACE_EXISTING);
+
+        // Convert the Path to a File
+        return tempFilePath.toFile();
     }
 
     private boolean doesBucketExist(String bucketName) {

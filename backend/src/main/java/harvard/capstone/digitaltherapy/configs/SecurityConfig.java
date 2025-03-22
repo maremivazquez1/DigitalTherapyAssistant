@@ -16,7 +16,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())  // Disable CSRF if this is a REST API
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/**").permitAll()  // Adjust paths as needed
+                         // Adjust paths as needed
                         .anyRequest().permitAll()
                 )
                 .httpBasic(Customizer.withDefaults());

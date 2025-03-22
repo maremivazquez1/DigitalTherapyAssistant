@@ -1,6 +1,6 @@
 package harvard.capstone.digitaltherapy.cbt.controller;
 
-import harvard.capstone.digitaltherapy.utility.S3FileUploadUtil;
+import harvard.capstone.digitaltherapy.utility.S3Utils;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,9 +23,9 @@ public class CBTSessionController {
 
     private static final String ALLOWED_CONTENT_TYPE = "audio/mpeg";
     private static final String OUTPUT_FILE_PATH = "backend/src/main/resources/cbt_session.mp3";
-    private final S3FileUploadUtil s3Service;
+    private final S3Utils s3Service;
 
-    public CBTSessionController(S3FileUploadUtil s3Service) {
+    public CBTSessionController(S3Utils s3Service) {
         this.s3Service = s3Service;
     }
     @PostMapping(value = "/cbt", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -44,28 +45,18 @@ public class CBTSessionController {
             String keyName = file.getOriginalFilename();
             String response = s3Service.uploadFile(convertedFile.getAbsolutePath(), keyName);
             convertedFile.delete(); // Cleanup temp file
-            Path outputPath = Paths.get(OUTPUT_FILE_PATH);
-            // Ensure directory exists
-            Files.createDirectories(outputPath.getParent());
+            File response_file = s3Service.downloadFileFromS3("dta-root", keyName);
+            // Create a FileSystemResource from the file
+            FileSystemResource fileResource = new FileSystemResource(response_file);
 
-            // Create output file if it doesn't exist
-            if (!Files.exists(outputPath)) {
-                Files.createFile(outputPath);
-            }
+            // Set headers for file download
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + file.getName());
 
-            File output = outputPath.toFile();
-            FileSystemResource resource = new FileSystemResource(output);
-
-            // Verify resource exists and is readable
-            if (!resource.exists() || !resource.isReadable()) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-            }
-
+            // Return the file as a ResponseEntity with appropriate headers
             return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(ALLOWED_CONTENT_TYPE))
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"processed_file.mp3\"")
-                    .body(resource);
+                    .headers(headers)
+                    .body(fileResource);
 
         } catch (IOException e) {
             // Log the error here using a proper logging framework
