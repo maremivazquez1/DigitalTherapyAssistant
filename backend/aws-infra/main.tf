@@ -41,7 +41,7 @@ resource "tls_private_key" "key" {
 resource "aws_key_pair" "my_ssh_key" {
   count      = length(data.aws_key_pair.existing) > 0 ? 0 : 1
   key_name   = var.key_name
-  public_key = tls_private_key.key.public_key_openssh
+  public_key = tls_private_key.key[0].public_key_openssh
   depends_on = [tls_private_key.key]
 }
 

@@ -7,7 +7,7 @@ output "api_url" {
 }
 
 output "private_key" {
-  value     = tls_private_key.key.private_key_pem
+  value     = tls_private_key.key[0].private_key_pem
   sensitive = true
 }
 
