@@ -32,14 +32,14 @@ data "aws_key_pair" "existing" {
 # private key is used to ssh (will be output to console)
 # Remove output when no longer need to ssh
 resource "tls_private_key" "key" {
-  count   = length(data.aws_key_pair.existing) > 0 ? 0 : 1
+  count     = length(data.aws_key_pair.existing) > 0 ? 0 : 1
   algorithm = "RSA"
   rsa_bits  = 2048
 }
 
 # generate public key to authenticate to ec2
 resource "aws_key_pair" "my_ssh_key" {
-  count   = length(data.aws_key_pair.existing) > 0 ? 0 : 1
+  count      = length(data.aws_key_pair.existing) > 0 ? 0 : 1
   key_name   = var.key_name
   public_key = tls_private_key.key.public_key_openssh
   depends_on = [tls_private_key.key]
