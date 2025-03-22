@@ -88,6 +88,19 @@ jobs:
     - name: Terraform Format
       run: terraform -chdir=backend/aws-infra/ fmt -check
 
+    - name: Check if RDS exists
+      id: check_rds
+      run: |
+        if aws rds describe-db-instances --db-instance-identifier "my-dta-db" > /dev/null 2>&1; then
+          echo "RDS_EXISTS=true" >> $GITHUB_ENV
+        else
+          echo "RDS_EXISTS=false" >> $GITHUB_ENV
+        fi
+
+    - name: Import Existing RDS (If Exists)
+      if: env.RDS_EXISTS == 'true'
+      run: terraform -chdir=backend/aws-infra/ import aws_db_instance.my_rds module.rds.aws_db_instance.rds_instance || true
+
     # Generates an execution plan for Terraform
     - name: Terraform Plan
       run: terraform -chdir=backend/aws-infra/ plan -input=false
