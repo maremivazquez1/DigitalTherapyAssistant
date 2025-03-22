@@ -82,9 +82,7 @@ jobs:
 
     - name: Create tfvars file
       run: |
-        cat <<EOF > terraform.tfvars
-        oauth_token = "${{ secrets.OAUTH_TOKEN_GITHUB }}"
-        EOF
+        echo "oauth_token = \"${{ secrets.OAUTH_TOKEN_GITHUB }}\"" > terraform.tfvars
 
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
