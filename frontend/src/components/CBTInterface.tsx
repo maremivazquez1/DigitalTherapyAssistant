@@ -71,7 +71,7 @@ const CBTInterface: React.FC = () => {
   const [micMuted, setMicMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(true); // camera is on by default
   // Track if user is speaking (for UI or logs)
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [_, setIsSpeaking] = useState(false);
 
 // --------------------- REFS ---------------------
   // 1) The combined stream with audio+video

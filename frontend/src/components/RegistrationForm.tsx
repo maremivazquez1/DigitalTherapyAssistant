@@ -6,13 +6,13 @@ import { RegisterData } from '../types/auth/auth';
 const RegistrationForm: React.FC = () => {
   // Local state matches RegisterData exactly
   const [formData, setFormData] = useState<RegisterData>({
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
-    confirm_password: '',
+    confirmPassword: '',
     phone: '',
-    date_of_birth: '',
+    dateOfBirth: '',
 
   });
 
@@ -35,7 +35,7 @@ const RegistrationForm: React.FC = () => {
     setSuccess(null);
 
     // Basic client-side check for matching passwords
-    if (formData.password !== formData.confirm_password) {
+    if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
@@ -75,7 +75,7 @@ const RegistrationForm: React.FC = () => {
               name="first_name"
               placeholder="Enter your first name"
               required
-              value={formData.first_name}
+              value={formData.firstName}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
@@ -92,7 +92,7 @@ const RegistrationForm: React.FC = () => {
               name="last_name"
               placeholder="Enter your last name"
               required
-              value={formData.last_name}
+              value={formData.lastName}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
@@ -143,7 +143,7 @@ const RegistrationForm: React.FC = () => {
               name="confirm_password"
               placeholder="Confirm your password"
               required
-              value={formData.confirm_password}
+              value={formData.confirmPassword}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
@@ -174,7 +174,7 @@ const RegistrationForm: React.FC = () => {
               type="date"
               id="date_of_birth"
               name="date_of_birth"
-              value={formData.date_of_birth}
+              value={formData.dateOfBirth}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
