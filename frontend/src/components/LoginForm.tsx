@@ -1,16 +1,41 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-
+import { login as loginService } from '../services/auth/authService';
 
 const LoginForm: React.FC = () => {
-    return(
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-<div data-theme="calming" className="flex h-screen flex-col items-center justify-center gap-4 bg-base-200 p-4">
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!email || !password) return;
+
+    // Transform email into username for the backend
+    const payload = {
+      username: email,
+      password,
+    };
+
+    try {
+      await loginService(payload);
+      // Handle successful login (e.g., redirect)
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    }
+  };
+
+  return (
+    <div data-theme="calming" className="flex h-screen flex-col items-center justify-center gap-4 bg-base-200 p-4">
       <h1 className="text-4xl font-bold text-primary">Welcome to Digital Therapy Assistant</h1>
-      <p className="text-lg text-base-content/70">Experience personalized mental health support - anytime, anywhere.</p>
+      <p className="text-lg text-base-content/70">
+        Experience personalized mental health support - anytime, anywhere.
+      </p>
       <div className="w-full max-w-md p-6 bg-base-100 rounded-lg shadow-lg">
         <h2 className="text-2xl font-bold text-center text-base-content">Login</h2>
-        <form className="space-y-6 mt-6">
+        <form className="space-y-6 mt-6" onSubmit={handleSubmit}>
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-base-content">
               Email
@@ -20,7 +45,8 @@ const LoginForm: React.FC = () => {
               id="email"
               placeholder="Enter your email"
               required
-
+              value={email}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
@@ -33,10 +59,11 @@ const LoginForm: React.FC = () => {
               id="password"
               placeholder="Enter your password"
               required
+              value={password}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
-
           <div>
             <button
               type="submit"
@@ -46,6 +73,7 @@ const LoginForm: React.FC = () => {
             </button>
           </div>
         </form>
+        {error && <p className="mt-4 text-center text-error">{error}</p>}
         <p className="text-sm text-center text-base-content mt-4">
           {"Don't have an account? "}
           <Link to="/register" className="text-primary hover:underline">
@@ -54,8 +82,7 @@ const LoginForm: React.FC = () => {
         </p>
       </div>
     </div>
-
-    )
+  );
 };
 
 export default LoginForm;

@@ -4,29 +4,33 @@ import { register as registerService } from '../services/auth/authService';
 import { RegisterData } from '../types/auth/auth';
 
 const RegistrationForm: React.FC = () => {
-  // Local state matches RegisterData exactly
+  // Local state for registration data (excluding confirmPassword)
   const [formData, setFormData] = useState<RegisterData>({
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
-    confirm_password: '',
     phone: '',
-    date_of_birth: '',
-
+    dateOfBirth: '',
   });
+
+  // Separate state for confirmPassword (for validation only)
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // This handleChange function checks if the field is part of address or a top-level field
+  // Handles changes for both formData and confirmPassword
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    if (name === 'confirmPassword') {
+      setConfirmPassword(value);
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -34,13 +38,14 @@ const RegistrationForm: React.FC = () => {
     setError(null);
     setSuccess(null);
 
-    // Basic client-side check for matching passwords
-    if (formData.password !== formData.confirm_password) {
+    // Validate password and confirmPassword match
+    if (formData.password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
     try {
+      // Only send formData (without confirmPassword)
       const response = await registerService(formData);
       if (response.status === 'success') {
         setSuccess(response.message);
@@ -55,9 +60,10 @@ const RegistrationForm: React.FC = () => {
   return (
     <div data-theme="calming" className="flex flex-col items-center justify-center min-h-screen bg-base-200 p-4">
       <h1 className="text-4xl font-bold text-primary text-center">Welcome to Digital Therapy Assistant</h1>
-      <p className="text-lg text-base-content/70 text-center">Experience personalized mental health support - anytime, anywhere.</p>
+      <p className="text-lg text-base-content/70 text-center">
+        Experience personalized mental health support - anytime, anywhere.
+      </p>
       <div className="w-full max-w-md p-8 mt-8 space-y-6 bg-base-100 rounded-lg shadow-md">
-      
         <h2 className="text-2xl font-bold text-center text-base-content">Register</h2>
 
         {error && <p className="text-sm text-center text-error">{error}</p>}
@@ -66,16 +72,16 @@ const RegistrationForm: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
           {/* First Name */}
           <div>
-            <label htmlFor="first_name" className="block text-sm font-medium text-base-content">
+            <label htmlFor="firstName" className="block text-sm font-medium text-base-content">
               First Name
             </label>
             <input
               type="text"
-              id="first_name"
-              name="first_name"
+              id="firstName"
+              name="firstName"
               placeholder="Enter your first name"
               required
-              value={formData.first_name}
+              value={formData.firstName}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
@@ -83,16 +89,16 @@ const RegistrationForm: React.FC = () => {
 
           {/* Last Name */}
           <div>
-            <label htmlFor="last_name" className="block text-sm font-medium text-base-content">
+            <label htmlFor="lastName" className="block text-sm font-medium text-base-content">
               Last Name
             </label>
             <input
               type="text"
-              id="last_name"
-              name="last_name"
+              id="lastName"
+              name="lastName"
               placeholder="Enter your last name"
               required
-              value={formData.last_name}
+              value={formData.lastName}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
@@ -134,16 +140,16 @@ const RegistrationForm: React.FC = () => {
 
           {/* Confirm Password */}
           <div>
-            <label htmlFor="confirm_password" className="block text-sm font-medium text-base-content">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-base-content">
               Confirm Password
             </label>
             <input
               type="password"
-              id="confirm_password"
-              name="confirm_password"
+              id="confirmPassword"
+              name="confirmPassword"
               placeholder="Confirm your password"
               required
-              value={formData.confirm_password}
+              value={confirmPassword}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
@@ -167,14 +173,14 @@ const RegistrationForm: React.FC = () => {
 
           {/* Date of Birth */}
           <div>
-            <label htmlFor="date_of_birth" className="block text-sm font-medium text-base-content">
+            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-base-content">
               Date of Birth
             </label>
             <input
               type="date"
-              id="date_of_birth"
-              name="date_of_birth"
-              value={formData.date_of_birth}
+              id="dateOfBirth"
+              name="dateOfBirth"
+              value={formData.dateOfBirth}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
@@ -182,13 +188,13 @@ const RegistrationForm: React.FC = () => {
 
           <div className="flex justify-center">
             <button data-testid="submit-button" type="submit" className="btn btn-wide btn-primary">
-            Register
+              Register
             </button>
           </div>
         </form>
 
         <p className="text-sm text-center text-base-content">
-          Already have an account?{" "}
+          Already have an account?{' '}
           <Link to="/login" className="text-primary hover:underline">
             Login
           </Link>

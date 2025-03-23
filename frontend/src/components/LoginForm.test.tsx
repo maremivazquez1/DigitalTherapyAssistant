@@ -7,23 +7,23 @@ import LoginForm from './LoginForm';
 import { login as mockLogin } from '../services/auth/authService';
 
 // Mock the authService to prevent actual API calls
-vi.mock('../services/authService', () => ({
+vi.mock('../services/auth/authService', () => ({
   login: vi.fn(),
 }));
 
 // Renders inputs
 describe('LoginForm - Render Tests', () => {
-  it('renders username and password inputs and login button', () => {
+  it('renders email and password inputs and login button', () => {
     render(
       <MemoryRouter>
         <LoginForm />
       </MemoryRouter>
     );
 
-    // Check Username field
-    const usernameInput = screen.getByLabelText(/Username/i);
-    expect(usernameInput).toBeInTheDocument();
-    expect(usernameInput).toHaveAttribute('required');
+    // Check Email field
+    const emailInput = screen.getByLabelText(/Email/i);
+    expect(emailInput).toBeInTheDocument();
+    expect(emailInput).toHaveAttribute('required');
 
     // Check Password field
     const passwordInput = screen.getByLabelText(/Password/i);
@@ -38,7 +38,7 @@ describe('LoginForm - Render Tests', () => {
 
 // Required fields validation
 describe('LoginForm - Required Fields Enforcement', () => {
-  it('does not call login if the username is missing', () => {
+  it('does not call login if the email is missing', () => {
     render(
       <MemoryRouter>
         <LoginForm />
@@ -51,7 +51,7 @@ describe('LoginForm - Required Fields Enforcement', () => {
     // Attempt to submit the form
     fireEvent.click(screen.getByRole('button', { name: /Login/i }));
 
-    // login service should not be called because username is missing
+    // login service should not be called because email is missing
     expect(mockLogin).not.toHaveBeenCalled();
   });
 
@@ -62,8 +62,8 @@ describe('LoginForm - Required Fields Enforcement', () => {
       </MemoryRouter>
     );
 
-    // Only fill in the username
-    fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'johnDoe' } });
+    // Only fill in the email
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'john@example.com' } });
 
     // Attempt to submit the form
     fireEvent.click(screen.getByRole('button', { name: /Login/i }));
@@ -89,7 +89,7 @@ describe('LoginForm - Successful Submission', () => {
     );
 
     // Fill out the form with valid data
-    fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'johnDoe' } });
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'john@example.com' } });
     fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'password123' } });
 
     // Submit the form
@@ -98,7 +98,7 @@ describe('LoginForm - Successful Submission', () => {
     // Wait for the login service to be called with the correct payload
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith({
-        username: 'johnDoe',
+        username: 'john@example.com', // email transformed to username
         password: 'password123',
       });
     });
@@ -118,7 +118,7 @@ describe('LoginForm - Server Error Response', () => {
     );
 
     // Fill out the form with invalid credentials
-    fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'johnDoe' } });
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'john@example.com' } });
     fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'wrongPassword' } });
 
     // Submit the form

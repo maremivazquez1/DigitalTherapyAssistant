@@ -71,7 +71,7 @@ const CBTInterface: React.FC = () => {
   const [micMuted, setMicMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(true); // camera is on by default
   // Track if user is speaking (for UI or logs)
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [, setIsSpeaking] = useState(false);
 
 // --------------------- REFS ---------------------
   // 1) The combined stream with audio+video
@@ -120,7 +120,7 @@ const CBTInterface: React.FC = () => {
               ttsAudioRef.current = null;
             }
           
-            // 2) Insert the new chat bubble (like you already do)
+            // 2) Insert the new chat bubble
             const aiMsg: ChatMessage = {
               id: Date.now(),
               sender: "Assistant",
