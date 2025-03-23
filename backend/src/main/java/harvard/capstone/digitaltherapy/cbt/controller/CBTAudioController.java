@@ -1,6 +1,8 @@
 package harvard.capstone.digitaltherapy.cbt.controller;
 
+import harvard.capstone.digitaltherapy.cbt.service.CBTHelper;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -8,27 +10,23 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api")
-public class CBTSessionController {
-
+public class CBTAudioController {
     private static final String ALLOWED_CONTENT_TYPE = "audio/mpeg";
     private static final String OUTPUT_FILE_PATH = "backend/src/main/resources/cbt_session.mp3";
     private final S3Utils s3Service;
 
-    public CBTSessionController(S3Utils s3Service) {
+    @Autowired
+    private CBTHelper cbtHelper;
+
+    public CBTAudioController(S3Utils s3Service) {
         this.s3Service = s3Service;
     }
-    @PostMapping(value = "/cbt", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/cbt-audio", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FileSystemResource> cbtSession(@RequestParam("file") MultipartFile file,  @RequestParam("type") String type,
                                                          @RequestParam("contentType") String contentType) {
         // Validate file
@@ -41,7 +39,7 @@ public class CBTSessionController {
         }
 
         try {
-            File convertedFile = convertMultiPartToFile(file);
+            File convertedFile = cbtHelper.convertMultiPartToBinaryFile(file);
             String keyName = file.getOriginalFilename();
             String response = s3Service.uploadFile(convertedFile.getAbsolutePath(), keyName);
             convertedFile.delete(); // Cleanup temp file
@@ -64,11 +62,4 @@ public class CBTSessionController {
         }
     }
 
-    private File convertMultiPartToFile(MultipartFile file) throws IOException {
-        File convFile = new File(file.getOriginalFilename());
-        try (FileOutputStream fos = new FileOutputStream(convFile)) {
-            fos.write(file.getBytes());
-        }
-        return convFile;
-    }
 }

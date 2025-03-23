@@ -13,10 +13,9 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.model.*;
+
+import java.io.*;
 import java.nio.file.*;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -132,4 +131,44 @@ public class S3Utils {
             }
         }
     }
-}
+
+
+
+        public void streamFileFromS3(String bucketName, String fileKey, OutputStream outputStream)
+                throws IOException {
+            try {
+                // First check if file exists
+                HeadObjectRequest headRequest = HeadObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(fileKey)
+                        .build();
+
+                try {
+                    s3Client.headObject(headRequest);
+                } catch (S3Exception e) {
+                    if (e.statusCode() == 404) {
+                        throw new FileNotFoundException("File not found in S3: " + fileKey);
+                    }
+                    throw new IOException("Error checking file in S3: " + e.getMessage(), e);
+                }
+
+                // Get the object
+                GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(fileKey)
+                        .build();
+
+                try (ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(getObjectRequest)) {
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    while ((bytesRead = s3Object.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
+                    }
+                    outputStream.flush();
+                }
+            } catch (S3Exception e) {
+                throw new IOException("Error streaming file from S3: " + e.getMessage(), e);
+            }
+        }
+    }
+
