@@ -64,6 +64,20 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
+
+		<!-- AWS SDK for Polly -->
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-polly</artifactId>
+			<version>1.12.123</version> <!-- Replace with latest version -->
+		</dependency>
+
+		<!-- AWS SDK for Transcribe -->
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-transcribe</artifactId>
+			<version>1.12.123</version> <!-- Replace with latest version -->
+		</dependency>
 	</dependencies>
 
 	<build>
