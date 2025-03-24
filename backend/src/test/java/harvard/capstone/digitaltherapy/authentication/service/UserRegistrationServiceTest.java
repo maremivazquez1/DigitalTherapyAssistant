@@ -17,7 +17,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-//@ExtendWith(MockitoExtension.class)
+@ExtendWith(MockitoExtension.class)
 class UserRegistrationServiceTest {
 
     @Mock
@@ -47,7 +47,7 @@ class UserRegistrationServiceTest {
         when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(typedQuery);
         when(typedQuery.setParameter(anyString(), any())).thenReturn(typedQuery);
     }
-/*
+
     @Test
     void registerUser_WithNewEmail_SuccessfullyRegisters() {
         // Arrange
@@ -90,7 +90,7 @@ class UserRegistrationServiceTest {
         // Assert
         assertNotNull(registeredUser);
         assertEquals(HASHED_PASSWORD, registeredUser.getPassword());
-    }*/
+    }
 }
 
 
