@@ -22,3 +22,27 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Vite cache
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
+# Environment variables
+.env
+.env.*
+
+# Package manager lock files (optional if using npm)
+yarn.lock
+pnpm-lock.yaml
+
+# Additional IDE files
+.vscode/settings.json
+.vscode/launch.json
+*.swp
+*.swo
+*.swn
