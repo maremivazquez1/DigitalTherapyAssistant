@@ -20,7 +20,7 @@ import { RegisterData, LoginData, AuthResponse } from '../../types/auth/auth';
 
 export const register = async (userData: RegisterData): Promise<AuthResponse> => {
   try {
-    const response = await api.post<AuthResponse>('/auth/register', userData);
+    const response = await api.post<AuthResponse>('/register', userData);
     return response.data;
   } catch (error: unknown) {
     return Promise.reject(error); // Ensure a rejected Promise is returned
@@ -29,7 +29,7 @@ export const register = async (userData: RegisterData): Promise<AuthResponse> =>
 
 export const login = async (credentials: LoginData): Promise<AuthResponse> => {
   try {
-    const response = await api.post<AuthResponse>('/auth/login', credentials);
+    const response = await api.post<AuthResponse>('/login', credentials);
     localStorage.setItem('token', response.data.token);
     return response.data;
   } catch (error: unknown) {

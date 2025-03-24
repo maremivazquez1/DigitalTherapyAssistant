@@ -1,14 +1,13 @@
 // src/components/RegistrationFormRender.test.tsx
 import '@testing-library/jest-dom';
-import { describe, it, expect, vi, Mock, MockedFunction } from 'vitest';
+import { describe, it, expect, vi, Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import RegistrationForm from './RegistrationForm';
-import { register as mockRegister } from '../services/authService';
-
+import { register as mockRegister } from '../services/auth/authService';
 
 // Mock the authService to prevent actual API calls
-vi.mock('../services/authService', () => ({
+vi.mock('../services/auth/authService', () => ({
   register: vi.fn(),
 }));
 
@@ -49,18 +48,14 @@ describe('RegistrationForm - Render Tests', () => {
     // 6. Check Phone field (optional)
     const phoneInput = screen.getByLabelText(/Phone/i);
     expect(phoneInput).toBeInTheDocument();
-    // Not required by default, so no .toHaveAttribute('required') here
 
     // 7. Check Date of Birth field (optional)
     const dobInput = screen.getByLabelText(/Date of Birth/i);
     expect(dobInput).toBeInTheDocument();
-    // Also optional, so no required check
   });
 });
 
-
 // Required fields validation
-
 describe('RegistrationForm - Required Fields Enforcement', () => {
   it('does not submit if a required field is missing', () => {
     render(
@@ -68,9 +63,9 @@ describe('RegistrationForm - Required Fields Enforcement', () => {
         <RegistrationForm />
       </MemoryRouter>
     );
-    // For demonstration, let's fill out everything EXCEPT "last_name"
+    // Fill out everything EXCEPT "Last Name"
     fireEvent.change(screen.getByLabelText(/First Name/i), { target: { value: 'John' } });
-    // Omit last name
+    // Omit Last Name
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'john@example.com' } });
     fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'password123' } });
@@ -79,11 +74,8 @@ describe('RegistrationForm - Required Fields Enforcement', () => {
     const submitButton = screen.getByRole('button', { name: /Register/i });
     fireEvent.click(submitButton);
 
-    // Because "last_name" is required and empty, we expect the form not to call registerService
+    // Expect that registerService is not called when a required field is missing
     expect(mockRegister).not.toHaveBeenCalled();
-
-    // Optional: If you want to test the browser's native validation message, you'd need to
-    // check for it specifically, but typically that's outside the scope of unit tests.
   });
 });
 
@@ -103,16 +95,14 @@ describe('RegistrationForm - Email Field (HTML5 validation)', () => {
     fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'password123' } });
 
-    // Submit
+    // Submit the form
     const submitButton = screen.getByRole('button', { name: /Register/i });
     fireEvent.click(submitButton);
 
-    // Because HTML5 validation blocks submission if email is invalid,
-    // the registerService should not be called
+    // Because HTML5 validation should block submission, registerService should not be called
     expect(mockRegister).not.toHaveBeenCalled();
   });
 });
-
 
 // Password mismatch handling
 describe('RegistrationForm - Password Mismatch', () => {
@@ -123,30 +113,29 @@ describe('RegistrationForm - Password Mismatch', () => {
       </MemoryRouter>
     );
 
-    // Fill out all required fields except for matching passwords
+    // Fill out fields with mismatching passwords
     fireEvent.change(screen.getByLabelText(/First Name/i), { target: { value: 'John' } });
     fireEvent.change(screen.getByLabelText(/Last Name/i), { target: { value: 'Doe' } });
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'john@example.com' } });
     fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'differentPass' } });
 
-    // Optionally fill out phone & date_of_birth if needed
+    // Optionally fill out phone & date of birth
     fireEvent.change(screen.getByLabelText(/Phone/i), { target: { value: '1234567890' } });
     fireEvent.change(screen.getByLabelText(/Date of Birth/i), { target: { value: '1990-01-01' } });
 
     // Submit the form
     fireEvent.click(screen.getByRole('button', { name: /Register/i }));
 
-    // Wait for the error message to appear
+    // Wait for the error message
     await waitFor(() => {
       expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
     });
 
-    // Ensure registerService was NOT called
+    // Ensure registerService was not called
     expect(mockRegister).not.toHaveBeenCalled();
   });
 });
-
 
 // Successful submission
 describe('RegistrationForm - Successful Submission', () => {
@@ -170,7 +159,7 @@ describe('RegistrationForm - Successful Submission', () => {
     fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'password123' } });
 
-    // (Optional) Fill out phone & date_of_birth if you want them tested
+    // (Optional) Fill out phone & date of birth
     fireEvent.change(screen.getByLabelText(/Phone/i), { target: { value: '1234567890' } });
     fireEvent.change(screen.getByLabelText(/Date of Birth/i), { target: { value: '1990-01-01' } });
 
@@ -182,15 +171,14 @@ describe('RegistrationForm - Successful Submission', () => {
       expect(screen.getByText(/Registration successful!/i)).toBeInTheDocument();
     });
 
-    // Verify registerService was called with the correct payload
+    // Verify registerService was called with the correct payload (camelCase, without confirmPassword)
     expect(mockRegister).toHaveBeenCalledWith({
-      first_name: 'John',
-      last_name: 'Doe',
+      firstName: 'John',
+      lastName: 'Doe',
       email: 'john@example.com',
       password: 'password123',
-      confirm_password: 'password123',
       phone: '1234567890',
-      date_of_birth: '1990-01-01',
+      dateOfBirth: '1990-01-01',
     });
   });
 });
@@ -217,17 +205,16 @@ describe('RegistrationForm - Server Error Response', () => {
     fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/Confirm Password/i), { target: { value: 'password123' } });
 
-    // (Optional) Fill out phone & date_of_birth
+    // (Optional) Fill out phone & date of birth
     fireEvent.change(screen.getByLabelText(/Phone/i), { target: { value: '5551234567' } });
     fireEvent.change(screen.getByLabelText(/Date of Birth/i), { target: { value: '1995-05-05' } });
 
-    // Submit
+    // Submit the form
     fireEvent.click(screen.getByRole('button', { name: /Register/i }));
 
-    // Wait for the error message from the server to appear
+    // Wait for the error message from the server
     await waitFor(() => {
       expect(screen.getByText(/Email already in use/i)).toBeInTheDocument();
     });
   });
 });
-
