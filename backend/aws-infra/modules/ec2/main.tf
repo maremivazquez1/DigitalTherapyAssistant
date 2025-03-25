@@ -1,8 +1,31 @@
-resource "aws_instance" "springboot_backend" {
-  ami           = var.ami
-  instance_type = var.instance_type
-  key_name      = var.key_name
+resource "aws_security_group" "ec2_sg" {
+  name        = "ec2_sg"
+  description = "Security group for EC2 instance"
+  vpc_id      = var.vpc_id
 
+  # Allow SSH for management (adjust as needed)
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow all outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_instance" "springboot_backend" {
+  ami                     = var.ami
+  instance_type           = var.instance_type
+  key_name                = var.key_name
+  vpc_security_group_ids  = [aws_security_group.ec2_sg.id]
+  
   user_data = <<-EOF
     #!/bin/bash
     sudo su
@@ -36,3 +59,4 @@ resource "aws_instance" "springboot_backend" {
     Name = "SpringBootBackend"
   }
 }
+
