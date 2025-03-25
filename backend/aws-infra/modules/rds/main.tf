@@ -1,8 +1,3 @@
-variable "rds_exists" {
-  type    = bool
-  default = false
-}
-
 resource "aws_db_instance" "rds_instance" {
   count = var.rds_exists ? 0 : 1
 
