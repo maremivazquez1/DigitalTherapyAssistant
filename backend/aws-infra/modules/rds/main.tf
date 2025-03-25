@@ -1,9 +1,10 @@
-data "aws_db_instance" "existing" {
-  db_instance_identifier = "my-dta-db"
+variable "rds_exists" {
+  type    = bool
+  default = false
 }
 
 resource "aws_db_instance" "rds_instance" {
-  count = length(data.aws_db_instance.existing) > 0 ? 0 : 1
+  count = var.rds_exists ? 0 : 1
 
   identifier            = "my-dta-db"
   allocated_storage     = 20
