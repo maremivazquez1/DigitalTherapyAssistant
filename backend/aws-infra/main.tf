@@ -33,7 +33,7 @@ module "ec2" {
 }
 
 module "rds" {
-  source  = "./modules/rds"
-  db_name = var.db_name
+  source     = "./modules/rds"
+  db_name    = var.db_name
   rds_exists = var.rds_exists
 }
