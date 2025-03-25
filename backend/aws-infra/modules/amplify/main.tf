@@ -13,7 +13,7 @@ resource "aws_amplify_branch" "pipeline" {
   branch_name = "pipeline"
   stage       = "PRODUCTION"
 
-  enable_auto_build = true  # Automatically triggers redeploy on code changes
+  enable_auto_build = false  # don't deploy automatically
 
   environment_variables = {
     REACT_APP_API_URL = var.api_url
