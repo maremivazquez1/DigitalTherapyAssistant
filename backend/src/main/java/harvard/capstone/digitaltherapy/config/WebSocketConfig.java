@@ -35,12 +35,4 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 .setAllowedOrigins("*");
     }
 
-    @Bean
-    public ServletServerContainerFactoryBean createWebSocketContainer() {
-        ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
-        container.setMaxTextMessageBufferSize(8192);
-        container.setMaxBinaryMessageBufferSize(1024 * 1024); // 1MB
-        container.setMaxSessionIdleTimeout(15 * 60 * 1000L); // 15 minutes
-        return container;
-    }
 }
