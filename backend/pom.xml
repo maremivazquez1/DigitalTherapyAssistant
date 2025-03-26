@@ -90,6 +90,21 @@
 			<artifactId>spring-boot-starter-websocket</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-polly</artifactId> 
+			<version>1.12.123</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-transcribe</artifactId>
+			<version>1.12.123</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-s3</artifactId>
+			<version>1.12.197</version>
+		</dependency>
+		<dependency>
 			<groupId>software.amazon.awssdk</groupId>
 			<artifactId>bedrockruntime</artifactId>
 		</dependency>
@@ -111,16 +126,6 @@
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-text</artifactId>
 			<version>1.12.0</version>
-		</dependency>
-		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-polly</artifactId>
-			<version>1.12.123</version>
-		</dependency>
-		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-transcribe</artifactId>
-			<version>1.12.123</version>
 		</dependency>
 	</dependencies>
 
