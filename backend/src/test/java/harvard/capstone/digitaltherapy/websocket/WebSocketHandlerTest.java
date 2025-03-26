@@ -1,7 +1,7 @@
 package harvard.capstone.digitaltherapy.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import harvard.capstone.digitaltherapy.service.BedrockService;
+import harvard.capstone.digitaltherapy.aws.service.BedrockService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

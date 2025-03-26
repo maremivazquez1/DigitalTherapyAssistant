@@ -1,6 +1,6 @@
 package harvard.capstone.digitaltherapy.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import harvard.capstone.digitaltherapy.aws.service.BedrockService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
@@ -9,7 +9,6 @@ import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest;
 import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelResponse;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 

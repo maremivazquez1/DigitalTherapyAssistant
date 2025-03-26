@@ -10,7 +10,6 @@ package harvard.capstone.digitaltherapy.websocket;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +18,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-import harvard.capstone.digitaltherapy.service.BedrockService;
+import harvard.capstone.digitaltherapy.aws.service.BedrockService;
 
 import java.io.IOException;
 import java.util.ArrayList;
