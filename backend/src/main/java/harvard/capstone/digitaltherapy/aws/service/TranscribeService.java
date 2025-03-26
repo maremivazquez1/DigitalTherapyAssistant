@@ -1,0 +1,89 @@
+package harvard.capstone.digitaltherapy.aws.service;
+
+import com.amazonaws.services.transcribe.AmazonTranscribe;
+import com.amazonaws.services.transcribe.model.StartTranscriptionJobRequest;
+import com.amazonaws.services.transcribe.model.StartTranscriptionJobResult;
+import com.amazonaws.services.transcribe.model.DeleteTranscriptionJobRequest;
+import com.amazonaws.services.transcribe.model.TranscriptionJob;
+import com.amazonaws.services.transcribe.model.Media;
+import com.amazonaws.services.transcribe.model.GetTranscriptionJobRequest;
+import com.amazonaws.services.transcribe.model.GetTranscriptionJobResult;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class TranscribeService {
+
+    @Autowired
+    private AmazonTranscribe amazonTranscribe;
+
+    public String startTranscriptionJob(String mediaUri, String jobName) {
+        // Check if a transcription job already exists with the given jobName
+        GetTranscriptionJobRequest getRequest = new GetTranscriptionJobRequest().withTranscriptionJobName(jobName);
+        try {
+            // Check the status of the existing transcription job
+            GetTranscriptionJobResult result = amazonTranscribe.getTranscriptionJob(getRequest);
+            TranscriptionJob existingJob = result.getTranscriptionJob();
+    
+            // If the job is in "COMPLETED" or "FAILED" state, delete the existing job results
+            if ("COMPLETED".equals(existingJob.getTranscriptionJobStatus()) || 
+                "FAILED".equals(existingJob.getTranscriptionJobStatus())) {
+                deleteTranscriptionJob(jobName); // Delete existing job results
+            }
+        } catch (Exception e) {
+            // Job not found, continue to create a new job
+            // Do not throw any exceptions
+        }
+    
+        // Create request object for starting the job
+        StartTranscriptionJobRequest request = new StartTranscriptionJobRequest()
+                .withTranscriptionJobName(jobName)
+                .withLanguageCode("en-US")
+                .withMedia(new Media().withMediaFileUri(mediaUri))
+                .withOutputBucketName("dta-root");
+    
+        // Start the transcription job
+        StartTranscriptionJobResult result = amazonTranscribe.startTranscriptionJob(request);
+        TranscriptionJob job = result.getTranscriptionJob();
+    
+        // Wait for the job to complete
+        while (!job.getTranscriptionJobStatus().equals("COMPLETED") && 
+               !job.getTranscriptionJobStatus().equals("FAILED")) {
+            try {
+                // Sleep for a short interval before checking the status again
+                Thread.sleep(5000);  // Wait for 5 seconds
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                return "Job interrupted";
+            }
+    
+            // Create a request to fetch the current status of the transcription job
+            getRequest = new GetTranscriptionJobRequest()
+                    .withTranscriptionJobName(jobName);
+    
+            // Retrieve the updated job status
+            job = amazonTranscribe.getTranscriptionJob(getRequest).getTranscriptionJob();
+        }
+    
+        // Return the job status after the loop finishes
+        return job.getTranscriptionJobStatus();
+    }     
+
+    // Method to delete the transcription job if it's completed or failed
+    public void deleteTranscriptionJob(String jobName) {
+        // Create the delete request for the transcription job
+        DeleteTranscriptionJobRequest deleteRequest = new DeleteTranscriptionJobRequest()
+                .withTranscriptionJobName(jobName);
+
+        // Delete the transcription job
+        try {
+            // Delete the transcription job and get the result
+            amazonTranscribe.deleteTranscriptionJob(deleteRequest);
+            System.out.println("Transcription job " + jobName + " deleted successfully.");
+        } catch (Exception e) {
+            // Handle any errors that may occur when deleting the job
+            System.out.println("Failed to delete transcription job " + jobName + ": " + e.getMessage());
+        }
+    }
+}
