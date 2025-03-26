@@ -1,4 +1,4 @@
-package harvard.capstone.digitaltherapy.configs;
+package harvard.capstone.digitaltherapy.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
