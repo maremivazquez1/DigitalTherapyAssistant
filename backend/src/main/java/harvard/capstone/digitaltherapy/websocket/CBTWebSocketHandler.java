@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import harvard.capstone.digitaltherapy.aws.service.TranscribeService;
 import harvard.capstone.digitaltherapy.cbt.service.CBTHelper;
-import harvard.capstone.digitaltherapy.service.BedrockService;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
