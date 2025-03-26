@@ -19,35 +19,34 @@ public class TranscribeService {
     private AmazonTranscribe amazonTranscribe;
 
     public String startTranscriptionJob(String mediaUri, String jobName) {
-
         // Check if a transcription job already exists with the given jobName
         GetTranscriptionJobRequest getRequest = new GetTranscriptionJobRequest().withTranscriptionJobName(jobName);
         try {
             // Check the status of the existing transcription job
             GetTranscriptionJobResult result = amazonTranscribe.getTranscriptionJob(getRequest);
             TranscriptionJob existingJob = result.getTranscriptionJob();
-
+    
             // If the job is in "COMPLETED" or "FAILED" state, delete the existing job results
             if ("COMPLETED".equals(existingJob.getTranscriptionJobStatus()) || 
                 "FAILED".equals(existingJob.getTranscriptionJobStatus())) {
                 deleteTranscriptionJob(jobName); // Delete existing job results
             }
         } catch (Exception e) {
-            // Handle if the job does not exist, no action needed
-            // Continue to create a new transcription job
+            // Job not found, continue to create a new job
+            // Do not throw any exceptions
         }
-
+    
         // Create request object for starting the job
         StartTranscriptionJobRequest request = new StartTranscriptionJobRequest()
                 .withTranscriptionJobName(jobName)
                 .withLanguageCode("en-US")
                 .withMedia(new Media().withMediaFileUri(mediaUri))
                 .withOutputBucketName("dta-root");
-
+    
         // Start the transcription job
         StartTranscriptionJobResult result = amazonTranscribe.startTranscriptionJob(request);
         TranscriptionJob job = result.getTranscriptionJob();
-
+    
         // Wait for the job to complete
         while (!job.getTranscriptionJobStatus().equals("COMPLETED") && 
                !job.getTranscriptionJobStatus().equals("FAILED")) {
@@ -58,21 +57,21 @@ public class TranscribeService {
                 e.printStackTrace();
                 return "Job interrupted";
             }
-
+    
             // Create a request to fetch the current status of the transcription job
             getRequest = new GetTranscriptionJobRequest()
                     .withTranscriptionJobName(jobName);
-
+    
             // Retrieve the updated job status
             job = amazonTranscribe.getTranscriptionJob(getRequest).getTranscriptionJob();
         }
-
+    
         // Return the job status after the loop finishes
         return job.getTranscriptionJobStatus();
-    }
+    }     
 
     // Method to delete the transcription job if it's completed or failed
-    private void deleteTranscriptionJob(String jobName) {
+    public void deleteTranscriptionJob(String jobName) {
         // Create the delete request for the transcription job
         DeleteTranscriptionJobRequest deleteRequest = new DeleteTranscriptionJobRequest()
                 .withTranscriptionJobName(jobName);
