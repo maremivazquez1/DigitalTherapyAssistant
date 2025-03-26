@@ -127,13 +127,6 @@
 			<artifactId>commons-text</artifactId>
 			<version>1.12.0</version>
 		</dependency>
-
-		<!-- AWS Test Refs -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
 	</dependencies>
 
 	<build>
