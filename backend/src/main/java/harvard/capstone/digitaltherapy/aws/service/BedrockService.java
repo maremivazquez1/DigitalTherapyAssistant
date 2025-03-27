@@ -1,10 +1,12 @@
 package harvard.capstone.digitaltherapy.aws.service;
 
 /**
- * Service class for interacting with the AWS Bedrock Nova Lite model.
- * Provides methods for generating text completions using a single prompt or
- * a sequence of messages with conversation history.
- * Handles formatting requests and parsing responses according to the Nova Lite API specification.
+ * BedrockService is responsible for interacting with the AWS Bedrock runtime,
+ * specifically the Nova Lite model. It handles formatting the request, sending
+ * it to Bedrock, and parsing the structured response to extract the generated text.
+ *
+ * This class is designed to be low-level and reusable. It does not handle any file I/O
+ * or orchestration logic — that responsibility is delegated to higher-level services.
  */
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -125,23 +127,6 @@ public class BedrockService {
         } catch (Exception e) {
             logger.error("Error invoking Bedrock model", e);
             throw new RuntimeException("Error invoking Bedrock model: " + e.getMessage(), e);
-        }
-    }
-
-    public String processFromS3(String inputTextS3Path, String outputTextS3Path) {
-        try {
-            logger.debug("Reading input text from S3: {}", inputTextS3Path);
-            String prompt = s3StorageService.readTextFromS3(inputTextS3Path);
-
-            String llmResponse = generateTextWithNovaLite(prompt);
-
-            logger.debug("Writing LLM response to S3: {}", outputTextS3Path);
-            s3StorageService.writeTextToS3(outputTextS3Path, llmResponse);
-
-            return outputTextS3Path;
-        } catch (Exception e) {
-            logger.error("Failed to process LLM text via S3 paths", e);
-            throw new RuntimeException("LLM processing failed: " + e.getMessage(), e);
         }
     }
 }
