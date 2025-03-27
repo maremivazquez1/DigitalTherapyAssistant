@@ -19,6 +19,13 @@ public class TranscribeService {
     private AmazonTranscribe amazonTranscribe;
 
     public String startTranscriptionJob(String mediaUri, String jobName) {
+        if (mediaUri == null || mediaUri.isEmpty()) {
+            throw new IllegalArgumentException("Invalid media URI");
+        }
+        if (jobName == null || jobName.isEmpty()) {
+            throw new IllegalArgumentException("Invalid job name");
+        }
+        
         // Check if a transcription job already exists with the given jobName
         GetTranscriptionJobRequest getRequest = new GetTranscriptionJobRequest().withTranscriptionJobName(jobName);
         try {
