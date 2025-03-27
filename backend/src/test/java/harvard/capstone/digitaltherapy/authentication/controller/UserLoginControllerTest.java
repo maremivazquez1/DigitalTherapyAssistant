@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
-//@ExtendWith(MockitoExtension.class)
+@ExtendWith(MockitoExtension.class)
 class UserLoginControllerTest {
 
     @Mock
@@ -39,7 +39,8 @@ class UserLoginControllerTest {
         invalidLoginRequest.setPassword("wrongPassword");
     }
 
- /*   @Test
+
+   @Test
     void loginUser_WithValidCredentials_ReturnsSuccessResponse() {
         // Arrange
         when(loginService.authenticateUser(validLoginRequest.getUsername(),
@@ -73,15 +74,17 @@ class UserLoginControllerTest {
         assertNotNull(response.getBody());
         assertEquals("error", response.getBody().getStatus());
         assertEquals("Invalid credentials", response.getBody().getMessage());
-    }*/
+    }
 
-    @Test
+
+ @Test
     void loginUser_WithNullRequest_ThrowsException() {
         // Act & Assert
         assertThrows(NullPointerException.class, () -> {
             userLoginController.loginUser(null);
         });
     }
+
 
 }
 
