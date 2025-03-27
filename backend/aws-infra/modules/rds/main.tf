@@ -29,7 +29,7 @@ resource "aws_db_instance" "rds_instance" {
   engine_version         = "8.0"
   instance_class         = "db.t3.micro"
   username               = "root"
-  password               = "Newuser@123"
+  password               = "Newuser123"
   db_name                = "my_dta_db"
   skip_final_snapshot    = true
 
