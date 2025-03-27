@@ -26,8 +26,11 @@ export const useWebSocket = (url: string, connect: boolean) => {
     socketRef.current = socket;
 
     socket.onopen = () => {
+      console.log(isConnected);
       console.log("[WebSocket] Connection established.");
+      console.log(isConnected);
       setIsConnected(true);
+      console.log(isConnected);
     };
 
     socket.onmessage = (event) => {
@@ -114,6 +117,21 @@ export const useWebSocket = (url: string, connect: boolean) => {
     } else {
       console.error("[useWebSocket] WebSocket is not connected.");
     }
+  };
+
+  const handleBinaryResponse = (arrayBuffer: ArrayBuffer) => {
+    console.log("[handleBinaryResponse] Received binary response, byteLength:", arrayBuffer.byteLength);
+  
+    // Convert the ArrayBuffer to a Blob.
+    // Adjust the MIME type if needed (here we assume audio/ogg with Opus codec).
+    const blob = new Blob([arrayBuffer], { type: "audio/ogg; codecs=opus" });
+    const url = URL.createObjectURL(blob);
+    
+    // Create an audio element and play it.
+    const audioElem = new Audio(url);
+    audioElem.play().catch(err => {
+      console.error("[handleBinaryResponse] Playback error:", err);
+    });
   };
 
   return { isConnected, messages, sendMessage };
