@@ -31,6 +31,12 @@ resource "aws_instance" "springboot_backend" {
     export DB_USER="${var.db_username}"
     export DB_PASSWORD="${var.db_password}"
 
+    # Wait for the RDS instance to be available
+    until nc -z $DB_HOST $DB_PORT; do
+      echo "Waiting for database connection on $DB_HOST:$DB_PORT..."
+      sleep 5
+    done
+
     # Build and run the Spring Boot application
     cd /home/ec2-user/app/backend
     mvn clean install
