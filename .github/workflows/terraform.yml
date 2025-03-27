@@ -114,7 +114,7 @@ jobs:
       # On push to "main", build or change infrastructure according to Terraform configuration files
       # Note: It is recommended to set up a required "strict" status check in your repository for "Terraform Cloud". See the documentation on "strict" required status checks for more information: https://help.github.com/en/github/administering-a-repository/types-of-required-status-checks
     - name: Terraform Apply
-      script:
+      run:
         - terraform -chdir=backend/aws-infra/ import aws_db_instance.my_rds module.rds.aws_db_instance.rds_instance || true 
         - terraform -chdir=backend/aws-infra/ plan -input=false
         - terraform -chdir=backend/aws-infra/ apply -var 'oauth_token=${{ secrets.OAUTH_TOKEN_GITHUB }}' -var="rds_exists=${{ env.RDS_EXISTS }}" -auto-approve -input=false
