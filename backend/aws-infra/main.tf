@@ -2,14 +2,38 @@ provider "aws" {
   region = "us-east-1"
 }
 
+resource "aws_security_group" "ec2_sg" {
+  name_prefix = "ec2_sg-"
+  description = "Security group for EC2 instance"
+  vpc_id      = var.vpc_id
+
+  # Allow SSH for management (adjust as needed)
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow all outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
 module "ec2" {
-  source        = "./modules/ec2"
-  ami           = data.aws_ami.latest_amazon_linux.id
-  instance_type = "t2.micro"
-  key_name      = var.key_name
-  repo_url      = var.repo_url
-  oauth_token   = var.oauth_token
-  vpc_id        = var.vpc_id
+  source                = "./modules/ec2"
+  ami                   = data.aws_ami.latest_amazon_linux.id
+  instance_type         = "t2.micro"
+  key_name              = var.key_name
+  repo_url              = var.repo_url
+  oauth_token           = var.oauth_token
+  vpc_id                = var.vpc_id
+  ec2_security_group_id = aws_security_group.ec2_sg.id
 
   # from rds
   db_endpoint = module.rds.rds_endpoint
@@ -23,7 +47,7 @@ module "rds" {
   db_name               = var.db_name
   rds_exists            = var.rds_exists
   vpc_id                = var.vpc_id
-  ec2_security_group_id = module.ec2.ec2_security_group_id
+  ec2_security_group_id = aws_security_group.ec2_sg.id
 }
 
 module "amplify" {
