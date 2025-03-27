@@ -35,7 +35,8 @@ public class TranscribeServiceTest {
         // Mock response for an existing and completed transcription job
         TranscriptionJob transcriptionJob = new TranscriptionJob()
                 .withTranscriptionJobName(jobName)
-                .withTranscriptionJobStatus(TranscriptionJobStatus.COMPLETED);
+                .withTranscriptionJobStatus(TranscriptionJobStatus.COMPLETED)
+                .withTranscript(new Transcript().withTranscriptFileUri("https://s3.amazonaws.com/dta-root/my-transcription-output.json"));
 
         // Create the GetTranscriptionJobResult and set the transcription job
         GetTranscriptionJobResult getResult = new GetTranscriptionJobResult()
@@ -53,9 +54,9 @@ public class TranscribeServiceTest {
         // Call the method under test with the mocked mediaUri and jobName
         String result = transcribeService.startTranscriptionJob(mediaUri, jobName);
 
-        // Verify that the correct transcription job was returned
+        // Verify that the correct URL is returned
         assertNotNull(result, "The result should not be null.");
-        assertEquals(TranscriptionJobStatus.COMPLETED.toString(), result, "The job status should be completed.");
+        assertEquals("https://s3.amazonaws.com/dta-root/my-transcription-output.json", result, "The result should be the correct URL.");
     }
 
     @Test
@@ -81,7 +82,8 @@ public class TranscribeServiceTest {
         // Simulate job status change after a short interval
         TranscriptionJob transcriptionJobCompleted = new TranscriptionJob()
                 .withTranscriptionJobName(jobName)
-                .withTranscriptionJobStatus(TranscriptionJobStatus.COMPLETED);
+                .withTranscriptionJobStatus(TranscriptionJobStatus.COMPLETED)
+                .withTranscript(new Transcript().withTranscriptFileUri("https://s3.amazonaws.com/dta-root/my-transcription-output.json"));
         when(amazonTranscribe.getTranscriptionJob(getRequest)).thenReturn(getTranscriptionJobResult);
         when(getTranscriptionJobResult.getTranscriptionJob()).thenReturn(transcriptionJobCompleted);
     
@@ -94,10 +96,8 @@ public class TranscribeServiceTest {
         // Call the method under test
         String result = transcribeService.startTranscriptionJob(mediaUri, jobName);
     
-        // Verify that the transcription job has been started
+        // Verify that the URL of the transcribed file is returned
         assertNotNull(result, "The result should not be null.");
-        assertEquals(TranscriptionJobStatus.COMPLETED.toString(), result, "The job status should be completed.");
+        assertEquals("https://s3.amazonaws.com/dta-root/my-transcription-output.json", result, "The result should be the correct URL.");
     }
-
 }
-
