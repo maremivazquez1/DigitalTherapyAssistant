@@ -7,9 +7,9 @@ output "rds_port" {
 }
 
 output "rds_username" {
-  value = length(aws_db_instance.rds_instance) > 0 ? aws_db_instance.rds_instance[0].username : root
+  value = length(aws_db_instance.rds_instance) > 0 ? aws_db_instance.rds_instance[0].username : "root"
 }
 
 output "rds_password" {
-  value = length(aws_db_instance.rds_instance) > 0 ? aws_db_instance.rds_instance[0].password : Newuser123
+  value = length(aws_db_instance.rds_instance) > 0 ? aws_db_instance.rds_instance[0].password : "Newuser123"
 }
