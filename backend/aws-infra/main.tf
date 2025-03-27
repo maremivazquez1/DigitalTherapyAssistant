@@ -10,6 +10,12 @@ module "ec2" {
   repo_url      = var.repo_url
   oauth_token   = var.oauth_token
   vpc_id        = var.vpc_id
+
+  # from rds
+  db_endpoint = module.rds.rds_endpoint
+  db_port     = module.rds.rds_port
+  db_username = module.rds.rds_username
+  db_password = module.rds.rds_password
 }
 
 module "rds" {

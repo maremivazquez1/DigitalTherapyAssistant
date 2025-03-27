@@ -47,11 +47,15 @@ resource "aws_instance" "springboot_backend" {
     echo 'export PATH=$M2_HOME/bin:$PATH' | sudo tee -a /etc/profile.d/maven.sh
     source /etc/profile.d/maven.sh
 
-    # Build the Spring Boot application
+    # export variables from rds for backend to use
+    export DB_HOST="${var.db_endpoint}"
+    export DB_PORT="${var.db_port}"
+    export DB_USER="${var.db_username}"
+    export DB_PASSWORD="${var.db_password}"
+
+    # Build and run the Spring Boot application
     cd /home/ec2-user/app/backend
     mvn clean install
-
-    # Run the application
     mvn spring-boot:run
   EOF
 
