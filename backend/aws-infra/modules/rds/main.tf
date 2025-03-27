@@ -34,6 +34,5 @@ resource "aws_db_instance" "rds_instance" {
   skip_final_snapshot    = true
 
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  db_subnet_group_name   = "my-dta-subnet-group"
 
 }
