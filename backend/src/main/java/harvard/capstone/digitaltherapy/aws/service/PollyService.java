@@ -27,6 +27,13 @@ public class PollyService {
     private static final String S3_BUCKET_FOLDER = "dta-speech-translation-storage/";
 
     public String convertTextToSpeech(String text, String fileName) {
+        if (text == null || text.isEmpty()) {
+            throw new IllegalArgumentException("Text input is empty");
+        }
+        if (fileName == null || fileName.isEmpty()) {
+            throw new IllegalArgumentException("Invalid file name");
+        }
+        
         try {
             // Create the request
             SynthesizeSpeechRequest synthesizeSpeechRequest = new SynthesizeSpeechRequest()
