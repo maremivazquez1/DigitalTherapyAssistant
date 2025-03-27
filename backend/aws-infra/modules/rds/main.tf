@@ -30,7 +30,7 @@ resource "aws_db_instance" "rds_instance" {
   instance_class         = "db.t3.micro"
   username               = "root"
   password               = "Newuser@123"
-  db_name                = "my-dta-db"
+  db_name                = "my_dta_db"
   skip_final_snapshot    = true
 
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
