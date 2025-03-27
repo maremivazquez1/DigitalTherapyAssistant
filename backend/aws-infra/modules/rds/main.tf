@@ -1,6 +1,6 @@
 # Create a security group for the RDS instance
 resource "aws_security_group" "rds_sg" {
-  name        = "rds_sg"
+  name_prefix = "rds_sg-"
   description = "Allow access to RDS from EC2"
   vpc_id      = var.vpc_id
 
