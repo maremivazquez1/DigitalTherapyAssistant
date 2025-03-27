@@ -61,7 +61,8 @@ public class S3Utils {
 
             if (response != null && response.sdkHttpResponse().isSuccessful()) {
                 logger.info("File successfully uploaded to S3: {}", keyName);
-                return "File uploaded to S3: " + keyName;
+                String s3Uri = String.format("s3://%s/%s", bucketName, keyName);
+                return s3Uri;
             } else {
                 throw new RuntimeException("Failed to upload file to S3");
             }
