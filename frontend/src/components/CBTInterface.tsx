@@ -112,14 +112,14 @@ const CBTInterface: React.FC = () => {
         const msg = JSON.parse(event.data);
         if (msg.type === "audio") {
             console.log("[handleServerMessage] Audio from server");
-          
+
             // 1) Stop old audio if it's still playing
             if (ttsAudioRef.current) {
               ttsAudioRef.current.pause();
               ttsAudioRef.current.src = "";   // or set currentTime = 0
               ttsAudioRef.current = null;
             }
-          
+
             // 2) Insert the new chat bubble
             const aiMsg: ChatMessage = {
               id: Date.now(),
@@ -129,7 +129,7 @@ const CBTInterface: React.FC = () => {
               timestamp: new Date(),
             };
             setChatMessages((prev) => [...prev, aiMsg]);
-          
+
             // 3) Create & play the new audio
             if (msg.audio) {
               const audioElem = new Audio(msg.audio);
@@ -147,7 +147,7 @@ const CBTInterface: React.FC = () => {
         console.error("[handleServerMessage] Error parsing server msg:", err);
       }
     };
-  
+
     if (socketRef.current) {
       console.log("[useEffect] Attaching onmessage to socketRef.current");
       socketRef.current.onmessage = handleServerMessage;
@@ -181,7 +181,7 @@ const CBTInterface: React.FC = () => {
 
       console.log("[startSession] Audio & video tracks acquired.");
 
-      
+
       // Use Hark
       const speechEvents = hark(audioOnlyStream, {
         interval: 50,   // how often to check volume
@@ -191,12 +191,12 @@ const CBTInterface: React.FC = () => {
       speechEvents.on("speaking", () => {
         console.log("[Hark] speaking event => user is interrupting");
         setIsSpeaking(true);
-      
+
         // Barge-in logic: pause the TTS audio
         if (ttsAudioRef.current) {
           ttsAudioRef.current.pause();
         }
-      
+
       });
 
       // Immediately finalize speech on "stopped_speaking"
@@ -299,7 +299,7 @@ const CBTInterface: React.FC = () => {
     if (videoRef.current) {
         console.log("[stopSession] Clearing camera box...");
         videoRef.current.pause();
-        videoRef.current.srcObject = null; 
+        videoRef.current.srcObject = null;
     }
 
     // 5) Stop all tracks in the combined stream
@@ -330,7 +330,7 @@ const CBTInterface: React.FC = () => {
   const toggleMic = () => {
     console.log("[toggleMic] toggling mic");
     if (!audioRecorderRef.current) return;
-  
+
     const track = combinedStreamRef.current?.getAudioTracks()[0];
     if (track) {
       track.enabled = !track.enabled; // flip track.enabled
@@ -343,7 +343,7 @@ const CBTInterface: React.FC = () => {
   const handleCamClick = () => {
     console.log("[handleCamClick] Toggling camera");
     if (!combinedStreamRef.current) return; // If there's no combined stream, do nothing
-  
+
     // Get the video track
     const videoTrack = combinedStreamRef.current.getVideoTracks()[0];
     if (videoTrack) {
@@ -458,3 +458,21 @@ const CBTInterface: React.FC = () => {
 };
 
 export default CBTInterface;
+
+/*testing the websocket */
+
+// import React from 'react';
+// import { useCBTWebSocket } from '../services/useCBTWebSocket';
+//
+// const CBTInterface = () => {
+//   useCBTWebSocket(); // Hook initializes on mount
+//
+//   return (
+//       <div>
+//         <h1>CBT Interface</h1>
+//         <p>WebSocket is connecting…</p>
+//       </div>
+//   );
+// };
+//
+// export default CBTInterface;
