@@ -39,4 +39,5 @@ public class WebSocketConfig implements WebSocketConfigurer {
         container.setMaxSessionIdleTimeout(15 * 60 * 1000L); // 15 minutes
         return container;
     }
+
 }

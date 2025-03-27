@@ -207,10 +207,11 @@ public class CBTWebSocketHandler extends TextWebSocketHandler {
 
             // Process the audio using existing functionality
             File convertedFile = cbtHelper.convertMultiPartToBinaryFile(multipartFile);
-            String keyName = multipartFile.getOriginalFilename();
+            String keyName = requestId + multipartFile.getOriginalFilename();
 
             // Upload to S3
             String response = s3Service.uploadFile(convertedFile.getAbsolutePath(), keyName);
+
             convertedFile.delete(); // Cleanup temp file
 
             // Download processed file
@@ -293,10 +294,6 @@ public class CBTWebSocketHandler extends TextWebSocketHandler {
     private String convertFileToBase64(File file) throws IOException {
         byte[] fileContent = Files.readAllBytes(file.toPath());
         return Base64.getEncoder().encodeToString(fileContent);
-    }
-
-    private void handleTextOnlyMessage(WebSocketSession session, JsonNode requestJson, String requestId) {
-        // Your text message handling code here
     }
 
     private void sendErrorMessage(WebSocketSession session, String message, int code, String requestId) throws IOException {
