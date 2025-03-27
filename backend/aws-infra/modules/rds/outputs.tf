@@ -1,15 +1,15 @@
 output "rds_endpoint" {
-  value = length(aws_db_instance.rds_instance) > 0 ? aws_db_instance.rds_instance[0].endpoint : null
+  value = aws_db_instance.rds_instance.endpoint 
 }
 
 output "rds_port" {
-  value = length(aws_db_instance.rds_instance) > 0 ? aws_db_instance.rds_instance[0].port : null
+  value = aws_db_instance.rds_instance.port 
 }
 
 output "rds_username" {
-  value = length(aws_db_instance.rds_instance) > 0 ? aws_db_instance.rds_instance[0].username : "root"
+  value = aws_db_instance.rds_instance.username
 }
 
 output "rds_password" {
-  value = length(aws_db_instance.rds_instance) > 0 ? aws_db_instance.rds_instance[0].password : "Newuser123"
+  value = aws_db_instance.rds_instance.password
 }

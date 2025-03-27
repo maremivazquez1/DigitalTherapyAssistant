@@ -21,7 +21,6 @@ resource "aws_security_group" "rds_sg" {
 
 # Create the RDS instance and attach the security group
 resource "aws_db_instance" "rds_instance" {
-  count                  = var.rds_exists ? 0 : 1
   identifier             = "my-dta-db"
   allocated_storage      = 20
   storage_type           = "gp2"

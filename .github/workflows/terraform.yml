@@ -67,6 +67,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # Restore cached Terraform plugins
+    - name: Restore Terraform cache
+      uses: actions/cache@v3
+      with:
+        path: backend/aws-infra/.terraform
+        key: ${{ runner.os }}-terraform-${{ hashFiles('backend/aws-infra/*.tf') }}
+
     # Install the latest version of Terraform CLI
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
@@ -102,7 +109,6 @@ jobs:
         fi
 
     - name: Import Existing RDS (If Exists)
-      if: env.RDS_EXISTS == 'true'
       run: terraform -chdir=backend/aws-infra/ import aws_db_instance.my_rds module.rds.aws_db_instance.rds_instance || true
 
     # Generates an execution plan for Terraform
