@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import therapyRoom from "../assets/therapy-room-1.svg";
 import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash } from "react-icons/fa";
 import hark from "hark";
-import testWav from "../assets/harvard.wav";
 import { useWebSocket, WebSocketMessage } from "../hooks/useWebSocket";
 
 interface ChatMessage {
@@ -12,8 +11,6 @@ interface ChatMessage {
   audioUrl?: string;
   timestamp: Date;
 }
-
-const MOCK_AUDIO = testWav;
 
 const CBTInterface: React.FC = () => {
   // --------------------- STATE ---------------------
@@ -38,6 +35,7 @@ const CBTInterface: React.FC = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // --------------------- USE WEBSOCKET HOOK ---------------------
   // The connection will be established when sessionActive becomes true.
@@ -136,8 +134,9 @@ const CBTInterface: React.FC = () => {
           return;
         }
         if (e.data.size > 0) {
-          console.log("[audioRecorder] Sending audio chunk to server...");
-          sendMessage(e.data);
+          console.log("[audioRecorder] Buffering audio chunk...");
+          // Store the chunk in the buffer for the current utterance.
+          audioChunksRef.current.push(e.data);
         }
       };
       audioRecorder.start(500);
@@ -145,13 +144,13 @@ const CBTInterface: React.FC = () => {
       // Video recorder for sending video chunks via WebSocket
       const videoRecorder = new MediaRecorder(videoOnlyStream);
       videoRecorderRef.current = videoRecorder;
-      videoRecorder.ondataavailable = (e) => {
+      /* videoRecorder.ondataavailable = (e) => {
         console.log(`[videoRecorder] chunk size: ${e.data.size}, type: ${e.data.type}`);
         if (e.data.size > 0) {
           console.log("[videoRecorder] Sending video chunk to server...");
           sendMessage(e.data);
         }
-      };
+      }; */
       videoRecorder.start(500);
 
       console.log("[startSession] Recorders started.");
@@ -171,6 +170,8 @@ const CBTInterface: React.FC = () => {
   // --------------------- FINALIZE USER SPEECH ---------------------
   const finalizeUserSpeech = () => {
     console.log("[finalizeUserSpeech] Finalizing user speech.");
+  
+    // Create and display the user chat bubble for this utterance.
     const userMsg: ChatMessage = {
       id: Date.now(),
       sender: "User",
@@ -178,10 +179,19 @@ const CBTInterface: React.FC = () => {
       timestamp: new Date(),
     };
     setChatMessages((prev) => [...prev, userMsg]);
-    // Optionally, you could signal the server to trigger an AI response here.
-
-    // Send an "end-of-speech" message to the server to trigger the response
-    sendMessage(JSON.stringify({ type: "end-of-speech" }));
+  
+    // Combine the buffered chunks into a single Blob.
+    // The MIME type should match the one produced by MediaRecorder.
+    const completeAudioBlob = new Blob(audioChunksRef.current, { type: "audio/ogg; codecs=opus" });
+  
+    // Clear the buffer for the next utterance.
+    audioChunksRef.current = [];
+  
+    // Send the complete audio file as one binary message.
+    sendMessage(completeAudioBlob);
+  
+    // Optionally, you can also send an "end-of-speech" text message if your backend expects it:
+    // sendMessage(JSON.stringify({ type: "end-of-speech" }));
   };
 
   // --------------------- STOP SESSION ---------------------
