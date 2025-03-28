@@ -15,6 +15,14 @@ resource "aws_security_group" "ec2_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Allow HTTP traffic on port 8080
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   # Allow all outbound traffic
   egress {
     from_port   = 0
@@ -54,7 +62,7 @@ module "amplify" {
   source      = "./modules/amplify"
   repo_url    = var.repo_url
   oauth_token = var.oauth_token
-  api_url     = "http://${module.ec2.api_url}:8080"
+  api_url     = "https://${module.ec2.api_url}:8080"
 }
 
 data "aws_ami" "latest_amazon_linux" {
