@@ -19,11 +19,11 @@ resource "aws_amplify_app" "frontend" {
     status = "200"
   }
 
-  enable_auto_build = true  # deploy automatically
 }
 
 resource "aws_amplify_branch" "pipeline" {
   app_id      = aws_amplify_app.frontend.id
   branch_name = "pipeline"
   stage       = "PRODUCTION"
+  enable_auto_build = true  # deploy automatically
 }
