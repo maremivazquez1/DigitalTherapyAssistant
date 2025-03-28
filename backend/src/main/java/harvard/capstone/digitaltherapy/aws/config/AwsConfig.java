@@ -3,6 +3,7 @@ package harvard.capstone.digitaltherapy.aws.config;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.polly.AmazonPolly;
 import com.amazonaws.services.polly.AmazonPollyClient;
@@ -18,27 +19,24 @@ public class AwsConfig {
 
     @Bean
     public AmazonPolly amazonPolly() {
-        AWSCredentials credentials = new BasicAWSCredentials("AKIAXOFMNMSEUS4FV5XU", "0ZkJuDrMXSz/CkStynIPUb6pJSxbIDWPVU2rPF4u");
         return AmazonPollyClient.builder()
-                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .withCredentials(DefaultAWSCredentialsProviderChain.getInstance())
                 .withRegion(Regions.US_EAST_1)
                 .build();
     }
 
     @Bean
     public AmazonTranscribe amazonTranscribe() {
-        AWSCredentials credentials = new BasicAWSCredentials("AKIAXOFMNMSEUS4FV5XU", "0ZkJuDrMXSz/CkStynIPUb6pJSxbIDWPVU2rPF4u");
         return AmazonTranscribeClient.builder()
-                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .withCredentials(DefaultAWSCredentialsProviderChain.getInstance())
                 .withRegion(Regions.US_EAST_1)
                 .build();
     }
 
     @Bean
     public AmazonS3 amazonS3() {
-        AWSCredentials credentials = new BasicAWSCredentials("AKIAXOFMNMSEUS4FV5XU", "0ZkJuDrMXSz/CkStynIPUb6pJSxbIDWPVU2rPF4u");
         return AmazonS3Client.builder()
-                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .withCredentials(DefaultAWSCredentialsProviderChain.getInstance())
                 .withRegion(Regions.US_EAST_1)
                 .build();
     }
