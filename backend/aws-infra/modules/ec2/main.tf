@@ -9,6 +9,7 @@ resource "aws_instance" "springboot_backend" {
     sudo su
     sudo yum update -y
     sudo yum install java-17-amazon-corretto git maven -y
+    sudo yum install nc -y
     
     # Inject OAuth token into the repo URL
     REPO_URL=$(echo "${var.repo_url}" | sed "s|https://|https://${var.oauth_token}@|")
