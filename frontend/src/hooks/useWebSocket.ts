@@ -33,11 +33,31 @@ export const useWebSocket = (url: string, connect: boolean) => {
     socket.onmessage = (event) => {
       console.log("[useWebSocket] Raw message received:", event.data);
 
+
+
+
       // Process text messages
       if (typeof event.data === "string") {
         try {
-          const parsed: WebSocketMessage = JSON.parse(event.data);
+          let parsed: any = JSON.parse(event.data);
           console.log("[useWebSocket] Parsed text message:", parsed);
+
+          // AWS error
+          if (parsed.error && parsed.code === 500) {
+            console.warn("[useWebSocket] AWS Error detected:", parsed.error);
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "audio", // or just leave this out if not needed
+                text:
+                  "Sorry, something went wrong while processing your audio. Please try again later.",
+                audio: undefined,
+              },
+            ]);
+            return;
+          }
+
           setMessages((prev) => [...prev, parsed]);
         } catch (err) {
           console.error("[useWebSocket] Error parsing text message:", err);
@@ -64,11 +84,21 @@ export const useWebSocket = (url: string, connect: boolean) => {
 
     socket.onerror = (err) => {
       console.error("[WebSocket] Error:", err);
+      // Instead of a separate error message, add a chat message from Assistant.
+      setMessages((prev) => [
+        ...prev,
+        { type: "system", text: "Connection error occurred. Please check your connection.", audio: undefined },
+      ]);
     };
 
     socket.onclose = (event) => {
-      console.log("[useWebSocket] Connection closed. Code:", event.code, "Reason:", event.reason);
+      console.log("[WebSocket] Connection closed. Code:", event.code, "Reason:", event.reason);
       setIsConnected(false);
+      // Add a message from the Assistant to notify of the closed connection.
+      setMessages((prev) => [
+        ...prev,
+        { type: "system", text: "Connection closed. Please try reconnecting.", audio: undefined },
+      ]);
     };
 
     return () => {
