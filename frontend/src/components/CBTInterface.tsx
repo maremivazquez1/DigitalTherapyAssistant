@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import therapyRoom from "../assets/therapy-room-1.svg";
 import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash } from "react-icons/fa";
 import hark from "hark";
-import { useWebSocket, WebSocketMessage } from "../hooks/useWebSocket";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 interface ChatMessage {
   id: number;
@@ -25,7 +25,7 @@ const CBTInterface: React.FC = () => {
   const [sessionActive, setSessionActive] = useState(false);
   const [micMuted, setMicMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(true);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [, setIsSpeaking] = useState(false);
 
   // --------------------- REFS ---------------------
   const combinedStreamRef = useRef<MediaStream | null>(null);
@@ -39,7 +39,7 @@ const CBTInterface: React.FC = () => {
 
   // --------------------- USE WEBSOCKET HOOK ---------------------
   // The connection will be established when sessionActive becomes true.
-  const { isConnected, messages, sendMessage } = useWebSocket("ws://localhost:8080/ws/cbt", sessionActive);
+  const { messages, sendMessage } = useWebSocket("ws://localhost:8080/ws/cbt", sessionActive);
 
   // --------------------- EFFECT: PROCESS INCOMING MESSAGES ---------------------
   useEffect(() => {
