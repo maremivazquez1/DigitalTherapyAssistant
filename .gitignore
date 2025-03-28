@@ -1,6 +1,26 @@
 # Ignore IDE files
 .idea/
 .vscode/
+# IntelliJ IDEA
+*.iml
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# Visual Studio Code
+.vscode/*
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# JetBrains IDEs
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/shelf/
 
 # Logs
 logs/
@@ -25,6 +45,10 @@ pom.xml.versionsBackup
 dependency-reduced-pom.xml
 release.properties
 
+# Additional Maven-related files
+.mvn/
+target/
+
 # Environment variables
 .env
 .env.local
@@ -45,6 +69,32 @@ out/
 .cache
 coverage/
 
+# TypeScript
+*.tsbuildinfo
+
+# Process and lock files
+*.pid
+*.pid.lock
+
+# Optional: frontend E2E test output (add if used)
+# cypress/
+# playwright-report/
+
 # Miscellaneous
 *.swp        # Swap files from text editors like Vim
 *.swo
+
+# JUnit Test Output
+test-output/
+
+# Merge/backup/patch leftovers
+*.orig
+*.rej
+*.bak
+*.tmp
+*.temp
+
+# Local database files
+*.mv.db
+*.h2.db
+*.sqlite

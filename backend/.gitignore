@@ -12,10 +12,30 @@ pom.xml.versionsBackup
 dependency-reduced-pom.xml
 release.properties
 
+# Maven Wrapper
+.mvn/
+!/.mvn/wrapper/maven-wrapper.jar
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
 # Logs
 logs/
 *.log
 hs_err_pid*
+
+# Test Reports
+surefire-reports/
+jacoco.exec
+target/site/
+
+# OS and editor junk
+.DS_Store
+*.swp
+*.swo
+*.bak
 
 # Environment variables
 .env
@@ -25,3 +45,42 @@ hs_err_pid*
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
+
+# AWS credentials or config (ensure not hardcoded)
+*.aws/
+.aws/
+*.pem
+*.crt
+*.key
+*.der
+
+# Redis dump files
+dump.rdb
+
+# ElasticSearch logs or data
+elasticsearch/
+es-data/
+
+# S3 buckets or mock data
+s3/
+*.s3mock
+
+# LangChain4j or temp storage
+langchain-cache/
+
+# JUnit Test Output
+test-output/
+
+# IntelliJ build output (just in case)
+out/
+
+# Local database files
+*.mv.db
+*.h2.db
+*.sqlite
+
+# Temporary or OS-specific files
+*.tmp
+*.temp
+*.orig
+Thumbs.db
