@@ -4,6 +4,8 @@ resource "aws_instance" "springboot_backend" {
   key_name                = var.key_name
   vpc_security_group_ids  = [var.ec2_security_group_id]
   
+  associate_public_ip_address = true
+  
   user_data = <<-EOF
     #!/bin/bash
     sudo su
