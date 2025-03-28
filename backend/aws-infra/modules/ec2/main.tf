@@ -33,8 +33,8 @@ resource "aws_instance" "springboot_backend" {
     export DB_PASSWORD="${var.db_password}"
 
     # Wait for the RDS instance to be available
-    until nc -z $DB_HOST $DB_PORT; do
-      echo "Waiting for database connection on $DB_HOST:$DB_PORT..."
+    until nc -vz ${DB_HOST%:*} $DB_PORT; do
+      echo "Waiting for database connection on ${DB_HOST%:*}:$DB_PORT..."
       sleep 5
     done
 
