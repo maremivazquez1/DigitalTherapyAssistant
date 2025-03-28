@@ -6,6 +6,19 @@ resource "aws_amplify_app" "frontend" {
   environment_variables = {
     REACT_APP_API_URL = var.api_url
   }
+
+  custom_rule {
+    source = "/assets/<*>"
+    target = "/assets/<*>"
+    status = "200"
+  }
+
+  custom_rule {
+    source = "/<*>"
+    target = "/index.html"
+    status = "200"
+  }
+
 }
 
 resource "aws_amplify_branch" "pipeline" {
@@ -13,7 +26,7 @@ resource "aws_amplify_branch" "pipeline" {
   branch_name = "pipeline"
   stage       = "PRODUCTION"
 
-  enable_auto_build = false  # don't deploy automatically
+  enable_auto_build = true  # deploy automatically
 
   environment_variables = {
     REACT_APP_API_URL = var.api_url
