@@ -40,7 +40,7 @@ resource "aws_instance" "springboot_backend" {
     # Build and run the Spring Boot application
     cd /home/ec2-user/app/backend
     mvn clean install
-    mvn spring-boot:run
+    mvn spring-boot:run  -Dspring-boot.run.arguments="--spring.datasource.username=var.db_username --spring.datasource.url=jdbc:mysql://var.db_endpoint:var.db_port/my_dta_db --spring.datasource.password=var.db_password"
   EOF
 
   tags = {
