@@ -12,7 +12,7 @@ export const useWebSocket = (url: string, connect: boolean) => {
   const [messages, setMessages] = useState<WebSocketMessage[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
 
-
+  // Log any changes to connection status
   useEffect(() => {
     console.log("isConnected changed to:", isConnected);
   }, [isConnected]);
@@ -21,41 +21,44 @@ export const useWebSocket = (url: string, connect: boolean) => {
     console.log("[useWebSocket] Connecting to:", url);
     if (!connect) return;
     const socket = new WebSocket(url);
-    socket.binaryType = "arraybuffer"; // if you need to send/receive binary data
+    // Set binaryType to arraybuffer so binary messages are received as ArrayBuffer
+    socket.binaryType = "arraybuffer";
     socketRef.current = socket;
 
     socket.onopen = () => {
-      console.log(isConnected);
       console.log("[WebSocket] Connection established.");
-      console.log(isConnected);
       setIsConnected(true);
-      console.log(isConnected);
     };
 
     socket.onmessage = (event) => {
-      // Check if the received data is a string or binary data
+      console.log("[useWebSocket] Raw message received:", event.data);
+
+      // Process text messages
       if (typeof event.data === "string") {
-        console.log("[useWebSocket] Received text message:", event.data);
         try {
-          const msg: WebSocketMessage = JSON.parse(event.data);
-          setMessages((prev) => [...prev, msg]);
+          const parsed: WebSocketMessage = JSON.parse(event.data);
+          console.log("[useWebSocket] Parsed text message:", parsed);
+          setMessages((prev) => [...prev, parsed]);
         } catch (err) {
           console.error("[useWebSocket] Error parsing text message:", err);
         }
-      } else if (event.data instanceof ArrayBuffer) {
+      }
+
+      // Process binary messages
+      if (event.data instanceof ArrayBuffer) {
         console.log("[useWebSocket] Received binary data from server.");
-        // Convert the binary data (ArrayBuffer) into a Blob.
-        // Use the correct MIME type—if your backend processes to MP3, use "audio/mpeg".
+        // Convert the ArrayBuffer into a Blob using the MIME type your backend uses.
+        // Here we assume the backend converts to MP3, so we use "audio/mpeg".
         const blob = new Blob([event.data], { type: "audio/mpeg" });
-        // Create a URL for the Blob
         const audioUrl = URL.createObjectURL(blob);
-        // Create a message object that includes both text and the audio URL.
-        const msg: WebSocketMessage = {
+        console.log("[useWebSocket] Created audio URL:", audioUrl);
+        // Create a message with both text and audio.
+        const audioMsg: WebSocketMessage = {
           type: "audio",
-          text: "Processed audio response", // You can adjust this text as needed
+          text: "Processed audio response", // Default text; you may adjust as needed
           audio: audioUrl,
         };
-        setMessages((prev) => [...prev, msg]);
+        setMessages((prev) => [...prev, audioMsg]);
       }
     };
 
@@ -75,27 +78,12 @@ export const useWebSocket = (url: string, connect: boolean) => {
 
   const sendMessage = (data: any) => {
     console.log("[useWebSocket] sendMessage called with data:", data);
-    console.log("connection", isConnected);
-    if (socketRef.current && isConnected) {
+    // Directly check the socket's readyState instead of isConnected
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(data);
     } else {
       console.error("[useWebSocket] WebSocket is not connected.");
     }
-  };
-
-  const handleBinaryResponse = (arrayBuffer: ArrayBuffer) => {
-    console.log("[handleBinaryResponse] Received binary response, byteLength:", arrayBuffer.byteLength);
-  
-    // Convert the ArrayBuffer to a Blob.
-    // Adjust the MIME type if needed (here we assume audio/ogg with Opus codec).
-    const blob = new Blob([arrayBuffer], { type: "audio/ogg; codecs=opus" });
-    const url = URL.createObjectURL(blob);
-    
-    // Create an audio element and play it.
-    const audioElem = new Audio(url);
-    audioElem.play().catch(err => {
-      console.error("[handleBinaryResponse] Playback error:", err);
-    });
   };
 
   return { isConnected, messages, sendMessage };

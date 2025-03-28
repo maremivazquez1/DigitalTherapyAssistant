@@ -53,12 +53,12 @@ const CBTInterface: React.FC = () => {
           ttsAudioRef.current.src = "";
           ttsAudioRef.current = null;
         }
-        // Add AI response to chat
+        // Transform the minimal WebSocketMessage into a richer ChatMessage
         const aiMsg: ChatMessage = {
           id: Date.now(),
-          sender: "Assistant",
-          message: msg.text,
-          audioUrl: msg.audio,
+          sender: "Assistant",   // Add the sender here
+          message: msg.text,     // Use the text from the WebSocketMessage
+          audioUrl: msg.audio,   // Use the audio URL from the WebSocketMessage
           timestamp: new Date(),
         };
         setChatMessages((prev) => [...prev, aiMsg]);
