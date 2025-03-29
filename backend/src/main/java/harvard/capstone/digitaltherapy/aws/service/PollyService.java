@@ -83,7 +83,7 @@ public class PollyService {
      */
     private String downloadTextFromS3(String s3Url) throws IOException {
         // Extract the bucket and key from the S3 URL
-        String[] urlParts = s3Url.replace("https://", "").split("/");
+        String[] urlParts = s3Url.replace("s3://", "").split("/");
         String bucketName = urlParts[0];
         String key = String.join("/", urlParts).substring(bucketName.length() + 1); // Extract key
 
