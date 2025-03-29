@@ -25,7 +25,6 @@ const CBTInterface: React.FC = () => {
   const [sessionActive, setSessionActive] = useState(false);
   const [micMuted, setMicMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(true);
-  const [, setIsSpeaking] = useState(false);
 
   // --------------------- REFS ---------------------
   const combinedStreamRef = useRef<MediaStream | null>(null);
@@ -197,7 +196,7 @@ const CBTInterface: React.FC = () => {
     }
   };
 
-  // --------------------- FINALIZE USER SPEECH ---------------------
+/*   // --------------------- FINALIZE USER SPEECH ---------------------
   const finalizeUserSpeech = () => {
     console.log("[finalizeUserSpeech] Finalizing user speech.");
   
@@ -232,7 +231,7 @@ const CBTInterface: React.FC = () => {
   
     // (Optional) Send a JSON signal if your backend expects one
     // sendMessage(JSON.stringify({ type: "end-of-speech" }));
-  };
+  }; */
 
   // --------------------- STOP SESSION ---------------------
   const stopSession = () => {
