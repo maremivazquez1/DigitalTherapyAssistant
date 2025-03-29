@@ -70,7 +70,7 @@ data "aws_ami" "latest_amazon_linux" {
   owners      = ["amazon"]
   filter {
     name   = "name"
-    values = ["*al2023*-x86_64"]
+    values = ["al2023-ami-2023.6.20250317.2-kernel-6.1-x86_64"]
   }
   filter {
     name   = "virtualization-type"
