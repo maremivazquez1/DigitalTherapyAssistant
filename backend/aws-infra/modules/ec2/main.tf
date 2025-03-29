@@ -44,14 +44,13 @@ resource "aws_instance" "springboot_backend" {
 
     # build and copy over the frontend to run with backend
     cd /home/ec2-user/app/frontend
-    npm install
-    npm run build
-    cp dist/* ../backend/src/main/resources/static/ -r
+    git config --global --add safe.directory /home/ec2-user/app
+    git checkout pipeline
 
     # Build and run the Spring Boot application
     cd /home/ec2-user/app/backend
     mvn clean install
-    mvn spring-boot:run  -Dspring-boot.run.arguments="--spring.datasource.username=$DB_USER --spring.datasource.url=jdbc:mysql://$DB_HOST/my_dta_db --spring.datasource.password=$DB_PASSWORD"
+    mvn spring-boot:run  -Dspring-boot.run.arguments="--spring.datasource.username=$DB_USER --spring.datasource.url=jdbc:mysql://$DB_HOST/my_dta_db --spring.datasource.password=$DB_PASSWORD --allowed.origins=$ALLOWED_ORIGINS"
   EOF
 
   tags = {
