@@ -1,5 +1,4 @@
 import React from "react";
-import CBTSession from "../components/CBTSession";
 
 const CBTSessionPage: React.FC = () => {
   return (
@@ -7,7 +6,7 @@ const CBTSessionPage: React.FC = () => {
       <header className="bg-blue-500 text-white p-3">Header</header>
       <div className="grid grid-cols-12 gap-2 p-4">
         <main className="col-span-12 bg-gray-100 p-6">
-          <CBTSession />
+          
         </main>
       </div>
       <footer className="bg-gray-800 text-white p-3 text-center">Footer</footer>
