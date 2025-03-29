@@ -32,13 +32,16 @@ public class LLMProcessingService {
         String response = bedrockService.generateTextWithNovaLite(prompt);
         String outputPath = generateOutputPath(inputS3Path);
         s3Service.writeTextToS3(outputPath, response);
-        return outputPath;
+        String rootOutputPath ="s3://dta-root/"+ outputPath;
+        return rootOutputPath;
     }
 
     private String generateOutputPath(String inputPath) {
-        int dotIndex = inputPath.lastIndexOf('.');
+        String outputPath= inputPath.replace("s3://dta-root/", "");
+        int dotIndex = outputPath.lastIndexOf('.');
         if (dotIndex > 0) {
-            return inputPath.substring(0, dotIndex) + "-response.txt";
+            outputPath = outputPath.substring(0, dotIndex) + "-response.txt";
+            return outputPath;
         } else {
             return inputPath + "-response.txt";
         }
