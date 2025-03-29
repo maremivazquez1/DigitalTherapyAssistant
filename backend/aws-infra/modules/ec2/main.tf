@@ -9,9 +9,10 @@ resource "aws_instance" "springboot_backend" {
   user_data = <<-EOF
     #!/bin/bash
     sudo su
-    sudo yum update -y
-    sudo yum install java-17-amazon-corretto git maven -y
-    sudo yum install nc -y
+    sudo dnf update -y
+    sudo dnf install java-17-amazon-corretto git maven -y
+    sudo dnf install nc -y
+    sudo dnf install nodejs npm -y
     
     # Inject OAuth token into the repo URL
     REPO_URL=$(echo "${var.repo_url}" | sed "s|https://|https://${var.oauth_token}@|")
@@ -40,6 +41,12 @@ resource "aws_instance" "springboot_backend" {
       echo "Waiting for database connection on $host:$DB_PORT..."
       sleep 5
     done
+
+    # build and copy over the frontend to run with backend
+    cd /home/ec2-user/app/frontend
+    npm install
+    npm run build
+    cp dist/* ../backend/src/main/resources/static/ -r
 
     # Build and run the Spring Boot application
     cd /home/ec2-user/app/backend

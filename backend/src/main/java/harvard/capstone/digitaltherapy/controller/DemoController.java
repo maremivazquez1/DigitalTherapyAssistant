@@ -1,13 +1,14 @@
 package harvard.capstone.digitaltherapy.controller;
 
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 
-@RestController
+@Controller
 public class DemoController {
 
-    @GetMapping("/")
-    public String home() {
-        return "Spring Boot is running!";
+    // This pattern matches any path that doesn't contain a dot (.)
+    @GetMapping(value = "/**/{path:[^\\.]*}")
+    public String forward() {
+        return "forward:/index.html";
     }
 }
