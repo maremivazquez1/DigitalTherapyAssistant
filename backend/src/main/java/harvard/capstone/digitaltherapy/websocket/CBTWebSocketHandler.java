@@ -1,9 +1,11 @@
 
 package harvard.capstone.digitaltherapy.websocket;
 
+import com.amazonaws.services.transcribe.AmazonTranscribe;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import harvard.capstone.digitaltherapy.aws.service.TranscribeService;
 import harvard.capstone.digitaltherapy.cbt.service.CBTHelper;
 import harvard.capstone.digitaltherapy.service.BedrockService;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
@@ -39,6 +41,9 @@ public class CBTWebSocketHandler extends TextWebSocketHandler {
 
     // Store conversation history per session
     private final ConcurrentHashMap<String, List<Map<String, String>>> conversationHistory = new ConcurrentHashMap<>();
+
+    @Autowired
+    private TranscribeService transcribeService;
 
     @Autowired
     public CBTWebSocketHandler(ObjectMapper objectMapper, S3Utils s3Service, CBTHelper cbtHelper) {
@@ -172,6 +177,7 @@ public class CBTWebSocketHandler extends TextWebSocketHandler {
 
             // Upload to S3
             String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
+            String transcribedS3Path = transcribeService.startTranscriptionJob(response, sessionId);
             tempFile.delete(); // Cleanup temp file
 
             // Download processed file
