@@ -13,6 +13,8 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 @Service
 public class PollyService {
@@ -82,44 +84,38 @@ public class PollyService {
      * @throws IOException if there is an issue with reading the file
      */
     private String downloadTextFromS3(String s3Url) throws IOException {
-        // Extract the bucket and key from the S3 URL
+        // Extract bucket and key from S3 URL
         String[] urlParts = s3Url.replace("s3://", "").split("/");
         String bucketName = urlParts[0];
         String key = String.join("/", urlParts).substring(bucketName.length() + 1);
     
         // Retrieve the S3 object
         InputStream inputStream = amazonS3.getObject(new GetObjectRequest(bucketName, key)).getObjectContent();
-    
-        // Read the input stream and extract transcript
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        StringBuilder transcriptBuilder = new StringBuilder();
-        boolean isTranscriptSection = false;
+    
+        // Read full content
+        StringBuilder fileContent = new StringBuilder();
         String line;
-    
         while ((line = reader.readLine()) != null) {
-            line = line.trim();
+            fileContent.append(line).append("\n");
+        }
+        String fileText = fileContent.toString().trim();
     
-            // Detect the start of the transcript section
-            if (line.startsWith("**Transcript:**")) {
-                isTranscriptSection = true;
-                // Extract potential transcript from the same line
-                int firstQuote = line.indexOf('"');
-                int lastQuote = line.lastIndexOf('"');
-                if (firstQuote != -1 && lastQuote != -1 && firstQuote != lastQuote) {
-                    transcriptBuilder.append(line, firstQuote + 1, lastQuote);
-                }
-                continue;
-            }
+        // Debug: Print file content
+        System.out.println("Full File Content:\n" + fileText);
     
-            // Collect subsequent transcript lines until an empty line or new section
-            if (isTranscriptSection) {
-                if (line.isEmpty() || line.startsWith("###")) { 
-                    break; // Stop when a new section starts
-                }
-                transcriptBuilder.append(" ").append(line); // Append with space
-            }
+        // Detect transcript format
+        Pattern transcriptPattern = Pattern.compile("\\*\\*Transcript:\\*\\*\\s*\"([^\"]+)\"");
+        Matcher matcher = transcriptPattern.matcher(fileText);
+    
+        if (matcher.find()) {
+            String transcript = matcher.group(1);
+            System.out.println("Extracted Transcript: " + transcript);
+            return transcript; // Return extracted text
         }
     
-        return transcriptBuilder.toString().trim(); // Return cleaned transcript
-    }    
+        // If no transcript found, return the entire file text
+        System.out.println("No transcript found, returning full file.");
+        return fileText;
+    }        
 }
