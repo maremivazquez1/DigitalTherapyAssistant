@@ -85,19 +85,41 @@ public class PollyService {
         // Extract the bucket and key from the S3 URL
         String[] urlParts = s3Url.replace("s3://", "").split("/");
         String bucketName = urlParts[0];
-        String key = String.join("/", urlParts).substring(bucketName.length() + 1); // Extract key
-
+        String key = String.join("/", urlParts).substring(bucketName.length() + 1);
+    
         // Retrieve the S3 object
         InputStream inputStream = amazonS3.getObject(new GetObjectRequest(bucketName, key)).getObjectContent();
-
-        // Read the input stream into a String
+    
+        // Read the input stream and extract transcript
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        StringBuilder stringBuilder = new StringBuilder();
+        StringBuilder transcriptBuilder = new StringBuilder();
+        boolean isTranscriptSection = false;
         String line;
+    
         while ((line = reader.readLine()) != null) {
-            stringBuilder.append(line).append("\n");
+            line = line.trim();
+    
+            // Detect the start of the transcript section
+            if (line.startsWith("**Transcript:**")) {
+                isTranscriptSection = true;
+                // Extract potential transcript from the same line
+                int firstQuote = line.indexOf('"');
+                int lastQuote = line.lastIndexOf('"');
+                if (firstQuote != -1 && lastQuote != -1 && firstQuote != lastQuote) {
+                    transcriptBuilder.append(line, firstQuote + 1, lastQuote);
+                }
+                continue;
+            }
+    
+            // Collect subsequent transcript lines until an empty line or new section
+            if (isTranscriptSection) {
+                if (line.isEmpty() || line.startsWith("###")) { 
+                    break; // Stop when a new section starts
+                }
+                transcriptBuilder.append(" ").append(line); // Append with space
+            }
         }
-
-        return stringBuilder.toString().trim(); // Return the content of the text file
-    }
+    
+        return transcriptBuilder.toString().trim(); // Return cleaned transcript
+    }    
 }
