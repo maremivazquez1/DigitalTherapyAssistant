@@ -13,6 +13,8 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 @Service
 public class PollyService {
@@ -82,22 +84,38 @@ public class PollyService {
      * @throws IOException if there is an issue with reading the file
      */
     private String downloadTextFromS3(String s3Url) throws IOException {
-        // Extract the bucket and key from the S3 URL
+        // Extract bucket and key from S3 URL
         String[] urlParts = s3Url.replace("s3://", "").split("/");
         String bucketName = urlParts[0];
-        String key = String.join("/", urlParts).substring(bucketName.length() + 1); // Extract key
-
+        String key = String.join("/", urlParts).substring(bucketName.length() + 1);
+    
         // Retrieve the S3 object
         InputStream inputStream = amazonS3.getObject(new GetObjectRequest(bucketName, key)).getObjectContent();
-
-        // Read the input stream into a String
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        StringBuilder stringBuilder = new StringBuilder();
+    
+        // Read full content
+        StringBuilder fileContent = new StringBuilder();
         String line;
         while ((line = reader.readLine()) != null) {
-            stringBuilder.append(line).append("\n");
+            fileContent.append(line).append("\n");
         }
-
-        return stringBuilder.toString().trim(); // Return the content of the text file
-    }
+        String fileText = fileContent.toString().trim();
+    
+        // Debug: Print file content
+        System.out.println("Full File Content:\n" + fileText);
+    
+        // Detect transcript format
+        Pattern transcriptPattern = Pattern.compile("\\*\\*Transcript:\\*\\*\\s*\"([^\"]+)\"");
+        Matcher matcher = transcriptPattern.matcher(fileText);
+    
+        if (matcher.find()) {
+            String transcript = matcher.group(1);
+            System.out.println("Extracted Transcript: " + transcript);
+            return transcript; // Return extracted text
+        }
+    
+        // If no transcript found, return the entire file text
+        System.out.println("No transcript found, returning full file.");
+        return fileText;
+    }        
 }

@@ -15,7 +15,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -34,9 +38,10 @@ public class PollyServiceTest {
     private PollyService pollyService;
 
     @Test
-    public void testConvertTextToSpeech_Success() {
-        // Mock the S3 text file content
-        String textFromS3 = "Hello, Polly!";
+    public void testConvertTextToSpeech_Success() throws IOException {
+        // Load sample text from file
+        String filePath = "src/test/resources/transcript-text-sample-1.txt";
+        String textFromS3 = new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8);
 
         // Mock the downloadTextFromS3 method to return the mock text
         when(amazonS3.getObject(any(GetObjectRequest.class)))
