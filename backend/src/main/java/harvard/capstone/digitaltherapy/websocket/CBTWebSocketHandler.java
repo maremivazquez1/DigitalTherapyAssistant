@@ -134,7 +134,9 @@ public class CBTWebSocketHandler extends TextWebSocketHandler {
             // Upload to S3
             String uploadResponse = s3Service.uploadFile(tempFile.getAbsolutePath(), fileName);
             // Get processed content
-            ResponseEntity<StreamingResponseBody> processedResponse = cbtHelper.downloadTextFile(fileName);
+            String llmResponse = llmProcessingService.process(uploadResponse);
+            llmResponse=llmResponse.replace("s3://dta-root/", "");
+            ResponseEntity<StreamingResponseBody> processedResponse = cbtHelper.downloadTextFile(llmResponse);
             if (processedResponse.getStatusCode() == HttpStatus.OK && processedResponse.getBody() != null) {
                 // Convert StreamingResponseBody to String
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();

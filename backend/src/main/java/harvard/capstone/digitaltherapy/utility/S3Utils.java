@@ -23,7 +23,7 @@ import java.time.Duration;
 @Service
 public class S3Utils {
     private static final Logger logger = LoggerFactory.getLogger(S3Utils.class);
-    private final S3Client s3Client;
+    S3Client s3Client;
     private final String bucketName;
 
     public S3Utils(@Value("${aws.s3.bucketName}") String bucketName,
