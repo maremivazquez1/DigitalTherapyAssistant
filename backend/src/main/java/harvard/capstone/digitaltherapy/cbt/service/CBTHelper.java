@@ -11,9 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Base64;
 
@@ -51,23 +49,6 @@ public class CBTHelper {
             logger.error("Error downloading file: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-    }
-
-    public File convertMultiPartToTextFile(MultipartFile file) throws IOException {
-        File convFile = Files.createTempFile("upload_", "_temp").toFile();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
-             BufferedWriter writer = new BufferedWriter(
-                     new FileWriter(convFile, StandardCharsets.UTF_8))) {
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                writer.write(line);
-                writer.newLine();
-            }
-            writer.flush();
-        }
-        return convFile;
     }
 
     public File convertMultiPartToBinaryFile(MultipartFile file) throws IOException {
