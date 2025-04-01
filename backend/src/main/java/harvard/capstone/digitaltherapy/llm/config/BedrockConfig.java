@@ -5,7 +5,7 @@
  *
  * Credentials are automatically sourced from the AWS default credentials provider chain.
  */
-package harvard.capstone.digitaltherapy.config;
+package harvard.capstone.digitaltherapy.llm.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,7 +14,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 
 @Configuration
-public class AwsBedrockConfig {
+public class BedrockConfig {
 
     @Value("${aws.region:us-east-1}")
     private String region;
