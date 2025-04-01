@@ -11,10 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Base64;
 
 @Service
 public class CBTHelper {
@@ -52,28 +51,69 @@ public class CBTHelper {
         }
     }
 
-    public File convertMultiPartToTextFile(MultipartFile file) throws IOException {
-        File convFile = Files.createTempFile("upload_", "_temp").toFile();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
-             BufferedWriter writer = new BufferedWriter(
-                     new FileWriter(convFile, StandardCharsets.UTF_8))) {
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                writer.write(line);
-                writer.newLine();
-            }
-            writer.flush();
-        }
-        return convFile;
-    }
-
     public File convertMultiPartToBinaryFile(MultipartFile file) throws IOException {
         File convFile = new File(file.getOriginalFilename());
         try (FileOutputStream fos = new FileOutputStream(convFile)) {
             fos.write(file.getBytes());
         }
         return convFile;
+    }
+
+
+    public MultipartFile createMultipartFileFromBase64(String base64Audio, String fileName) {
+        // Remove the data:audio/mp3;base64, prefix if present
+        String base64Data = base64Audio.contains(",") ?
+                base64Audio.substring(base64Audio.indexOf(",") + 1) : base64Audio;
+
+        byte[] audioData = Base64.getDecoder().decode(base64Data);
+
+        return new MultipartFile() {
+            @Override
+            public String getName() {
+                return "file";
+            }
+
+            @Override
+            public String getOriginalFilename() {
+                return fileName;
+            }
+
+            @Override
+            public String getContentType() {
+                return "audio/mpeg";
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return audioData.length == 0;
+            }
+
+            @Override
+            public long getSize() {
+                return audioData.length;
+            }
+
+            @Override
+            public byte[] getBytes() throws IOException {
+                return audioData;
+            }
+
+            @Override
+            public InputStream getInputStream() throws IOException {
+                return new ByteArrayInputStream(audioData);
+            }
+
+            @Override
+            public void transferTo(File dest) throws IOException, IllegalStateException {
+                try (FileOutputStream fos = new FileOutputStream(dest)) {
+                    fos.write(audioData);
+                }
+            }
+        };
+    }
+
+    public String convertFileToBase64(File file) throws IOException {
+        byte[] fileContent = Files.readAllBytes(file.toPath());
+        return Base64.getEncoder().encodeToString(fileContent);
     }
 }
