@@ -49,8 +49,34 @@ public class BedrockService {
         this.objectMapper = new ObjectMapper();
     }
 
+    private String parsePromptJSON(String jsonString){
+        try{
+            // Parse Transcript JSON from original prompt data string
+            JsonNode rootNode = objectMapper.readTree(jsonString);
+            if (rootNode != null && rootNode.isObject()){
+                JsonNode resultsNode = rootNode.path("results");
+                if (resultsNode != null && resultsNode.isObject()) { // Ensure "results" exists and is an object
+                    JsonNode transcriptsNode = resultsNode.path("transcripts");
+                    if (transcriptsNode != null && transcriptsNode.isArray() && transcriptsNode.size() > 0) { // Ensure "transcripts" is an array with elements
+                        JsonNode transcriptNode = transcriptsNode.get(0).path("transcript");
+                        if (transcriptNode != null && transcriptNode.isTextual()) { // Ensure "transcript" exists and is a string
+                            return transcriptNode.asText();
+                        }
+                    }
+                }
+            }
+            return jsonString;
+        }
+        catch (Exception e){
+            logger.error("Invalid JSON prompt: " + jsonString);
+            return jsonString;
+        }
+    }
+
     public String generateTextWithNovaLite(String prompt) {
         try {
+            // Parse JSON format from transcription job data string
+            prompt = parsePromptJSON(prompt);
             logger.debug("Generating text with Nova Lite for prompt: '{}'", prompt);
 
             // Create request body for Nova Lite
