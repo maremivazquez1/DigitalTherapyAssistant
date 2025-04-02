@@ -1,0 +1,234 @@
+package harvard.capstone.digitaltherapy.cbt.controller;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import harvard.capstone.digitaltherapy.llm.service.LLMProcessingService;
+import harvard.capstone.digitaltherapy.aws.service.PollyService;
+import harvard.capstone.digitaltherapy.aws.service.TranscribeService;
+import harvard.capstone.digitaltherapy.cbt.service.CBTHelper;
+import harvard.capstone.digitaltherapy.utility.S3Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.socket.BinaryMessage;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+
+@Controller
+public class CBTController {
+    private static final Logger logger = LoggerFactory.getLogger(CBTController.class);
+
+    private final ObjectMapper objectMapper;
+    private final S3Utils s3Service;
+    private final CBTHelper cbtHelper;
+    private final TranscribeService transcribeService;
+    private final LLMProcessingService llmProcessingService;
+    private final PollyService pollyService;
+
+    @Autowired
+    public CBTController(ObjectMapper objectMapper,
+                         S3Utils s3Service,
+                         CBTHelper cbtHelper,
+                         TranscribeService transcribeService,
+                         LLMProcessingService llmProcessingService,
+                         PollyService pollyService) {
+        this.objectMapper = objectMapper;
+        this.s3Service = s3Service;
+        this.cbtHelper = cbtHelper;
+        this.transcribeService = transcribeService;
+        this.llmProcessingService = llmProcessingService;
+        this.pollyService = pollyService;
+    }
+
+
+    public void handleMessage(WebSocketSession session, JsonNode requestJson, String messageType, String requestId) throws IOException {
+        if ("audio".equals(messageType)) {
+            handleAudioMessage(session, requestJson, requestId);
+        } else {
+            String content = requestJson.has("text") ? requestJson.get("text").asText() : "";
+            handleTextMessage(session, requestJson);
+        }
+    }
+
+    public void handleTextOnlyMessage(WebSocketSession session, String content, String requestId) throws IOException {
+        if (content.isEmpty()) {
+            sendErrorMessage(session, "Text content cannot be empty", 400, requestId);
+            return;
+        }
+        try {
+            // Create a temporary text file
+            File tempFile = File.createTempFile("text_", ".txt");
+            try (FileWriter writer = new FileWriter(tempFile)) {
+                writer.write(content);
+            }
+            // Generate unique filename
+            String fileName = "text_" + requestId + ".txt";
+            // Upload to S3
+            String uploadResponse = s3Service.uploadFile(tempFile.getAbsolutePath(), fileName);
+            // Get processed content
+            String llmResponse = llmProcessingService.process(uploadResponse);
+            llmResponse=llmResponse.replace("s3://dta-root/", "");
+            ResponseEntity<StreamingResponseBody> processedResponse = cbtHelper.downloadTextFile(llmResponse);
+            if (processedResponse.getStatusCode() == HttpStatus.OK && processedResponse.getBody() != null) {
+                // Convert StreamingResponseBody to String
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                processedResponse.getBody().writeTo(baos);
+                String processedContent = baos.toString(StandardCharsets.UTF_8);
+                // Create response JSON
+                ObjectNode responseJson = objectMapper.createObjectNode();
+                responseJson.put("type", "text-processed");
+                responseJson.put("requestId", requestId);
+                responseJson.put("originalContent", content);
+                responseJson.put("processedContent", processedContent);
+                responseJson.put("fileName", fileName);
+                // Send response
+                session.sendMessage(new TextMessage(responseJson.toString()));
+            } else {
+                sendErrorMessage(session, "Failed to process text content", 500, requestId);
+            }
+            // Cleanup
+            if (!tempFile.delete()) {
+                logger.warn("Failed to delete temporary file: {}", tempFile.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            logger.error("Error processing text message: {}", e.getMessage(), e);
+            sendErrorMessage(session, "Error processing text: " + e.getMessage(), 500, requestId);
+        }
+    }
+
+    public void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
+        String sessionId = session.getId();
+        logger.info("Received binary message from session {}", sessionId);
+
+        try {
+            // Get the binary payload
+            ByteBuffer buffer = message.getPayload();
+            byte[] audioData = new byte[buffer.remaining()];
+            buffer.get(audioData);
+
+            // Create a temporary file to store the audio
+            File tempFile = File.createTempFile("audio_", ".mp3");
+            try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+                fos.write(audioData);
+            }
+
+            // Process the audio using existing functionality
+            String keyName = "audio_" + sessionId + ".mp3";
+
+            // Upload to S3
+            String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
+            String transcribedS3Path = transcribeService.startTranscriptionJob(response, sessionId);
+            tempFile.delete(); // Cleanup temp file
+            String s3Path = transcribedS3Path.replace("https://s3.amazonaws.com/", "s3://");
+            String llmResponse = llmProcessingService.process(s3Path);
+            String textToSpeechResponse = pollyService.convertTextToSpeech(llmResponse, sessionId);
+            textToSpeechResponse= textToSpeechResponse.replace("https://dta-root.s3.amazonaws.com/", "");
+            File responseFile = s3Service.downloadFileFromS3("dta-root", textToSpeechResponse);
+
+            // Convert processed file to binary message
+            byte[] processedAudio = Files.readAllBytes(responseFile.toPath());
+            BinaryMessage responseMessage = new BinaryMessage(processedAudio);
+
+            // Send the binary response
+            session.sendMessage(responseMessage);
+            // Cleanup
+            responseFile.delete();
+
+        } catch (Exception e) {
+            logger.error("Error processing binary message from session {}: {}", sessionId, e.getMessage(), e);
+            try {
+                sendErrorMessage(session, "Error processing audio: " + e.getMessage(), 500, "unknown");
+            } catch (IOException ex) {
+                logger.error("Failed to send error message to session {}", sessionId, ex);
+            }
+        }
+    }
+
+    public void handleAudioMessage(WebSocketSession session, JsonNode requestJson, String requestId) throws IOException {
+        String audioData = requestJson.get("audioData").asText();
+        String fileName = requestJson.get("fileName").asText();
+        String type = requestJson.has("type") ? requestJson.get("type").asText() : "";
+
+        try {
+            // Convert base64 audio to MultipartFile
+            MultipartFile multipartFile = cbtHelper.createMultipartFileFromBase64(audioData, fileName);
+
+            // Process the audio using existing functionality
+            File convertedFile = cbtHelper.convertMultiPartToBinaryFile(multipartFile);
+            String keyName = requestId + multipartFile.getOriginalFilename();
+
+            // Upload to S3
+            String response = s3Service.uploadFile(convertedFile.getAbsolutePath(), keyName);
+
+            convertedFile.delete(); // Cleanup temp file
+
+            // Download processed file
+            File responseFile = s3Service.downloadFileFromS3("dta-root", keyName);
+
+            // Convert processed file to base64 for WebSocket response
+            String processedAudioBase64 = cbtHelper.convertFileToBase64(responseFile);
+
+            // Create response JSON
+            ObjectNode responseJson = objectMapper.createObjectNode();
+            responseJson.put("requestId", requestId);
+            responseJson.put("type", "audio");
+            responseJson.put("fileName", fileName);
+            responseJson.put("processedAudio", processedAudioBase64);
+
+            // Send the response
+            session.sendMessage(new TextMessage(responseJson.toString()));
+
+            // Cleanup
+            responseFile.delete();
+
+        } catch (Exception e) {
+            logger.error("Error processing audio: {}", e.getMessage(), e);
+            sendErrorMessage(session, "Error processing audio: " + e.getMessage(), 500, requestId);
+        }
+    }
+
+    public void handleTextMessage(WebSocketSession session, JsonNode requestJson) {
+        String sessionId = session.getId();
+        logger.info("Received message from session {}: {}", sessionId, "Handle text chat input");
+
+        try {
+            String messageType = requestJson.has("type") ? requestJson.get("type").asText() : "text";
+            String requestId = requestJson.has("requestId") ? requestJson.get("requestId").asText() : "unknown";
+            String content = requestJson.has("text") ? requestJson.get("text").asText() : "";
+
+            if ("audio".equals(messageType)) {
+                handleAudioMessage(session, requestJson, requestId);
+            } else {
+                handleTextOnlyMessage(session, content, requestId);
+            }
+
+        } catch (Exception e) {
+            logger.error("Error processing message from session {}: {}", sessionId, e.getMessage(), e);
+            try {
+                sendErrorMessage(session, "Error processing message: " + e.getMessage(), 500, "unknown");
+            } catch (IOException ex) {
+                logger.error("Failed to send error message to session {}", sessionId, ex);
+            }
+        }
+    }
+
+    private void sendErrorMessage(WebSocketSession session, String message, int code, String requestId) throws IOException {
+        ObjectNode errorJson = objectMapper.createObjectNode();
+        errorJson.put("error", message);
+        errorJson.put("code", code);
+        errorJson.put("requestId", requestId);
+        session.sendMessage(new TextMessage(errorJson.toString()));
+    }
+
+}
