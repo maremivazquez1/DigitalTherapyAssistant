@@ -127,19 +127,27 @@ public class CBTController {
             String keyName = "audio_" + sessionId + ".mp3";
 
             // Upload to S3
+            long s3AudioFileUploadTime  = System.currentTimeMillis();
             String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
+            logger.info("S3 Audio File Upload Time took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
+            long transcribeServiceTime  = System.currentTimeMillis();
             String transcribedS3Path = transcribeService.startTranscriptionJob(response, sessionId);
+            logger.info("transcribe Service took {} ms", System.currentTimeMillis() - transcribeServiceTime);
             tempFile.delete(); // Cleanup temp file
             String s3Path = transcribedS3Path.replace("https://s3.amazonaws.com/", "s3://");
+            long llmResponseTime  = System.currentTimeMillis();
             String llmResponse = llmProcessingService.process(s3Path);
+            logger.info("llm Response Time took {} ms", System.currentTimeMillis() - llmResponseTime);
+            long pollyServiceTime  = System.currentTimeMillis();
             String textToSpeechResponse = pollyService.convertTextToSpeech(llmResponse, sessionId);
+            logger.info("Polly Service Response Time took {} ms", System.currentTimeMillis() - pollyServiceTime);
             textToSpeechResponse= textToSpeechResponse.replace("https://dta-root.s3.amazonaws.com/", "");
+            long S3DownloadTime  = System.currentTimeMillis();
             File responseFile = s3Service.downloadFileFromS3("dta-root", textToSpeechResponse);
-
+            logger.info("S3 response download Time took {} ms", System.currentTimeMillis() - S3DownloadTime);
             // Convert processed file to binary message
             byte[] processedAudio = Files.readAllBytes(responseFile.toPath());
             BinaryMessage responseMessage = new BinaryMessage(processedAudio);
-
             // Send the binary response
             session.sendMessage(responseMessage);
             // Cleanup

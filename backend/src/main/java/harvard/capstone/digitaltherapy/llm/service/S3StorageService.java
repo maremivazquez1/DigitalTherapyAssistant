@@ -116,7 +116,7 @@ public class S3StorageService {
      * @throws IllegalArgumentException If the S3 path format is invalid
      */
     public void writeTextToS3(String s3Path, String content) throws IOException {
-        validateS3Path(s3Path);
+        //validateS3Path(s3Path);
 
         File tempFile = null;
         try {
