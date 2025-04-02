@@ -1,17 +1,10 @@
 import React from "react";
+import Dashboard from "../components/Dashboard";
 
-const CBTSessionPage: React.FC = () => {
+const DashboardPage: React.FC = () => {
   return (
-    <div className="grid grid-rows-[auto_1fr_auto] h-screen">
-      <header className="bg-blue-500 text-white p-3">Header</header>
-      <div className="grid grid-cols-12 gap-2 p-4">
-        <main className="col-span-12 bg-gray-100 p-6">
-          
-        </main>
-      </div>
-      <footer className="bg-gray-800 text-white p-3 text-center">Footer</footer>
-    </div>
+    <Dashboard />
   );
 };
 
-export default CBTSessionPage;
+export default DashboardPage;
