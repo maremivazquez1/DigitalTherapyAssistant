@@ -1,7 +1,18 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const NavBar: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Clear authentication data here (e.g., remove tokens)
+    localStorage.removeItem("authToken");
+    // Optionally clear other user data, reset state, etc.
+    
+    // Redirect to login page after logging out
+    navigate("/login");
+  };
+
   return (
     <div className="navbar bg-base-100 shadow-sm">
       <div className="flex-1">
@@ -10,7 +21,6 @@ const NavBar: React.FC = () => {
         </Link>
       </div>
       <div className="flex-none">
-        {/* Dropdown that shows on hover */}
         <div className="dropdown dropdown-end dropdown-hover">
           <label tabIndex={0} className="btn btn-square btn-ghost">
             <svg
@@ -32,7 +42,7 @@ const NavBar: React.FC = () => {
             className="dropdown-content menu p-2 shadow bg-base-200 rounded-box w-56"
           >
             <li>
-              <Link to="/item2">
+              <Link to="/profile">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-5 w-5"
@@ -44,14 +54,14 @@ const NavBar: React.FC = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                    d="M5.121 17.804A4.992 4.992 0 0012 20a4.992 4.992 0 006.879-2.196M15 11a3 3 0 10-6 0 3 3 0 006 0z"
                   />
                 </svg>
-                Item 2
+                Profile
               </Link>
             </li>
             <li>
-              <Link to="/item1">
+              <button onClick={handleLogout} className="flex items-center">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-5 w-5"
@@ -63,30 +73,11 @@ const NavBar: React.FC = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7"
                   />
                 </svg>
-                Item 1
-              </Link>
-            </li>
-            <li>
-              <Link to="/item3">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2"
-                  />
-                </svg>
-                Item 3
-              </Link>
+                Logout
+              </button>
             </li>
           </ul>
         </div>
