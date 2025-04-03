@@ -21,7 +21,7 @@ public class TranscribeService {
     /**
      * Speech-to-Text service function
      *
-     * @param mediUri .mp3 S3 asset URI. Expected format: s3://dta-root/dta-speech-translation-storage/[autiofileID].mp3
+     * @param mediUri .mp3 S3 asset URI. Expected format: s3://dtaroot/dta-speech-translation-storage/[autiofileID].mp3
      * @param jobName user/job id string for the AWS Transcribe service
      * @return The URL for the translated file from the Transcribe job
      */
@@ -55,7 +55,7 @@ public class TranscribeService {
                 .withTranscriptionJobName(jobName)
                 .withLanguageCode("en-US")
                 .withMedia(new Media().withMediaFileUri(mediaUri))
-                .withOutputBucketName("dta-root");
+                .withOutputBucketName("dtaroot");
 
         // Start the transcription job
         StartTranscriptionJobResult result = amazonTranscribe.startTranscriptionJob(request);
@@ -88,7 +88,7 @@ public class TranscribeService {
 
         // If the job is completed, get the URL of the transcribed file
         if ("COMPLETED".equals(job.getTranscriptionJobStatus())) {
-            String bucketName = "dta-root";
+            String bucketName = "dtaroot";
             String fileKey = job.getTranscript().getTranscriptFileUri().substring(job.getTranscript().getTranscriptFileUri().lastIndexOf('/') + 1);
             String fileUrl = "https://s3.amazonaws.com/" + bucketName + "/" + fileKey;
             return fileUrl;

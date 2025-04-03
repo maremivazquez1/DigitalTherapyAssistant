@@ -25,7 +25,7 @@ public class TranscribeServiceTest {
     @Test
     public void testStartTranscriptionJobWhenJobExistsAndCompleted() {
         // Mock mediaUri and jobName
-        String mediaUri = "s3://dta-root/dta-speech-translation-storage/temp-audio.mp3";
+        String mediaUri = "s3://dtaroot/dta-speech-translation-storage/temp-audio.mp3";
         String jobName = "MyTranscriptionJob";
 
         // Mock GetTranscriptionJobRequest with the given jobName
@@ -36,7 +36,7 @@ public class TranscribeServiceTest {
         TranscriptionJob transcriptionJob = new TranscriptionJob()
                 .withTranscriptionJobName(jobName)
                 .withTranscriptionJobStatus(TranscriptionJobStatus.COMPLETED)
-                .withTranscript(new Transcript().withTranscriptFileUri("https://s3.amazonaws.com/dta-root/my-transcription-output.json"));
+                .withTranscript(new Transcript().withTranscriptFileUri("https://s3.amazonaws.com/dtaroot/my-transcription-output.json"));
 
         // Create the GetTranscriptionJobResult and set the transcription job
         GetTranscriptionJobResult getResult = new GetTranscriptionJobResult()
@@ -56,13 +56,13 @@ public class TranscribeServiceTest {
 
         // Verify that the correct URL is returned
         assertNotNull(result, "The result should not be null.");
-        assertEquals("https://s3.amazonaws.com/dta-root/my-transcription-output.json", result, "The result should be the correct URL.");
+        assertEquals("https://s3.amazonaws.com/dtaroot/my-transcription-output.json", result, "The result should be the correct URL.");
     }
 
     @Test
     public void testStartTranscriptionJobWhenJobDoesNotExist() throws InterruptedException {
         // Mock mediaUri and jobName
-        String mediaUri = "s3://dta-root/dta-speech-translation-storage/temp-audio.mp3";
+        String mediaUri = "s3://dtaroot/dta-speech-translation-storage/temp-audio.mp3";
         String jobName = "MyTranscriptionJob";
     
         // Mock GetTranscriptionJobRequest to simulate that the job doesn't exist
@@ -83,7 +83,7 @@ public class TranscribeServiceTest {
         TranscriptionJob transcriptionJobCompleted = new TranscriptionJob()
                 .withTranscriptionJobName(jobName)
                 .withTranscriptionJobStatus(TranscriptionJobStatus.COMPLETED)
-                .withTranscript(new Transcript().withTranscriptFileUri("https://s3.amazonaws.com/dta-root/my-transcription-output.json"));
+                .withTranscript(new Transcript().withTranscriptFileUri("https://s3.amazonaws.com/dtaroot/my-transcription-output.json"));
         when(amazonTranscribe.getTranscriptionJob(getRequest)).thenReturn(getTranscriptionJobResult);
         when(getTranscriptionJobResult.getTranscriptionJob()).thenReturn(transcriptionJobCompleted);
     
@@ -98,6 +98,6 @@ public class TranscribeServiceTest {
     
         // Verify that the URL of the transcribed file is returned
         assertNotNull(result, "The result should not be null.");
-        assertEquals("https://s3.amazonaws.com/dta-root/my-transcription-output.json", result, "The result should be the correct URL.");
+        assertEquals("https://s3.amazonaws.com/dtaroot/my-transcription-output.json", result, "The result should be the correct URL.");
     }
 }

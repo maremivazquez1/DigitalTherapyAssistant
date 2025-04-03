@@ -78,7 +78,7 @@ public class CBTController {
             String uploadResponse = s3Service.uploadFile(tempFile.getAbsolutePath(), fileName);
             // Get processed content
             String llmResponse = llmProcessingService.process(uploadResponse);
-            llmResponse=llmResponse.replace("s3://dta-root/", "");
+            llmResponse=llmResponse.replace("s3://dtaroot/", "");
             ResponseEntity<StreamingResponseBody> processedResponse = cbtHelper.downloadTextFile(llmResponse);
             if (processedResponse.getStatusCode() == HttpStatus.OK && processedResponse.getBody() != null) {
                 // Convert StreamingResponseBody to String
@@ -141,9 +141,9 @@ public class CBTController {
             long pollyServiceTime  = System.currentTimeMillis();
             String textToSpeechResponse = pollyService.convertTextToSpeech(llmResponse, sessionId);
             logger.info("Polly Service Response Time took {} ms", System.currentTimeMillis() - pollyServiceTime);
-            textToSpeechResponse= textToSpeechResponse.replace("https://dta-root.s3.amazonaws.com/", "");
+            textToSpeechResponse= textToSpeechResponse.replace("https://dtaroot.s3.amazonaws.com/", "");
             long S3DownloadTime  = System.currentTimeMillis();
-            File responseFile = s3Service.downloadFileFromS3("dta-root", textToSpeechResponse);
+            File responseFile = s3Service.downloadFileFromS3("dtaroot", textToSpeechResponse);
             logger.info("S3 response download Time took {} ms", System.currentTimeMillis() - S3DownloadTime);
             // Convert processed file to binary message
             byte[] processedAudio = Files.readAllBytes(responseFile.toPath());
@@ -182,7 +182,7 @@ public class CBTController {
             convertedFile.delete(); // Cleanup temp file
 
             // Download processed file
-            File responseFile = s3Service.downloadFileFromS3("dta-root", keyName);
+            File responseFile = s3Service.downloadFileFromS3("dtaroot", keyName);
 
             // Convert processed file to base64 for WebSocket response
             String processedAudioBase64 = cbtHelper.convertFileToBase64(responseFile);

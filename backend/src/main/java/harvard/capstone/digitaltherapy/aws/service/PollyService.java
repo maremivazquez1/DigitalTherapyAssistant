@@ -25,7 +25,7 @@ public class PollyService {
     @Autowired
     private AmazonS3 amazonS3;
 
-    private static final String S3_BUCKET_NAME = "dta-root";
+    private static final String S3_BUCKET_NAME = "dtaroot";
     private static final String S3_BUCKET_FOLDER = "dta-speech-translation-storage/";
 
     /**
@@ -69,7 +69,7 @@ public class PollyService {
             amazonS3.putObject(new PutObjectRequest(S3_BUCKET_NAME, s3Key, audioStream, null));
     
             // Return the S3 URL
-            return "https://dta-root.s3.amazonaws.com/" + s3Key;
+            return "https://dtaroot.s3.amazonaws.com/" + s3Key;
         } catch (RuntimeException e) {
             // Handle Polly failure (no S3 interactions should happen)
             throw new RuntimeException("Polly service failure", e); // Make sure to include the error message here
