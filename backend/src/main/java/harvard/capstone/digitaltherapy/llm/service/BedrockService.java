@@ -1,4 +1,4 @@
-package harvard.capstone.digitaltherapy.aws.service;
+package harvard.capstone.digitaltherapy.llm.service;
 
 /**
  * BedrockService is responsible for interacting with the AWS Bedrock runtime,
@@ -22,10 +22,6 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest;
 import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelResponse;
-import harvard.capstone.digitaltherapy.aws.service.S3StorageService;
-
-import java.util.List;
-import java.util.Map;
 
 @Service
 public class BedrockService {
@@ -33,7 +29,6 @@ public class BedrockService {
     private static final Logger logger = LoggerFactory.getLogger(BedrockService.class);
     private final BedrockRuntimeClient bedrockRuntimeClient;
     private final ObjectMapper objectMapper;
-    private final S3StorageService s3StorageService;
 
     // AWS Nova Lite model ID
     private static final String NOVA_LITE_MODEL_ID = "amazon.nova-lite-v1:0";
@@ -43,14 +38,39 @@ public class BedrockService {
     private String systemPrompt;
 
     @Autowired
-    public BedrockService(BedrockRuntimeClient bedrockRuntimeClient, S3StorageService s3StorageService) {
+    public BedrockService(BedrockRuntimeClient bedrockRuntimeClient) {
         this.bedrockRuntimeClient = bedrockRuntimeClient;
-        this.s3StorageService = s3StorageService;
         this.objectMapper = new ObjectMapper();
+    }
+
+    private String parsePromptJSON(String jsonString){
+        try{
+            // Parse Transcript JSON from original prompt data string
+            JsonNode rootNode = objectMapper.readTree(jsonString);
+            if (rootNode != null && rootNode.isObject()){
+                JsonNode resultsNode = rootNode.path("results");
+                if (resultsNode != null && resultsNode.isObject()) { // Ensure "results" exists and is an object
+                    JsonNode transcriptsNode = resultsNode.path("transcripts");
+                    if (transcriptsNode != null && transcriptsNode.isArray() && transcriptsNode.size() > 0) { // Ensure "transcripts" is an array with elements
+                        JsonNode transcriptNode = transcriptsNode.get(0).path("transcript");
+                        if (transcriptNode != null && transcriptNode.isTextual()) { // Ensure "transcript" exists and is a string
+                            return transcriptNode.asText();
+                        }
+                    }
+                }
+            }
+            return jsonString;
+        }
+        catch (Exception e){
+            logger.error("Invalid JSON prompt: " + jsonString);
+            return jsonString;
+        }
     }
 
     public String generateTextWithNovaLite(String prompt) {
         try {
+            // Parse JSON format from transcription job data string
+            prompt = parsePromptJSON(prompt);
             logger.debug("Generating text with Nova Lite for prompt: '{}'", prompt);
 
             // Create request body for Nova Lite
