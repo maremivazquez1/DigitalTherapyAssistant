@@ -237,9 +237,17 @@
           handleBinaryResponse(event.data);
         } else {
           // Handle text message
-          try {
+           try {
             const data = JSON.parse(event.data);
-            addMessage(event.data, 'server');
+            if (data.type === 'transcription') {
+              // Display transcription
+              const transcriptionDiv = document.getElementById('transcriptionText');
+              transcriptionDiv.textContent = data.text;
+              document.querySelector('.transcription-preview').style.display = 'block';
+              addMessage('Transcription received: ' + data.text, 'server');
+            } else {
+              addMessage(event.data, 'server');
+            }
           } catch (e) {
             addMessage(event.data, 'server');
           }
