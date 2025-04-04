@@ -4,7 +4,8 @@ export const useCBTWebSocket = () => {
     const socketRef = useRef<WebSocket | null>(null);
 
     useEffect(() => {
-        const socket = new WebSocket('ws://localhost:8080/ws/cbt');
+        // const socket = new WebSocket('ws://localhost:8080/ws/cbt');
+        const socket = new WebSocket('ws://' + import.meta.env.VITE_API_BASE_URL  + '/ws/cbt');
         socketRef.current = socket;
 
         socket.onopen = () => {

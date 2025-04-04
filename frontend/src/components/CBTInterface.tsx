@@ -38,7 +38,8 @@ const CBTInterface: React.FC = () => {
 
   // --------------------- USE WEBSOCKET HOOK ---------------------
   // The connection will be established when sessionActive becomes true.
-  const { messages, sendMessage } = useWebSocket("ws://localhost:8080/ws/cbt", sessionActive);
+  // const { messages, sendMessage } = useWebSocket("ws://localhost:8080/ws/cbt", sessionActive);
+  const { messages, sendMessage } = useWebSocket("ws://" + import.meta.env.VITE_API_BASE_URL  + "/ws/cbt", sessionActive);
 
   // --------------------- EFFECT: PROCESS INCOMING MESSAGES ---------------------
   useEffect(() => {

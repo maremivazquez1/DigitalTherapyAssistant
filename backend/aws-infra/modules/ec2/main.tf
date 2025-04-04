@@ -55,6 +55,7 @@ resource "aws_instance" "springboot_backend" {
 
     # Build and run the Spring Boot application
     cd /home/ec2-user/app/backend
+    sed -i "s/localhost/$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)/g" backend/src/main/resources/static/websocket-cbt-audio.html
     mvn clean install
     mvn spring-boot:run  -Dspring-boot.run.arguments="--spring.datasource.username=$DB_USER --spring.datasource.url=jdbc:mysql://$DB_HOST/my_dta_db --spring.datasource.password=$DB_PASSWORD"
   EOF

@@ -62,7 +62,7 @@ module "amplify" {
   source      = "./modules/amplify"
   repo_url    = var.repo_url
   oauth_token = var.oauth_token
-  api_url     = "http://${module.ec2.api_url}:8080"
+  api_url     = "${module.ec2.api_url}:8080"
 }
 
 data "aws_ami" "latest_amazon_linux" {
