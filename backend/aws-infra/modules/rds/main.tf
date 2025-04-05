@@ -21,7 +21,7 @@ resource "aws_security_group" "rds_sg" {
 
 # Create the RDS instance and attach the security group
 resource "aws_db_instance" "rds_instance" {
-  identifier             = "my-dta-db"
+  identifier             = "cbt"
   allocated_storage      = 20
   storage_type           = "gp2"
   engine                 = "mysql"
@@ -29,7 +29,7 @@ resource "aws_db_instance" "rds_instance" {
   instance_class         = "db.t3.micro"
   username               = "root"
   password               = "Newuser123"
-  db_name                = "my_dta_db"
+  db_name                = "cbt"
   skip_final_snapshot    = true
 
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
