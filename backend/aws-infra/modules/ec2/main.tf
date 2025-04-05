@@ -29,21 +29,25 @@ resource "aws_instance" "springboot_backend" {
     echo 'export PATH=$M2_HOME/bin:$PATH' | sudo tee -a /etc/profile.d/maven.sh
     source /etc/profile.d/maven.sh
 
-    # SSL certificate sign (for HTTPS/WSS)
-    keytool -genkeypair -alias sslkey -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore keystore.p12 -validity 365 -storepass mysslpassword -dname "CN=your.domain.com, OU=IT, O=DigitalTherapyAssistantCo, L=Orlando, S=Florida, C=US"
-    mv keystore.p12 /home/ec2-user/keystore.p12
-
     # writing to a file for validation and to run manually
     cat <<EOL | sudo tee /etc/profile.d/springboot_env.sh
     export DB_HOST="${var.db_endpoint}"
     export DB_PORT="${var.db_port}"
     export DB_USER="${var.db_username}"
     export DB_PASSWORD="${var.db_password}"
+    export TOKEN=\$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+    export PUBLIC_IP=\$(curl -s "http://169.254.169.254/latest/meta-data/public-ipv4" -H "X-aws-ec2-metadata-token: \$TOKEN")
     EOL
+
 
     # Source to include variables in current run
     sudo chmod +x /etc/profile.d/springboot_env.sh
     source /etc/profile.d/springboot_env.sh
+
+    # SSL certificate sign (for HTTPS/WSS)
+    keytool -genkeypair -alias sslkey -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore keystore.p12 -validity 365 -storepass mysslpassword -dname "CN=${PUBLIC_IP}, OU=IT, O=DigitalTherapyAssistantCo, L=Orlando, S=Florida, C=US"
+    mv keystore.p12 /home/ec2-user/keystore.p12
+
 
     host="$${DB_HOST%:*}"
     # Wait for the RDS instance to be available
@@ -53,6 +57,7 @@ resource "aws_instance" "springboot_backend" {
     done
 
     # go to correct branch
+    cd /home/ec2-user/app
     git config --global --add safe.directory /home/ec2-user/app
     git checkout pipeline
 
@@ -60,7 +65,7 @@ resource "aws_instance" "springboot_backend" {
     cd /home/ec2-user/app/backend
     sed -i "s/localhost/$(curl -s https://169.254.169.254/latest/meta-data/public-ipv4)/g" src/main/resources/static/websocket-cbt-audio.html
     mvn clean install
-    mvn spring-boot:run  -Dspring-boot.run.arguments="--spring.datasource.username=$DB_USER --spring.datasource.url=jdbc:mysql://$DB_HOST/my_dta_db --spring.datasource.password=$DB_PASSWORD"
+    mvn spring-boot:run  -Dspring-boot.run.arguments="--spring.datasource.username=$DB_USER --spring.datasource.url=jdbc:mysql://$DB_HOST/cbt --spring.datasource.password=$DB_PASSWORD"
   EOF
 
   tags = {
