@@ -45,7 +45,7 @@ resource "aws_instance" "springboot_backend" {
     source /etc/profile.d/springboot_env.sh
 
     # SSL certificate sign (for HTTPS/WSS)
-    keytool -genkeypair -alias sslkey -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore keystore.p12 -validity 365 -storepass mysslpassword -dname "CN=${PUBLIC_IP}, OU=IT, O=DigitalTherapyAssistantCo, L=Orlando, S=Florida, C=US"
+    keytool -genkeypair -alias sslkey -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore keystore.p12 -validity 365 -storepass mysslpassword -dname "CN=$${PUBLIC_IP}, OU=IT, O=DigitalTherapyAssistantCo, L=Orlando, S=Florida, C=US"
     mv keystore.p12 /home/ec2-user/keystore.p12
 
 
