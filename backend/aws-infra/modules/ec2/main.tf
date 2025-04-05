@@ -16,6 +16,8 @@ resource "aws_instance" "springboot_backend" {
     
     # Inject OAuth token into the repo URL
     REPO_URL=$(echo "${var.repo_url}" | sed "s|https://|https://${var.oauth_token}@|")
+    TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+    PUBLIC_IP=$(curl -s "http://169.254.169.254/latest/meta-data/public-ipv4" -H "X-aws-ec2-metadata-token: $TOKEN")
 
     # Clone your GitHub repo
     git clone $REPO_URL /home/ec2-user/app
@@ -35,10 +37,8 @@ resource "aws_instance" "springboot_backend" {
     export DB_PORT="${var.db_port}"
     export DB_USER="${var.db_username}"
     export DB_PASSWORD="${var.db_password}"
-    export TOKEN=\$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-    export PUBLIC_IP=\$(curl -s "http://169.254.169.254/latest/meta-data/public-ipv4" -H "X-aws-ec2-metadata-token: \$TOKEN")
+    export PUBLIC_IP=$${PUBLIC_IP}
     EOL
-
 
     # Source to include variables in current run
     sudo chmod +x /etc/profile.d/springboot_env.sh
