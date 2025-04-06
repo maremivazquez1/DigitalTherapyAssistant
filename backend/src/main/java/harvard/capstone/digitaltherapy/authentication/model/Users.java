@@ -14,11 +14,11 @@ public class Users {
     @Column(name = "user_id")
     private Integer id;
 
-    @Column(name = "password", length = 255, nullable = false)
-    private String password;
-
     @Column(name = "email", length = 100, nullable = false, unique = true)
     private String email;
+
+    @Column(name = "password", length = 255, nullable = false)
+    private String password;
 
     @Column(name = "first_name", length = 50)
     private String firstName;
@@ -29,14 +29,14 @@ public class Users {
     @Column(name = "phone", length = 20)
     private String phone;
 
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @Column(name = "date_of_birth")
-    private LocalDate dateOfBirth;
 
     @PrePersist
     protected void onCreate() {

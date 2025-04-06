@@ -18,9 +18,15 @@ export const useWebSocket = (url: string, connect: boolean) => {
   }, [isConnected]);
 
   useEffect(() => {
-    console.log("[useWebSocket] Connecting to:", url);
     if (!connect) return;
-    const socket = new WebSocket(url);
+
+    // Retrieve token from local storage and append it as a query parameter
+    const token = localStorage.getItem("token");
+    // If token exists, append it to the URL; otherwise, use the original URL.
+    const wsUrl = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+    console.log("[useWebSocket] Connecting using URL:", wsUrl);
+
+    const socket = new WebSocket(wsUrl);
     // Set binaryType to arraybuffer so binary messages are received as ArrayBuffer
     socket.binaryType = "arraybuffer";
     socketRef.current = socket;
@@ -32,38 +38,31 @@ export const useWebSocket = (url: string, connect: boolean) => {
 
     socket.onmessage = (event) => {
       console.log("[useWebSocket] Raw message received:", event.data);
-
-
-
-
       // Process text messages
       if (typeof event.data === "string") {
         try {
-          let parsed: any = JSON.parse(event.data);
+          const parsed = JSON.parse(event.data);
           console.log("[useWebSocket] Parsed text message:", parsed);
 
           // AWS error
           if (parsed.error && parsed.code === 500) {
             console.warn("[useWebSocket] AWS Error detected:", parsed.error);
-
             setMessages((prev) => [
               ...prev,
               {
-                type: "audio", // or just leave this out if not needed
-                text:
+                type: "audio", // or leave out if not needed
+                text: 
                   "Sorry, something went wrong while processing your audio. Please try again later.",
                 audio: undefined,
               },
             ]);
             return;
           }
-
           setMessages((prev) => [...prev, parsed]);
         } catch (err) {
           console.error("[useWebSocket] Error parsing text message:", err);
         }
       }
-
       // Process binary messages
       if (event.data instanceof ArrayBuffer) {
         console.log("[useWebSocket] Received binary data from server.");
@@ -72,10 +71,9 @@ export const useWebSocket = (url: string, connect: boolean) => {
         const blob = new Blob([event.data], { type: "audio/mpeg" });
         const audioUrl = URL.createObjectURL(blob);
         console.log("[useWebSocket] Created audio URL:", audioUrl);
-        // Create a message with both text and audio.
         const audioMsg: WebSocketMessage = {
           type: "audio",
-          text: "Processed audio response", // Default text; you may adjust as needed
+          text: "Processed audio response",
           audio: audioUrl,
         };
         setMessages((prev) => [...prev, audioMsg]);
@@ -84,20 +82,24 @@ export const useWebSocket = (url: string, connect: boolean) => {
 
     socket.onerror = (err) => {
       console.error("[WebSocket] Error:", err);
-      // Instead of a separate error message, add a chat message from Assistant.
       setMessages((prev) => [
         ...prev,
-        { type: "system", text: "Connection error occurred. Please check your connection.", audio: undefined },
+        {
+          type: "system",
+          text: "Connection error occurred. Please check your connection.",
+        },
       ]);
     };
 
     socket.onclose = (event) => {
       console.log("[WebSocket] Connection closed. Code:", event.code, "Reason:", event.reason);
       setIsConnected(false);
-      // Add a message from the Assistant to notify of the closed connection.
       setMessages((prev) => [
         ...prev,
-        { type: "system", text: "Connection closed. Please try reconnecting.", audio: undefined },
+        {
+          type: "system",
+          text: "Connection closed. Please try reconnecting.",
+        },
       ]);
     };
 
@@ -108,7 +110,6 @@ export const useWebSocket = (url: string, connect: boolean) => {
 
   const sendMessage = (data: any) => {
     console.log("[useWebSocket] sendMessage called with data:", data);
-    // Directly check the socket's readyState instead of isConnected
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(data);
     } else {
