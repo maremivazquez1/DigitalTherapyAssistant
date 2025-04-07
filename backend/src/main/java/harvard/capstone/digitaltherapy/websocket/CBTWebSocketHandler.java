@@ -87,7 +87,7 @@ public class CBTWebSocketHandler extends TextWebSocketHandler {
     public void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
         String sessionId = session.getId();
         logger.info("Received binary message from session {}", sessionId);
-        cbtController.handleBinaryMessage(session, message);
+        cbtController.handleStreamingBinaryMessage(session, message);
     }
 
     private void sendErrorMessage(WebSocketSession session, String message, int code, String requestId) throws IOException {

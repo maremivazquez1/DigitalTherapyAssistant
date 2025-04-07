@@ -1,16 +1,14 @@
 package harvard.capstone.digitaltherapy.aws.service;
 
 import com.amazonaws.services.transcribe.AmazonTranscribe;
-import com.amazonaws.services.transcribe.model.StartTranscriptionJobRequest;
-import com.amazonaws.services.transcribe.model.StartTranscriptionJobResult;
-import com.amazonaws.services.transcribe.model.DeleteTranscriptionJobRequest;
-import com.amazonaws.services.transcribe.model.TranscriptionJob;
-import com.amazonaws.services.transcribe.model.Media;
-import com.amazonaws.services.transcribe.model.GetTranscriptionJobRequest;
-import com.amazonaws.services.transcribe.model.GetTranscriptionJobResult;
+import com.amazonaws.services.transcribe.model.*;
+
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.*;
 
 @Service
 public class TranscribeService {
@@ -18,14 +16,18 @@ public class TranscribeService {
     @Autowired
     private AmazonTranscribe amazonTranscribe;
 
+    // Executor service for asynchronous task handling
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+
     /**
-     * Speech-to-Text service function
+     * Speech-to-Text service function for quick chunks.
+     * Starts the transcription job asynchronously and returns the result URL when ready.
      *
-     * @param mediUri .mp3 S3 asset URI. Expected format: s3://dta-root/dta-speech-translation-storage/[autiofileID].mp3
-     * @param jobName user/job id string for the AWS Transcribe service
-     * @return The URL for the translated file from the Transcribe job
+     * @param mediaUri .mp3 S3 asset URI. Expected format: s3://dta-root/dta-speech-translation-storage/[audiofileID].mp3
+     * @param jobName  user/job id string for the AWS Transcribe service
+     * @return A CompletableFuture that will eventually hold the URL for the translated file
      */
-    public String startTranscriptionJob(String mediaUri, String jobName) {
+    public CompletableFuture<String> startTranscriptionJobAsync(String mediaUri, String jobName) {
         if (mediaUri == null || mediaUri.isEmpty()) {
             throw new IllegalArgumentException("Invalid media URI");
         }
@@ -33,84 +35,103 @@ public class TranscribeService {
             throw new IllegalArgumentException("Invalid job name");
         }
 
-        // Check if a transcription job already exists with the given jobName
-        GetTranscriptionJobRequest getRequest = new GetTranscriptionJobRequest().withTranscriptionJobName(jobName);
-        try {
-            // Check the status of the existing transcription job
-            GetTranscriptionJobResult result = amazonTranscribe.getTranscriptionJob(getRequest);
-            TranscriptionJob existingJob = result.getTranscriptionJob();
-
-            // If the job is in "COMPLETED" or "FAILED" state, delete the existing job results
-            if ("COMPLETED".equals(existingJob.getTranscriptionJobStatus()) || 
-                "FAILED".equals(existingJob.getTranscriptionJobStatus())) {
-                deleteTranscriptionJob(jobName); // Delete existing job results
-            }
-        } catch (Exception e) {
-            // Job not found, continue to create a new job
-            // Do not throw any exceptions
-        }
-
-        // Create request object for starting the job
-        StartTranscriptionJobRequest request = new StartTranscriptionJobRequest()
-                .withTranscriptionJobName(jobName)
-                .withLanguageCode("en-US")
-                .withMedia(new Media().withMediaFileUri(mediaUri))
-                .withOutputBucketName("dta-root");
-
-        // Start the transcription job
-        StartTranscriptionJobResult result = amazonTranscribe.startTranscriptionJob(request);
-        TranscriptionJob job = result.getTranscriptionJob();
-
-        // Wait for the job to complete
-        int requestDelayMs = 200;
-        int maxDelayMs = 5000;
-        while (!job.getTranscriptionJobStatus().equals("COMPLETED") && 
-               !job.getTranscriptionJobStatus().equals("FAILED")) {
+        // Return a CompletableFuture that will be completed when transcription job is finished
+        return CompletableFuture.supplyAsync(() -> {
             try {
-                // Sleep for a short interval before checking the status again
-                Thread.sleep(requestDelayMs);  // Wait request delay
-                if (requestDelayMs < maxDelayMs)
-                    requestDelayMs += 500;
-                else
-                    requestDelayMs = maxDelayMs;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                return "Job interrupted";
-            }
+                // First, check if a job with the same name exists and delete it if found
+                deleteExistingTranscriptionJob(jobName);
 
-            // Create a request to fetch the current status of the transcription job
-            getRequest = new GetTranscriptionJobRequest()
+                // Create the transcription job request
+                StartTranscriptionJobRequest request = new StartTranscriptionJobRequest()
+                        .withTranscriptionJobName(jobName)
+                        .withLanguageCode("en-US")
+                        .withMedia(new Media().withMediaFileUri(mediaUri))
+                        .withOutputBucketName("dta-root");
+
+                // Start the transcription job
+                StartTranscriptionJobResult result = amazonTranscribe.startTranscriptionJob(request);
+                TranscriptionJob job = result.getTranscriptionJob();
+
+                // Poll the transcription job asynchronously for the result
+                return pollTranscriptionJobResult(job);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return "Error starting transcription job.";
+            }
+        }, executorService); // Use the executor service to run the task asynchronously
+    }
+
+    /**
+     * Checks if a transcription job with the given name exists and deletes it if found.
+     *
+     * @param jobName The name of the transcription job to check and delete if it exists.
+     */
+    private void deleteExistingTranscriptionJob(String jobName) {
+        try {
+            // Create a request to get the transcription job status
+            GetTranscriptionJobRequest getRequest = new GetTranscriptionJobRequest()
                     .withTranscriptionJobName(jobName);
 
-            // Retrieve the updated job status
-            job = amazonTranscribe.getTranscriptionJob(getRequest).getTranscriptionJob();
+            // Try to fetch the job status
+            GetTranscriptionJobResult getResult = amazonTranscribe.getTranscriptionJob(getRequest);
+
+            // If the job exists, delete it
+            if (getResult != null && getResult.getTranscriptionJob() != null) {
+                amazonTranscribe.deleteTranscriptionJob(new DeleteTranscriptionJobRequest().withTranscriptionJobName(jobName));
+                System.out.println("Deleted existing transcription job with name: " + jobName);
+            }
+        } catch (NoSuchKeyException e) {
+            // If the job doesn't exist, just ignore it.
+            System.out.println("No existing job with name: " + jobName);
+        } catch (Exception e) {
+            System.err.println("Error while trying to delete the existing transcription job: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Polls the transcription job until it's completed or failed.
+     *
+     * @param job The transcription job to monitor
+     * @return The URL of the transcribed file when the job completes
+     */
+    private String pollTranscriptionJobResult(TranscriptionJob job) {
+        // Create request for checking job status
+        GetTranscriptionJobRequest getRequest = new GetTranscriptionJobRequest()
+                .withTranscriptionJobName(job.getTranscriptionJobName());
+
+        int requestDelayMs = 1000; // Poll every second
+        int maxDelayMs = 5000;    // Max delay for polling
+
+        while (true) {
+            try {
+                // Fetch job status
+                job = amazonTranscribe.getTranscriptionJob(getRequest).getTranscriptionJob();
+
+                // If job completed or failed, exit the loop
+                if ("COMPLETED".equals(job.getTranscriptionJobStatus()) || "FAILED".equals(job.getTranscriptionJobStatus())) {
+                    break;
+                }
+
+                // Sleep before checking again
+                Thread.sleep(requestDelayMs);
+                if (requestDelayMs < maxDelayMs) {
+                    requestDelayMs += 500;  // Increase delay up to max value
+                }
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return "Job interrupted.";
+            }
         }
 
-        // If the job is completed, get the URL of the transcribed file
+        // If job is completed, return the URL of the transcribed file
         if ("COMPLETED".equals(job.getTranscriptionJobStatus())) {
-            String bucketName = "dta-root";
-            String fileKey = job.getTranscript().getTranscriptFileUri().substring(job.getTranscript().getTranscriptFileUri().lastIndexOf('/') + 1);
-            String fileUrl = "https://s3.amazonaws.com/" + bucketName + "/" + fileKey;
-            return fileUrl;
+            String fileUrl = job.getTranscript().getTranscriptFileUri();
+            return "https://s3.amazonaws.com/dta-root/" + fileUrl.substring(fileUrl.lastIndexOf('/') + 1);
         } else {
             return "Transcription job failed.";
         }
     }
 
-    // Method to delete the transcription job if it's completed or failed
-    public void deleteTranscriptionJob(String jobName) {
-        // Create the delete request for the transcription job
-        DeleteTranscriptionJobRequest deleteRequest = new DeleteTranscriptionJobRequest()
-                .withTranscriptionJobName(jobName);
-
-        // Delete the transcription job
-        try {
-            // Delete the transcription job and get the result
-            amazonTranscribe.deleteTranscriptionJob(deleteRequest);
-            System.out.println("Transcription job " + jobName + " deleted successfully.");
-        } catch (Exception e) {
-            // Handle any errors that may occur when deleting the job
-            System.out.println("Failed to delete transcription job " + jobName + ": " + e.getMessage());
-        }
-    }
+    // You can also add methods for deleting jobs or handling exceptions.
 }

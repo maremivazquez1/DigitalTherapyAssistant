@@ -1,5 +1,7 @@
 package harvard.capstone.digitaltherapy.websocket;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,7 +57,7 @@ class CBTWebSocketHandlerTest {
     void testHandleBinaryMessage() {
         BinaryMessage binaryMessage = new BinaryMessage(new byte[]{1, 2, 3});
         webSocketHandler.handleBinaryMessage(session, binaryMessage);
-        verify(cbtController, times(1)).handleBinaryMessage(session, binaryMessage);
+        verify(cbtController, times(1)).handleStreamingBinaryMessage(session, binaryMessage);
     }
 
 }
