@@ -111,6 +111,9 @@ const CBTInterface: React.FC = () => {
         default:
           console.warn("[useEffect] Unrecognized message type:", msg.type);
       }
+
+      default:
+        console.warn("[useEffect] Unrecognized message type:", msg.type);
     }
     // Update the last processed index to the current message count.
     lastProcessedIndex.current = messages.length;
