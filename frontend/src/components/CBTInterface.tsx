@@ -10,6 +10,7 @@ interface ChatMessage {
   message?: string;
   audioUrl?: string;
   timestamp: Date;
+  pending?: boolean; // Optional flag to indicate a temporary message
 }
 
 const CBTInterface: React.FC = () => {
@@ -42,9 +43,67 @@ const CBTInterface: React.FC = () => {
 
   // --------------------- EFFECT: PROCESS INCOMING MESSAGES ---------------------
   useEffect(() => {
-    if (messages.length > 0) {
-      const msg = messages[messages.length - 1];
-      if (msg.type === "audio") {
+    if (messages.length === 0) return;
+
+    const msg = messages[messages.length - 1];
+
+    switch (msg.type) {
+      /**
+       * When the backend sends:
+       *   {"type": "input-transcription", "text": "final transcript..."}
+       * we update the pending bubble (if any) with the actual transcript.
+       */
+      case "input-transcription": {
+        setChatMessages((prev) => {
+          const pendingIndex = prev.findIndex(
+            (m) => m.pending && m.sender === "User"
+          );
+          if (pendingIndex !== -1) {
+            // Update existing pending bubble
+            const updated = [...prev];
+            updated[pendingIndex] = {
+              ...updated[pendingIndex],
+              message: msg.text,
+              pending: false,
+            };
+            return updated;
+          }
+          // If no pending bubble exists, add a new one
+          return [
+            ...prev,
+            {
+              id: Date.now(),
+              sender: "User",
+              message: msg.text,
+              timestamp: new Date(),
+            },
+          ];
+        });
+        break;
+      }
+
+      /**
+       * When the backend sends:
+       *   {"type": "output-transcription", "text": "assistant reply..."}
+       * add that as a new Assistant chat bubble.
+       */
+      case "output-transcription": {
+        const assistantMsg: ChatMessage = {
+          id: Date.now(),
+          sender: "Assistant",
+          message: msg.text,
+          timestamp: new Date(),
+        };
+        setChatMessages((prev) => [...prev, assistantMsg]);
+        break;
+      }
+
+      /**
+       * When the backend sends:
+       *   {"type": "audio", "text": "processed audio response", "audio": "audioURL"}
+       * then only handle playing the audio and do NOT add an extra bubble.
+       */
+      case "audio": {
         console.log("[useEffect] Processing audio message from server");
         // Stop any currently playing audio
         if (ttsAudioRef.current) {
@@ -52,28 +111,23 @@ const CBTInterface: React.FC = () => {
           ttsAudioRef.current.src = "";
           ttsAudioRef.current = null;
         }
-        // Transform the minimal WebSocketMessage into a richer ChatMessage
-        const aiMsg: ChatMessage = {
-          id: Date.now(),
-          sender: "Assistant",   // Add the sender here
-          message: msg.text,     // Use the text from the WebSocketMessage
-          audioUrl: msg.audio,   // Use the audio URL from the WebSocketMessage
-          timestamp: new Date(),
-        };
-        setChatMessages((prev) => [...prev, aiMsg]);
-        // Play the audio if available
+        // Play the TTS audio if available
         if (msg.audio) {
           const audioElem = new Audio(msg.audio);
           ttsAudioRef.current = audioElem;
-          audioElem.play().catch(err => {
-            console.warn("[TTS] Couldn’t autoplay:", err);
+          audioElem.play().catch((err) => {
+            console.warn("[TTS] Could not autoplay:", err);
           });
           audioElem.onended = () => {
             console.log("[TTS] Audio ended");
             ttsAudioRef.current = null;
           };
         }
+        break;
       }
+
+      default:
+        console.warn("[useEffect] Unrecognized message type:", msg.type);
     }
   }, [messages]);
 
@@ -89,149 +143,112 @@ const CBTInterface: React.FC = () => {
     if (sessionActive) return;
     console.log("[startSession] Starting session...");
     setSessionActive(true);
-  
+
     try {
       const combinedStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: true,
       });
-  
+
       combinedStreamRef.current = combinedStream;
       const audioTrack = combinedStream.getAudioTracks()[0];
       const videoTrack = combinedStream.getVideoTracks()[0];
       const audioOnlyStream = new MediaStream([audioTrack]);
       const videoOnlyStream = new MediaStream([videoTrack]);
-  
-      // 🎤 Setup MediaRecorder for audio
+
+      // Setup MediaRecorder for audio
       const audioRecorder = new MediaRecorder(audioOnlyStream, {
         mimeType: "audio/webm;codecs=opus",
       });
-  
+
       audioChunksRef.current = [];
-  
+
       audioRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           audioChunksRef.current.push(e.data);
           console.log("[Recorder] Buffered chunk:", e.data.size);
         }
       };
-  
+
       audioRecorder.onstop = () => {
         console.log("[Recorder] Stopped. Finalizing...");
-  
+
         if (audioChunksRef.current.length === 0) {
           console.warn("No audio chunks — not sending.");
           return;
         }
-  
+
+        // Combine all buffered chunks into a final Blob
         const completeAudioBlob = new Blob(audioChunksRef.current, {
           type: "audio/webm;codecs=opus",
         });
-  
-        console.log("🧪 Final Blob size:", completeAudioBlob.size);
-        // window.open(URL.createObjectURL(completeAudioBlob)); // for testing
-  
-        const userMsg: ChatMessage = {
+        console.log("Final Blob size:", completeAudioBlob.size);
+
+        // Insert a temporary bubble while waiting for the transcription from the backend
+        const pendingUserMsg: ChatMessage = {
           id: Date.now(),
           sender: "User",
-          message: "User's final transcribed text (mock)",
+          message: "Transcribing your message...",
+          pending: true,
           timestamp: new Date(),
         };
-        setChatMessages((prev) => [...prev, userMsg]);
-  
+        setChatMessages((prev) => [...prev, pendingUserMsg]);
+
+        // Send the audio blob to the backend
         sendMessage(completeAudioBlob);
         audioChunksRef.current = [];
       };
-  
+
       audioRecorderRef.current = audioRecorder;
-  
-      // 🗣️ Setup Hark for speech detection
+
+      // Setup Hark for speech detection
       const harkInstance = hark(audioOnlyStream, {
         interval: 50,
         threshold: -50,
       });
-  
+
       harkInstance.on("speaking", () => {
         console.log("[Hark] speaking");
-  
+
         if (ttsAudioRef.current) {
           ttsAudioRef.current.pause();
         }
-  
+
         if (audioRecorderRef.current?.state !== "recording") {
           console.log("[Hark] Starting recorder...");
           audioChunksRef.current = [];
-          if (audioRecorderRef.current) {
-            audioRecorderRef.current.start(500); // collect every 500ms
-          }
+          audioRecorderRef.current?.start(500); // collect every 500ms
         }
       });
-  
+
       harkInstance.on("stopped_speaking", () => {
         console.log("[Hark] stopped_speaking");
-  
+
         if (audioRecorderRef.current?.state === "recording") {
           console.log("[Hark] Stopping recorder...");
-          audioRecorderRef.current.stop(); // `onstop` will handle the rest
+          audioRecorderRef.current.stop(); // onstop will handle the rest
         }
       });
-  
+
       harkRef.current = harkInstance;
-  
-      // 🎥 Setup MediaRecorder for video (if needed)
+
+      // Setup MediaRecorder for video (if needed)
       const videoRecorder = new MediaRecorder(videoOnlyStream);
       videoRecorderRef.current = videoRecorder;
       videoRecorder.start(500);
-  
+
       if (videoRef.current) {
         videoRef.current.srcObject = videoOnlyStream;
         videoRef.current.play().catch((err) => {
           console.warn("[Video] Autoplay might be blocked:", err);
         });
       }
-  
+
       console.log("[startSession] Recorders and Hark initialized.");
     } catch (err) {
       console.error("[startSession] Error accessing media devices:", err);
     }
   };
-
-/*   // --------------------- FINALIZE USER SPEECH ---------------------
-  const finalizeUserSpeech = () => {
-    console.log("[finalizeUserSpeech] Finalizing user speech.");
-  
-    // 1. Make sure we have at least one chunk before proceeding
-    if (audioChunksRef.current.length === 0) {
-      console.warn("No audio chunks collected — not sending.");
-      return;
-    }
-  
-    // 🗨️ 2. Create and display the user chat bubble for this utterance
-    const userMsg: ChatMessage = {
-      id: Date.now(),
-      sender: "User",
-      message: "User's final transcribed text (mock)",
-      timestamp: new Date(),
-    };
-    setChatMessages((prev) => [...prev, userMsg]);
-  
-    // 3. Combine the buffered chunks into a single Blob
-    const completeAudioBlob = new Blob(audioChunksRef.current, {
-      type: "audio/ogg; codecs=opus",
-    });
-  
-    console.log("[finalizeUserSpeech] Blob size:", completeAudioBlob.size);
-    //window.open(URL.createObjectURL(completeAudioBlob)); // test if the blob is valid
-  
-    // 4. Clear the buffer for the next utterance
-    audioChunksRef.current = [];
-  
-    // 5. Send the complete audio file as one binary message
-    sendMessage(completeAudioBlob);
-  
-    // (Optional) Send a JSON signal if your backend expects one
-    // sendMessage(JSON.stringify({ type: "end-of-speech" }));
-  }; */
 
   // --------------------- STOP SESSION ---------------------
   const stopSession = () => {
@@ -240,22 +257,14 @@ const CBTInterface: React.FC = () => {
 
     if (ttsAudioRef.current) {
       console.log("[stopSession] Forcing complete audio shutdown...");
-    
       try {
-        // Pause and reset playback
         ttsAudioRef.current.pause();
-    
-        // Revoke the blob URL if applicable
         if (ttsAudioRef.current.src?.startsWith("blob:")) {
           console.log("[stopSession] Revoking audio URL:", ttsAudioRef.current.src);
           URL.revokeObjectURL(ttsAudioRef.current.src);
         }
-    
-        // Reset and unload the current audio source
         ttsAudioRef.current.src = "";
-        ttsAudioRef.current.load(); // Important: forces state reset
-    
-        // Remove all event listeners just in case
+        ttsAudioRef.current.load();
         ttsAudioRef.current.onended = null;
         ttsAudioRef.current.onerror = null;
         ttsAudioRef.current.onpause = null;
@@ -263,11 +272,8 @@ const CBTInterface: React.FC = () => {
       } catch (err) {
         console.warn("[stopSession] Error during audio shutdown:", err);
       }
-    
-      // Force a completely new Audio instance
-      ttsAudioRef.current = new Audio(); // Fresh and clean
+      ttsAudioRef.current = new Audio();
     }
-
 
     if (audioRecorderRef.current && audioRecorderRef.current.state !== "inactive") {
       console.log("[stopSession] Stopping audio recorder...");
@@ -342,22 +348,21 @@ const CBTInterface: React.FC = () => {
                   </time>
                 </div>
                 <div
-                  className={`chat-bubble p-3 shadow-md rounded-full ${
+                  className={`chat-bubble p-4 shadow-md rounded-full ${
                     msg.sender === "User"
                       ? "bg-base-300 bg-opacity-80 text-primary-content"
                       : "bg-base-300 bg-opacity-80 text-secondary-content"
                   }`}
                 >
                   {msg.message}
-                  {msg.audioUrl && (
-                    <audio src={msg.audioUrl} controls={false} />
-                  )}
+                  {msg.audioUrl && <audio src={msg.audioUrl} controls={false} />}
                 </div>
               </div>
             ))}
           </div>
         </div>
       </div>
+
       {/* BEGIN SESSION BUTTON */}
       {!sessionActive && (
         <div className="absolute inset-0 flex items-center justify-center">
@@ -366,6 +371,7 @@ const CBTInterface: React.FC = () => {
           </button>
         </div>
       )}
+
       {/* STOP SESSION BUTTON */}
       {sessionActive && (
         <div className="absolute top-5 left-1/2 transform -translate-x-1/2">
@@ -374,6 +380,8 @@ const CBTInterface: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* MIC & CAMERA CONTROLS */}
       <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 flex items-center gap-4">
         {/* Mic Button */}
         <button
@@ -384,6 +392,7 @@ const CBTInterface: React.FC = () => {
             {micMuted ? <FaMicrophoneSlash /> : <FaMicrophone />}
           </span>
         </button>
+
         {/* Camera Button */}
         <button
           onClick={handleCamClick}
@@ -394,6 +403,8 @@ const CBTInterface: React.FC = () => {
           </span>
         </button>
       </div>
+
+      {/* SELF-VIEW VIDEO */}
       <div className="absolute bottom-5 right-5 avatar">
         <div className="w-38 h-38 rounded border-4 border-neutral overflow-hidden">
           <video ref={videoRef} autoPlay muted className="object-cover w-full h-full" />
