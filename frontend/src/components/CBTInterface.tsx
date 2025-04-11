@@ -111,7 +111,6 @@ const CBTInterface: React.FC = () => {
         default:
           console.warn("[useEffect] Unrecognized message type:", msg.type);
       }
-
       default:
         console.warn("[useEffect] Unrecognized message type:", msg.type);
     }
