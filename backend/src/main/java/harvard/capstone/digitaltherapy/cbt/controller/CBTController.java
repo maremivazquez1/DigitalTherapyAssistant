@@ -135,6 +135,7 @@ public class CBTController {
             logger.info("transcribe Service took {} ms", System.currentTimeMillis() - transcribeServiceTime);
             tempFile.delete(); // Cleanup temp file
             String transcribedText = "";
+            String transcribedResponseText = "";
             String transcript = "";
             try {
                 File transcribedFile = s3Service.downloadFileFromS3("dta-root",
@@ -160,13 +161,27 @@ public class CBTController {
             }
             // Send transcribed text as a text message
             ObjectNode textResponse = objectMapper.createObjectNode();
-            textResponse.put("type", "transcription");
+            textResponse.put("type", "input-transcription");
             textResponse.put("text", transcript);
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textResponse)));
 
             String s3Path = transcribedS3Path.replace("https://s3.amazonaws.com/", "s3://");
             long llmResponseTime  = System.currentTimeMillis();
             String llmResponse = llmProcessingService.process(s3Path);
+            try {
+                File transcribedResponseFile = s3Service.downloadFileFromS3("dta-root",
+                        llmResponse.replace("s3://dta-root/", ""));
+                transcribedResponseText = new String(Files.readAllBytes(transcribedResponseFile.toPath()), StandardCharsets.UTF_8);
+                transcribedResponseFile.delete(); // Cleanup
+            } catch (Exception e) {
+                logger.error("Error reading transcribed text: {}", e.getMessage(), e);
+            }
+            // Send transcribed text as a text message
+            ObjectNode textLLMResponse = objectMapper.createObjectNode();
+            textLLMResponse.put("type", "output-transcription");
+            textLLMResponse.put("text", transcribedResponseText);
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textLLMResponse)));
+
             logger.info("llm Response Time took {} ms", System.currentTimeMillis() - llmResponseTime);
             long pollyServiceTime  = System.currentTimeMillis();
             String textToSpeechResponse = pollyService.convertTextToSpeech(llmResponse, sessionId);
