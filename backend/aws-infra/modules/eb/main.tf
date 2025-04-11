@@ -16,7 +16,6 @@ resource "aws_s3_object" "artifact" {
   bucket = aws_s3_bucket.artifact_bucket.bucket
   key    = var.artifact_key
   source = var.artifact_path
-  etag   = filemd5(var.artifact_path)
 }
 
 resource "aws_elastic_beanstalk_application_version" "this" {
