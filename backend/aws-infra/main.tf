@@ -2,8 +2,8 @@ provider "aws" {
   region = "us-east-1"
 }
 
-resource "aws_security_group" "ec2_sg" {
-  name_prefix = "ec2_sg-"
+resource "aws_security_group" "eb_sg" {
+  name_prefix = "eb_sg-"
   description = "Security group for EC2 instance"
   vpc_id      = var.vpc_id
 
@@ -40,37 +40,40 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
-
-module "ec2" {
-  source                = "./modules/ec2"
-  ami                   = data.aws_ami.latest_amazon_linux.id
-  instance_type         = "t2.micro"
-  key_name              = var.key_name
-  repo_url              = var.repo_url
-  oauth_token           = var.oauth_token
-  vpc_id                = var.vpc_id
-  ec2_security_group_id = aws_security_group.ec2_sg.id
-
-  # from rds
-  db_endpoint = module.rds.rds_endpoint
-  db_port     = module.rds.rds_port
-  db_username = module.rds.rds_username
-  db_password = module.rds.rds_password
-}
-
 module "rds" {
   source                = "./modules/rds"
   db_name               = var.db_name
   rds_exists            = var.rds_exists
   vpc_id                = var.vpc_id
-  ec2_security_group_id = aws_security_group.ec2_sg.id
+  ec2_security_group_id = aws_security_group.eb_sg.id
+}
+
+module "eb" {
+  source              = "./modules/eb"
+  application_name    = "springboot-app"
+  environment_name    = "springboot-env"
+  artifact_path       = "build/libs/springboot-app.zip" # Update with your actual ZIP file location
+  artifact_key        = "springboot-app.zip"
+  solution_stack_name = "64bit Amazon Linux 2 v3.4.10 running Corretto 17"
+  instance_type       = "t3.micro"
+  s3_bucket           = "beanstalk-artifacts"
+
+  # from rds
+  db_host     = module.rds.rds_endpoint
+  db_port     = module.rds.rds_port
+  db_user     = module.rds.rds_username
+  db_password = module.rds.rds_password
+
+  # security
+  vpc_id             = var.vpc_id
+  security_group_ids = [aws_security_group.eb_sg.id]
 }
 
 module "amplify" {
   source      = "./modules/amplify"
   repo_url    = var.repo_url
   oauth_token = var.oauth_token
-  api_url     = "${module.ec2.api_url}:8443"
+  api_url     = "${module.eb.endpoint_url}:8443"
 }
 
 data "aws_ami" "latest_amazon_linux" {

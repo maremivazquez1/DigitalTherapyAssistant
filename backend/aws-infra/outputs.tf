@@ -3,7 +3,7 @@ output "frontend_url" {
 }
 
 output "api_url" {
-  value = module.ec2.api_url
+  value = module.eb.endpoint_url
 }
 
 output "rds_endpoint" {

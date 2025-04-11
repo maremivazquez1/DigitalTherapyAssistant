@@ -34,6 +34,44 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # Build the Spring Boot JAR
+    - name: Set up Java 17
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Build with Maven
+      run: |
+        cd backend
+        mvn clean package -DskipTests
+
+    # Zip the JAR for Beanstalk
+    - name: Package artifact
+      run: |
+        mkdir -p eb-artifact
+        cp backend/target/*.jar eb-artifact/app.jar
+        cd eb-artifact
+        zip springboot-app.zip app.jar
+        ls -l springboot-app.zip
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    # Upload to S3
+    - name: Upload artifact to S3
+      run: |
+        export BUCKET="beanstalk-bucket"
+        export KEY="springboot-app.zip"
+        aws s3 mb s3://$BUCKET || true
+        aws s3 cp eb-artifact/springboot-app.zip s3://$BUCKET/$KEY
+        echo "ARTIFACT_BUCKET=$BUCKET" >> $GITHUB_ENV
+        echo "ARTIFACT_KEY=$KEY"    >> $GITHUB_ENV
+
     # Restore cached Terraform plugins
     - name: Restore Terraform cache
       uses: actions/cache@v3
@@ -47,16 +85,14 @@ jobs:
       with:
         terraform_version: 1.11.1
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1  # Change this to your region
-
+    # Create terraform.tfvars
     - name: Create tfvars file
       run: |
-        echo "oauth_token = \"${{ secrets.OAUTH_TOKEN_GITHUB }}\"" > terraform.tfvars
+        cat > terraform.tfvars <<EOF
+        oauth_token    = "${{ secrets.OAUTH_TOKEN_GITHUB }}"
+        s3_bucket      = "${{ env.ARTIFACT_BUCKET }}"
+        artifact_key   = "${{ env.ARTIFACT_KEY }}"
+        EOF
 
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
@@ -83,5 +119,11 @@ jobs:
       # On push to "main", build or change infrastructure according to Terraform configuration files
       # Note: It is recommended to set up a required "strict" status check in your repository for "Terraform Cloud". See the documentation on "strict" required status checks for more information: https://help.github.com/en/github/administering-a-repository/types-of-required-status-checks
     - name: Terraform Apply
-      run: terraform -chdir=backend/aws-infra/ apply -var 'oauth_token=${{ secrets.OAUTH_TOKEN_GITHUB }}' -var="rds_exists=${{ env.RDS_EXISTS }}" -auto-approve -input=false
+      run: terraform -chdir=backend/aws-infra/ apply \
+            -var="oauth_token=${{ secrets.OAUTH_TOKEN_GITHUB }}" \
+            -var="rds_exists=${{ env.RDS_EXISTS }}" \
+            -var="s3_bucket=${{ env.ARTIFACT_BUCKET }}" \
+            -var="artifact_key=${{ env.ARTIFACT_KEY }}" \
+            -auto-approve \
+            -input=false
       if: github.ref == 'refs/heads/pipeline' && github.event_name == 'push'
