@@ -32,10 +32,17 @@ const CBTInterface: React.FC = () => {
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
   const videoRecorderRef = useRef<MediaRecorder | null>(null);
   const harkRef = useRef<any>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
+  // New refs to store metadata for each utterance
+  const utteranceFileIdRef = useRef<string | null>(null);
+  const utteranceStartTimeRef = useRef<string | null>(null);
+
+  // New ref for the session ID
+  const sessionIdRef = useRef<string | null>(null);
 
   // --------------------- USE WEBSOCKET HOOK ---------------------
   // The connection will be established when sessionActive becomes true.
@@ -81,7 +88,6 @@ const CBTInterface: React.FC = () => {
         });
         break;
       }
-
       /**
        * When the backend sends:
        *   {"type": "output-transcription", "text": "assistant reply..."}
@@ -97,7 +103,6 @@ const CBTInterface: React.FC = () => {
         setChatMessages((prev) => [...prev, assistantMsg]);
         break;
       }
-
       /**
        * When the backend sends:
        *   {"type": "audio", "text": "processed audio response", "audio": "audioURL"}
@@ -125,7 +130,6 @@ const CBTInterface: React.FC = () => {
         }
         break;
       }
-
       default:
         console.warn("[useEffect] Unrecognized message type:", msg.type);
     }
@@ -145,6 +149,9 @@ const CBTInterface: React.FC = () => {
     setSessionActive(true);
 
     try {
+      // Generate a new session ID when the session starts
+      sessionIdRef.current = `session_${Date.now()}`;
+
       const combinedStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: true,
@@ -178,25 +185,35 @@ const CBTInterface: React.FC = () => {
           return;
         }
 
-        // Combine all buffered chunks into a final Blob
+        // Create a header object with metadata including session ID
+        const headerMessage = {
+          type: "header",
+          session_id: sessionIdRef.current, // Added session ID here
+          file_id: utteranceFileIdRef.current || `audio_${Date.now()}`,
+          modality: "audio",
+          timestamp_start: utteranceStartTimeRef.current || new Date().toISOString(),
+          timestamp_end: new Date().toISOString(),
+          user_id: "user_12345",
+        };
+
+        // Send the header before sending the actual blob
+        sendMessage(JSON.stringify(headerMessage));
+        console.log("[Recorder] Sent header:", headerMessage);
+
+        // Combine all buffered chunks into a final Blob (complete utterance)
         const completeAudioBlob = new Blob(audioChunksRef.current, {
           type: "audio/webm;codecs=opus",
         });
         console.log("Final Blob size:", completeAudioBlob.size);
 
-        // Insert a temporary bubble while waiting for the transcription from the backend
-        const pendingUserMsg: ChatMessage = {
-          id: Date.now(),
-          sender: "User",
-          message: "Transcribing your message...",
-          pending: true,
-          timestamp: new Date(),
-        };
-        setChatMessages((prev) => [...prev, pendingUserMsg]);
-
-        // Send the audio blob to the backend
+        // Send the complete audio blob to the backend
         sendMessage(completeAudioBlob);
+        console.log("[Recorder] Sent complete audio blob.");
+
+        // Clear buffered chunks and reset utterance metadata for the next utterance
         audioChunksRef.current = [];
+        utteranceFileIdRef.current = null;
+        utteranceStartTimeRef.current = null;
       };
 
       audioRecorderRef.current = audioRecorder;
@@ -214,10 +231,15 @@ const CBTInterface: React.FC = () => {
           ttsAudioRef.current.pause();
         }
 
+        // Only start a new recorder if one isn’t already running
         if (audioRecorderRef.current?.state !== "recording") {
-          console.log("[Hark] Starting recorder...");
+          // Initialize metadata for this utterance
+          utteranceFileIdRef.current = `audio_${Date.now()}`;
+          utteranceStartTimeRef.current = new Date().toISOString();
+          console.log("[Hark] New utterance started with file ID:", utteranceFileIdRef.current);
+
           audioChunksRef.current = [];
-          audioRecorderRef.current?.start(500); // collect every 500ms
+          audioRecorderRef.current?.start(500); // Collect every 500ms
         }
       });
 
@@ -226,7 +248,7 @@ const CBTInterface: React.FC = () => {
 
         if (audioRecorderRef.current?.state === "recording") {
           console.log("[Hark] Stopping recorder...");
-          audioRecorderRef.current.stop(); // onstop will handle the rest
+          audioRecorderRef.current.stop(); // onstop will handle sending metadata and blob
         }
       });
 
