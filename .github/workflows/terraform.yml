@@ -65,7 +65,7 @@ jobs:
     # Upload to S3
     - name: Upload artifact to S3
       run: |
-        export BUCKET="beanstalk-bucket"
+        export BUCKET="cbt-beanstalk-bucket"
         export KEY="springboot-app.zip"
         aws s3 mb s3://$BUCKET || true
         aws s3 cp eb-artifact/springboot-app.zip s3://$BUCKET/$KEY

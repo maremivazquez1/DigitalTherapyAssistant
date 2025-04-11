@@ -53,10 +53,10 @@ module "eb" {
   application_name    = "springboot-app"
   environment_name    = "springboot-env"
   artifact_path       = "build/libs/springboot-app.zip" # Update with your actual ZIP file location
-  artifact_key        = "springboot-app.zip"
+  artifact_key        = var.s3_key
   solution_stack_name = "64bit Amazon Linux 2 v3.4.10 running Corretto 17"
   instance_type       = "t3.micro"
-  s3_bucket           = "beanstalk-artifacts"
+  s3_bucket           = "var.s3_bucket
 
   # from rds
   db_host     = module.rds.rds_endpoint
