@@ -29,7 +29,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
                 // only permit access to the following if without valid login (also always allow initial web socket HTTP)
-                .requestMatchers("/api/login", "/api/register", "/ws/cbt/**").permitAll()
+                .requestMatchers("/api/login", "/api/register").permitAll()
                 .anyRequest().authenticated()
             )
             // Register JWT filter to check valid token first before usual username/pass authentication

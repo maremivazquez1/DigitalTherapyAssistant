@@ -2,10 +2,11 @@ package harvard.capstone.digitaltherapy.config;
 
 import harvard.capstone.digitaltherapy.authentication.service.JwtTokenProvider;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,20 +31,38 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
         if (token != null && jwtTokenProvider.validateToken(token)) {
             String username = jwtTokenProvider.getUsername(token);
-            // Create a simple authentication token (you can extend this to load roles/authorities)
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                    username, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            username,
+                            null,
+                            Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+            // add extra details of request to authentication for debugging
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
         }
         filterChain.doFilter(request, response);
     }
 
-    // Helper method to extract the token from the Authorization header
     private String resolveToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
+        String token = request.getHeader("Authorization");
+        // case if using websocket
+        if (token == null && "websocket".equalsIgnoreCase(request.getHeader("Upgrade"))) {
+            String query = request.getQueryString();
+            if (query != null && query.contains("token=")) {
+                String[] parts = query.split("token=");
+                if (parts.length > 1) {
+                    token = parts[1];
+                    // remove extra stuff after '&'
+                    if (token.contains("&")) {
+                        token = token.substring(0, token.indexOf("&"));
+                    }
+                }
+            }
         }
-        return null;
+        // typical HTTP request
+        if (token != null && token.startsWith("Bearer ")) {
+            return token.substring(7);
+        }
+        return token;
     }
 }
