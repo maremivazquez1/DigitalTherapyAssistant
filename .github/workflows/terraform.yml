@@ -113,8 +113,8 @@ jobs:
     - name: Check if S3 bucket exists and import
       id: check_s3
       run: |
-        if aws s3api head-bucket --bucket "$BUCKET" > /dev/null 2>&1; then
-          terraform -chdir=backend/aws-infra/ import module.eb.aws_s3_bucket.artifact_bucket "$BUCKET"
+        if aws s3api head-bucket --bucket "${{ env.ARTIFACT_BUCKET }}" > /dev/null 2>&1; then
+          terraform -chdir=backend/aws-infra/ import module.eb.aws_s3_bucket.artifact_bucket "${{ env.ARTIFACT_BUCKET }}" 
         fi
 
     - name: Check if EB Application exists and import
