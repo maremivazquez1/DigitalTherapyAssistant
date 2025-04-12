@@ -120,11 +120,13 @@ jobs:
       # On push to "main", build or change infrastructure according to Terraform configuration files
       # Note: It is recommended to set up a required "strict" status check in your repository for "Terraform Cloud". See the documentation on "strict" required status checks for more information: https://help.github.com/en/github/administering-a-repository/types-of-required-status-checks
     - name: Terraform Apply
-      run: terraform -chdir=backend/aws-infra/ apply \
+      run: |
+          terraform -chdir=backend/aws-infra/ apply \
             -var="oauth_token=${{ secrets.OAUTH_TOKEN_GITHUB }}" \
             -var="rds_exists=${{ env.RDS_EXISTS }}" \
             -var="s3_bucket=${{ env.ARTIFACT_BUCKET }}" \
             -var="artifact_key=${{ env.ARTIFACT_KEY }}" \
             -auto-approve \
             -input=false
+
       if: github.ref == 'refs/heads/pipeline' && github.event_name == 'push'
