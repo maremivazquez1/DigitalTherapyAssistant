@@ -117,6 +117,13 @@ jobs:
           terraform -chdir=backend/aws-infra/ import module.eb.aws_s3_bucket.artifact_bucket "$BUCKET"
         fi
 
+    - name: Check if EB Application exists and import
+      id: check_eb_app
+      run: |
+        if aws elasticbeanstalk describe-applications --application-names "springboot-app" > /dev/null 2>&1; then
+          terraform -chdir=backend/aws-infra/ import module.eb.aws_elastic_beanstalk_application.this springboot-app
+        fi
+
     # Generates an execution plan for Terraform
     - name: Terraform Plan
       run: terraform -chdir=backend/aws-infra/ plan -input=false
