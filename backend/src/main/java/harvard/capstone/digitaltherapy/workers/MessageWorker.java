@@ -6,6 +6,7 @@ import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,6 +30,12 @@ public class MessageWorker {
                 .maxOutputTokens(300)
                 .build();
 
+        /*OpenAiChatModel model = OpenAiChatModel.builder()
+                .baseUrl("http://langchain4j.dev/demo/openai/v1")
+                //.apiKey("demo") comment this line out
+                .modelName("gpt-4o-mini")
+                .build();
+*/
     }
 
     public void setSessionContext(String sessionId, String userId) {
