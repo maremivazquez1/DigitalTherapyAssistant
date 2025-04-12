@@ -107,10 +107,14 @@ jobs:
       id: check_rds
       run: |
         if aws rds describe-db-instances --db-instance-identifier "cbt" > /dev/null 2>&1; then
-          echo "RDS_EXISTS=true" >> $GITHUB_ENV
           terraform -chdir=backend/aws-infra/ import module.rds.aws_db_instance.rds_instance cbt
-        else
-          echo "RDS_EXISTS=false" >> $GITHUB_ENV
+        fi
+
+    - name: Check if S3 bucket exists and import
+      id: check_s3
+      run: |
+        if aws s3api head-bucket --bucket "$BUCKET" > /dev/null 2>&1; then
+          terraform -chdir=backend/aws-infra/ import module.eb.aws_s3_bucket.artifact_bucket "$BUCKET"
         fi
 
     # Generates an execution plan for Terraform
@@ -124,7 +128,6 @@ jobs:
       run: |
           terraform -chdir=backend/aws-infra/ apply \
             -var="oauth_token=${{ secrets.OAUTH_TOKEN_GITHUB }}" \
-            -var="rds_exists=${{ env.RDS_EXISTS }}" \
             -var="s3_bucket=${{ env.ARTIFACT_BUCKET }}" \
             -var="s3_key=${{ env.ARTIFACT_KEY }}" \
             -auto-approve \
