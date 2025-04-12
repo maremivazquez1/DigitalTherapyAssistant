@@ -7,22 +7,11 @@ resource "aws_s3_bucket" "artifact_bucket" {
   bucket = var.s3_bucket
 }
 
-resource "aws_s3_bucket_acl" "artifact_bucket_acl" {
-  bucket = aws_s3_bucket.artifact_bucket.id
-  acl    = "private"
-}
-
-resource "aws_s3_object" "artifact" {
-  bucket = aws_s3_bucket.artifact_bucket.bucket
-  key    = var.artifact_key
-  source = var.artifact_path
-}
-
 resource "aws_elastic_beanstalk_application_version" "this" {
   name        = "v1"
   application = aws_elastic_beanstalk_application.this.name
-  bucket      = aws_s3_bucket.artifact_bucket.bucket
-  key         = aws_s3_object.artifact.key
+  bucket      = var.s3_bucket
+  key         = var.artifact_key
   description = "Application version v1"
 }
 
