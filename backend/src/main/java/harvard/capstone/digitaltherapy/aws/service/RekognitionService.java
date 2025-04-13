@@ -3,6 +3,7 @@ package harvard.capstone.digitaltherapy.aws.service;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,22 +21,16 @@ import java.util.List;
 @Service
 public class RekognitionService {
 
-    private static final Logger logger = LoggerFactory.getLogger(RekognitionService.class);
+    @Autowired
     private RekognitionClient rekognitionClient;
+
+    private static final Logger logger = LoggerFactory.getLogger(RekognitionService.class);
 
     // In-memory tracking (consider external store for production)
     private final Map<String, CompletableFuture<String>> jobFutures = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    @PostConstruct
-    public void init() {
-        rekognitionClient = RekognitionClient.builder()
-            .region(Region.US_EAST_1)
-            .credentialsProvider(DefaultCredentialsProvider.create())
-            .build();
-    }
 
     private S3Object parseS3Url(String s3Url) {
         try {
