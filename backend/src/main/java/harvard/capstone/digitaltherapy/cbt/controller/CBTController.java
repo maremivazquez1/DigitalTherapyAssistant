@@ -138,6 +138,7 @@ public class CBTController {
                  long s3AudioFileUploadTime  = System.currentTimeMillis();
                  String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
                  logger.info("S3 Video File Upload took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
+                 session.sendMessage(new TextMessage("Video files is received and processed by the Recognition LLM Service"));
 
              }else if(currentModality.equalsIgnoreCase("audio")){
                 tempFile = File.createTempFile("audio_", ".mp3");
