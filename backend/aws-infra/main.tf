@@ -182,5 +182,5 @@ module "amplify" {
   repo_url    = var.repo_url
   oauth_token = var.oauth_token
   # Point your Amplify API configuration to the ALB DNS name.
-  api_url = "https://digitaltherapyassistant.click"
+  api_url = "digitaltherapyassistant.click"
 }
