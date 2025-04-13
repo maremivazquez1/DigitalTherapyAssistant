@@ -40,8 +40,8 @@ public class S3Utils {
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .overrideConfiguration(config -> config
                         .retryPolicy(retryPolicy)
-                        .apiCallTimeout(Duration.ofMinutes(5))
-                        .apiCallAttemptTimeout(Duration.ofMinutes(2)))
+                        .apiCallTimeout(Duration.ofMinutes(30))
+                        .apiCallAttemptTimeout(Duration.ofMinutes(20)))
                 .build();
     }
 
