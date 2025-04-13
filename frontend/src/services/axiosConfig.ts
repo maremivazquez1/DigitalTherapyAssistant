@@ -1,7 +1,7 @@
 // src/services/axiosConfig.ts
 import axios from 'axios';
 
-const baseURL = ("http://" + import.meta.env.VITE_API_BASE_URL) || '/api';
+const baseURL = ("https://" + import.meta.env.VITE_API_BASE_URL) || '/api';
 
 const api = axios.create({
   baseURL,
