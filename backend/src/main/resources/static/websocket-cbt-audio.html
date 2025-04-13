@@ -173,7 +173,7 @@
   <h1>AWS Bedrock WebSocket Test Client</h1>
 
   <div class="connection-info">
-    <p>Connect to: <code>wss://localhost:8443/ws/cbt</code></p>
+    <p>Connect to: <code>ws://localhost:8080/ws/cbt</code></p>
   </div>
 
   <div class="control-panel">
@@ -214,7 +214,7 @@
 
   function connect() {
     try {
-      socket = new WebSocket('wss://localhost:8443/ws/cbt');
+      socket = new WebSocket('ws://localhost:8080/ws/cbt');
       socket.binaryType = 'arraybuffer'; // Set binary type for handling binary messages
 
       socket.onopen = function() {

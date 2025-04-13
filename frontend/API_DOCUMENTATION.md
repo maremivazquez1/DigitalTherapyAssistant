@@ -139,7 +139,7 @@
 ## **4️⃣ WebSocket API**
  
 ### ➤ WebSocket Connection
-- **URL:** `wss://api.yourapp.com/chat/stream`
+- **URL:** `ws://api.yourapp.com/chat/stream`
 - **Description:** Enables real-time chat with the AI.
 - **Message Format:**
   ```json

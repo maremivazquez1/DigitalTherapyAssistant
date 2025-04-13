@@ -29,7 +29,7 @@ const reconnectDelay = 1000; // Initial delay in ms (1 second)
 let heartbeatInterval: number | null = null; // Updated to use number | null
 
 // update with the correct WebSocket base URL
-const WS_BASE_URL = "wss://api.yourapp.com/chat/stream";
+const WS_BASE_URL = "ws://api.yourapp.com/chat/stream";
 
 export const connectWebSocket = (sessionId: string, onMessage: (message: WebSocketMessage) => void) => {
     if (socket && socket.readyState === WebSocket.OPEN) {

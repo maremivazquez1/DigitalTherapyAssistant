@@ -1,13 +1,54 @@
-variable "ami" {}
-variable "instance_type" {}
-variable "repo_url" {}
-variable "oauth_token" {}
-variable "key_name" {}
-variable "vpc_id" {}
-variable "ec2_security_group_id" {}
+variable "ami" {
+  description = "AMI to use for the instance"
+  type        = string
+}
 
-# rds variables
-variable "db_endpoint" {}
-variable "db_port" {}
-variable "db_username" {}
-variable "db_password" {}
+variable "instance_type" {
+  description = "EC2 instance type"
+  type        = string
+}
+
+variable "key_name" {
+  description = "Key pair name for SSH"
+  type        = string
+}
+
+variable "repo_url" {
+  description = "Repository URL for your application"
+  type        = string
+}
+
+variable "oauth_token" {
+  description = "OAuth token for repository access"
+  type        = string
+}
+
+variable "vpc_id" {
+  description = "VPC ID"
+  type        = string
+}
+
+variable "ec2_security_group_id" {
+  description = "The security group ID for this instance"
+  type        = string
+}
+
+variable "db_endpoint" {
+  description = "Database endpoint"
+  type        = string
+}
+
+variable "db_port" {
+  description = "Database port"
+  type        = string
+}
+
+variable "db_username" {
+  description = "Database username"
+  type        = string
+}
+
+variable "db_password" {
+  description = "Database password"
+  type        = string
+}
