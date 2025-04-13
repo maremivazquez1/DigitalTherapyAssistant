@@ -9,6 +9,7 @@ import harvard.capstone.digitaltherapy.workers.MessageWorker;
 import harvard.capstone.digitaltherapy.workers.TextAnalysisWorker;
 
 import dev.langchain4j.data.segment.TextSegment;
+import org.springframework.stereotype.Service;
 
 
 import java.util.ArrayList;
@@ -23,7 +24,8 @@ import java.util.UUID;
  * Core orchestration component that manages the therapeutic conversation flow
  * and coordinates interactions between different system components.
  */
-public class DTASessionOrchestrator {
+@Service
+public class DTASessionOrchestrator implements TherapySessionService {
 
     private final TextAnalysisWorker textAnalysisWorker;
     private final MessageWorker messageWorker;
@@ -45,6 +47,8 @@ public class DTASessionOrchestrator {
      *
      * @return The session ID for the new session
      */
+
+    @Override
     public String createSession() {
         String sessionId = UUID.randomUUID().toString();
         List<ChatMessage> messages = new ArrayList<>();
@@ -67,6 +71,8 @@ public class DTASessionOrchestrator {
      * @param userMessage The message from the user
      * @return The therapeutic response
      */
+
+    @Override
     public String processUserMessage(String sessionId, String userMessage) {
         if (!sessionMessages.containsKey(sessionId)) {
             throw new IllegalArgumentException("Invalid session ID: " + sessionId);
@@ -118,6 +124,21 @@ public class DTASessionOrchestrator {
 
         return response;
     }
+
+    /**
+     * Checks if a session exists
+     *
+     * @param sessionId The session identifier to check
+     * @return true if the session exists, false otherwise
+     */
+    @Override
+    public boolean sessionExists(String sessionId) {
+        if (sessionId == null) {
+            return false;
+        }
+        return sessionMessages.containsKey(sessionId);
+    }
+
 
     /**
      * Creates a context message from therapy insights
