@@ -1,5 +1,6 @@
 package harvard.capstone.digitaltherapy.cbt.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -125,18 +126,62 @@ public class CBTController {
 
             // Process the audio using existing functionality
             String keyName = "audio_" + sessionId + ".mp3";
-
             // Upload to S3
             long s3AudioFileUploadTime  = System.currentTimeMillis();
             String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
-            logger.info("S3 Audio File Upload Time took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
+            logger.info("S3 Audio File Upload took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
             long transcribeServiceTime  = System.currentTimeMillis();
             String transcribedS3Path = transcribeService.startTranscriptionJob(response, sessionId);
             logger.info("transcribe Service took {} ms", System.currentTimeMillis() - transcribeServiceTime);
             tempFile.delete(); // Cleanup temp file
+            String transcribedText = "";
+            String transcribedResponseText = "";
+            String transcript = "";
+            try {
+                File transcribedFile = s3Service.downloadFileFromS3("dta-root",
+                        transcribedS3Path.replace("https://s3.amazonaws.com/dta-root/", ""));
+                transcribedText = new String(Files.readAllBytes(transcribedFile.toPath()), StandardCharsets.UTF_8);
+                try {
+                    JsonNode rootNode = objectMapper.readTree(transcribedText);
+                    JsonNode transcriptsNode = rootNode.path("results").path("transcripts");
+
+                    if (!transcriptsNode.isEmpty() && transcriptsNode.get(0).has("transcript")) {
+                        transcript = transcriptsNode.get(0).path("transcript").asText();
+                    } else {
+                        logger.warn("Transcript not found in the expected JSON structure");
+                        transcript = "Transcription failed";
+                    }
+                } catch (JsonProcessingException e) {
+                    logger.error("Error parsing transcription JSON: {}", e.getMessage());
+                    transcript = "Error processing transcription";
+                }
+                transcribedFile.delete(); // Cleanup
+            } catch (Exception e) {
+                logger.error("Error reading transcribed text: {}", e.getMessage(), e);
+            }
+            // Send transcribed text as a text message
+            ObjectNode textResponse = objectMapper.createObjectNode();
+            textResponse.put("type", "input-transcription");
+            textResponse.put("text", transcript);
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textResponse)));
+
             String s3Path = transcribedS3Path.replace("https://s3.amazonaws.com/", "s3://");
             long llmResponseTime  = System.currentTimeMillis();
             String llmResponse = llmProcessingService.process(s3Path);
+            try {
+                File transcribedResponseFile = s3Service.downloadFileFromS3("dta-root",
+                        llmResponse.replace("s3://dta-root/", ""));
+                transcribedResponseText = new String(Files.readAllBytes(transcribedResponseFile.toPath()), StandardCharsets.UTF_8);
+                transcribedResponseFile.delete(); // Cleanup
+            } catch (Exception e) {
+                logger.error("Error reading transcribed text: {}", e.getMessage(), e);
+            }
+            // Send transcribed text as a text message
+            ObjectNode textLLMResponse = objectMapper.createObjectNode();
+            textLLMResponse.put("type", "output-transcription");
+            textLLMResponse.put("text", transcribedResponseText);
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textLLMResponse)));
+
             logger.info("llm Response Time took {} ms", System.currentTimeMillis() - llmResponseTime);
             long pollyServiceTime  = System.currentTimeMillis();
             String textToSpeechResponse = pollyService.convertTextToSpeech(llmResponse, sessionId);
