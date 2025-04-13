@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import harvard.capstone.digitaltherapy.aws.service.RekognitionService;
 import harvard.capstone.digitaltherapy.llm.service.LLMProcessingService;
 import harvard.capstone.digitaltherapy.aws.service.PollyService;
 import harvard.capstone.digitaltherapy.aws.service.TranscribeService;
@@ -25,6 +26,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.concurrent.CompletableFuture;
 
 @Controller
 public class CBTController {
@@ -36,6 +38,7 @@ public class CBTController {
     private final TranscribeService transcribeService;
     private final LLMProcessingService llmProcessingService;
     private final PollyService pollyService;
+    private final RekognitionService rekognitionService;
     private String currentModality = "";
     @Autowired
     public CBTController(ObjectMapper objectMapper,
@@ -43,13 +46,14 @@ public class CBTController {
                          CBTHelper cbtHelper,
                          TranscribeService transcribeService,
                          LLMProcessingService llmProcessingService,
-                         PollyService pollyService) {
+                         PollyService pollyService, RekognitionService rekognitionService) {
         this.objectMapper = objectMapper;
         this.s3Service = s3Service;
         this.cbtHelper = cbtHelper;
         this.transcribeService = transcribeService;
         this.llmProcessingService = llmProcessingService;
         this.pollyService = pollyService;
+        this.rekognitionService = rekognitionService;
     }
 
 
@@ -138,7 +142,21 @@ public class CBTController {
                  long s3AudioFileUploadTime  = System.currentTimeMillis();
                  String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
                  logger.info("S3 Video File Upload took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
-                 session.sendMessage(new TextMessage("Video files is received and processed by the Recognition LLM Service"));
+                 CompletableFuture<Object> facialExpressionAnalysis=  rekognitionService.detectFacesFromVideoAsync(response)
+                         .thenApply(result -> {
+                             // You can do additional processing here if needed
+                             String processedResult = result != null ? result : "No analysis available";
+                             try {
+                                 session.sendMessage(new TextMessage(processedResult));
+                             } catch (IOException e) {
+                                 throw new RuntimeException(e);
+                             }
+                             return null;
+                         })
+                         .exceptionally(throwable -> {
+                             // Handle any errors
+                             return "Error analyzing facial expressions";
+                         });
 
              }else if(currentModality.equalsIgnoreCase("audio")){
                 tempFile = File.createTempFile("audio_", ".mp3");
