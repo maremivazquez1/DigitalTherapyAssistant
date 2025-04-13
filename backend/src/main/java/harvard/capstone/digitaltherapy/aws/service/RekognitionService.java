@@ -142,6 +142,21 @@ public class RekognitionService {
 
             FaceDetail faceDetail = new FaceDetail();
             faceDetail.setConfidence(faceDetection.face().confidence());
+            
+            // Map emotions
+            List<Emotion> emotions = new ArrayList<>();
+            Emotion topEmotion = null;
+            for (software.amazon.awssdk.services.rekognition.model.Emotion rekEmotion : faceDetection.face().emotions()) {
+                Emotion current = new Emotion(rekEmotion.typeAsString(), rekEmotion.confidence());
+                if (topEmotion == null || current.getConfidence() > topEmotion.getConfidence()) {
+                    topEmotion = current;
+                }
+            }
+            if (topEmotion != null) {
+                emotions.add(topEmotion);
+            }
+            faceDetail.setEmotions(emotions);
+
             customFaceDetection.setFace(faceDetail);
 
             faceDetections.add(customFaceDetection);
@@ -153,19 +168,56 @@ public class RekognitionService {
 
     /* ---------------------------------- Face Detail Mapping ---------------------------------- */
 
-    public static class FaceDetail {
+    private static class FaceDetail {
         private double confidence;
-
+        private List<Emotion> emotions;
+    
         public double getConfidence() {
             return confidence;
         }
+    
+        public void setConfidence(double confidence) {
+            this.confidence = confidence;
+        }
+    
+        public List<Emotion> getEmotions() {
+            return emotions;
+        }
+    
+        public void setEmotions(List<Emotion> emotions) {
+            this.emotions = emotions;
+        }
+    }
 
+    private static class Emotion {
+        private String type;
+        private double confidence;
+    
+        public Emotion() {}
+    
+        public Emotion(String type, double confidence) {
+            this.type = type;
+            this.confidence = confidence;
+        }
+    
+        public String getType() {
+            return type;
+        }
+    
+        public void setType(String type) {
+            this.type = type;
+        }
+    
+        public double getConfidence() {
+            return confidence;
+        }
+    
         public void setConfidence(double confidence) {
             this.confidence = confidence;
         }
     }
-
-    public static class FaceDetection {
+    
+    private static class FaceDetection {
         private long timestamp;
         private FaceDetail face;
 
@@ -186,7 +238,7 @@ public class RekognitionService {
         }
     }
 
-    public static class FaceDetectionResponse {
+    private static class FaceDetectionResponse {
         private String jobStatus;
         private List<FaceDetection> faces;
 
