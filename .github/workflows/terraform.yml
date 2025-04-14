@@ -86,7 +86,7 @@ jobs:
                       --names app-alb \
                       --query 'LoadBalancers[0].LoadBalancerArn' \
                       --output text)
-          terraform import aws_lb.app_alb "$ALB_ARN"
+          terraform -chdir=backend/aws-infra/ import aws_lb.app_alb "$ALB_ARN"
         fi
 
     # Generates an execution plan for Terraform
