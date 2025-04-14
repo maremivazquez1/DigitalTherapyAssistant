@@ -82,11 +82,12 @@ jobs:
         AWS_REGION: us-east-1
       run: |
         if aws elbv2 describe-load-balancers --names app-alb >/dev/null 2>&1; then
-        ALB_ARN=$(aws elbv2 describe-load-balancers \
-                    --names app-alb \
-                    --query 'LoadBalancers[0].LoadBalancerArn' \
-                    --output text)
-        terraform import aws_lb.app_alb "$ALB_ARN"
+          ALB_ARN=$(aws elbv2 describe-load-balancers \
+                      --names app-alb \
+                      --query 'LoadBalancers[0].LoadBalancerArn' \
+                      --output text)
+          terraform import aws_lb.app_alb "$ALB_ARN"
+        fi
 
     # Generates an execution plan for Terraform
     - name: Terraform Plan
