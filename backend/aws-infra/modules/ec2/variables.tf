@@ -52,3 +52,13 @@ variable "db_password" {
   description = "Database password"
   type        = string
 }
+
+variable "aws_key" {
+  description = "AWS key name"
+  type        = string
+}
+
+variable "aws_secret" {
+  description = "AWS key"
+  type        = string
+}

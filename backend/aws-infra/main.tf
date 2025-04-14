@@ -161,6 +161,8 @@ module "ec2" {
   oauth_token           = var.oauth_token
   vpc_id                = var.vpc_id
   ec2_security_group_id = aws_security_group.ec2_sg.id
+  aws_key               = var.aws_key
+  aws_secret            = var.aws_secret
 
   # RDS parameters.
   db_endpoint = module.rds.rds_endpoint
