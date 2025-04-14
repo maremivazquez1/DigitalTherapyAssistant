@@ -76,6 +76,18 @@ jobs:
           echo "RDS_EXISTS=false" >> $GITHUB_ENV
         fi
 
+    - name: Check if ELB exists and import
+      id: check_elb
+      env:
+        AWS_REGION: us-east-1
+      run: |
+        if aws elbv2 describe-load-balancers --names app-alb >/dev/null 2>&1; then
+        ALB_ARN=$(aws elbv2 describe-load-balancers \
+                    --names app-alb \
+                    --query 'LoadBalancers[0].LoadBalancerArn' \
+                    --output text)
+        terraform import aws_lb.app_alb "$ALB_ARN"
+
     # Generates an execution plan for Terraform
     - name: Terraform Plan
       run: terraform -chdir=backend/aws-infra/ plan -input=false
