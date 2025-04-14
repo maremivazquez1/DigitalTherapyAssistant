@@ -21,6 +21,10 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import ws.schild.jave.*;
+import ws.schild.jave.encode.AudioAttributes;
+import ws.schild.jave.encode.EncodingAttributes;
+import ws.schild.jave.encode.VideoAttributes;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -131,34 +135,70 @@ public class CBTController {
             buffer.get(audioData);
             File tempFile = null;
             String keyName ="";
-             if(currentModality.equalsIgnoreCase("video")){
-                tempFile = File.createTempFile("video_", ".mp4");
-                try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+            if (currentModality.equalsIgnoreCase("video")) {
+                // Step 1: Save incoming WebM data to a temp file
+                File webmFile = File.createTempFile("video_temp_", ".webm");
+                try (FileOutputStream fos = new FileOutputStream(webmFile)) {
                     fos.write(audioData);
                 }
 
-                // Process the audio using existing functionality
-                keyName = "video_" + sessionId + ".mp4";
-                 long s3AudioFileUploadTime  = System.currentTimeMillis();
-                 String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
-                 logger.info("S3 Video File Upload took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
-                 CompletableFuture<Object> facialExpressionAnalysis=  rekognitionService.detectFacesFromVideoAsync(response)
-                         .thenApply(result -> {
-                             // You can do additional processing here if needed
-                             String processedResult = result != null ? result : "No analysis available";
-                             try {
-                                 session.sendMessage(new TextMessage(processedResult));
-                             } catch (IOException e) {
-                                 throw new RuntimeException(e);
-                             }
-                             return null;
-                         })
-                         .exceptionally(throwable -> {
-                             // Handle any errors
-                             return "Error analyzing facial expressions";
-                         });
+                // Step 2: Create target MP4 file
+                File mp4File = new File(webmFile.getParent(), "converted_" + webmFile.getName().replace(".webm", ".mp4"));
 
-             }else if(currentModality.equalsIgnoreCase("audio")){
+                AudioAttributes audio = new AudioAttributes();
+                audio.setCodec("aac");
+                audio.setBitRate(128000);
+                audio.setChannels(2);
+                audio.setSamplingRate(44100);
+
+                // Set video attributes
+                VideoAttributes video = new VideoAttributes();
+                video.setCodec("libx264");
+                video.setBitRate(800000);
+                video.setFrameRate(30);
+
+                EncodingAttributes attrs = new EncodingAttributes();
+                attrs.setOutputFormat("mp4");
+                attrs.setAudioAttributes(audio);
+                attrs.setVideoAttributes(video);
+
+                Encoder encoder = new Encoder();
+                try {
+                    encoder.encode(new MultimediaObject(webmFile), mp4File, attrs);
+                } catch (EncoderException e) {
+                    throw new RuntimeException("Video conversion failed: " + e.getMessage(), e);
+                }
+
+                // Step 4: Clean up WebM temp file
+                webmFile.delete();
+
+                // Step 5: Upload MP4 to S3
+                tempFile = mp4File;
+                keyName = "video_" + sessionId + ".mp4";
+                long s3AudioFileUploadTime = System.currentTimeMillis();
+
+                String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
+                logger.info("S3 Video File Upload took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
+
+                // Step 6: Process video with AWS Rekognition
+                CompletableFuture<Object> facialExpressionAnalysis = rekognitionService.detectFacesFromVideoAsync(response)
+                        .thenApply(result -> {
+                            String processedResult = result != null ? result : "No analysis available";
+                            try {
+                                session.sendMessage(new TextMessage(processedResult));
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                            return null;
+                        })
+                        .exceptionally(throwable -> {
+                            // Log error and notify client if needed
+                            logger.error("Error analyzing facial expressions", throwable);
+                            return "Error analyzing facial expressions";
+                        });
+            }
+
+            else if(currentModality.equalsIgnoreCase("audio")){
                 tempFile = File.createTempFile("audio_", ".mp3");
                 try (FileOutputStream fos = new FileOutputStream(tempFile)) {
                     fos.write(audioData);
