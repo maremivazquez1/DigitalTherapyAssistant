@@ -70,10 +70,7 @@ jobs:
       id: check_rds
       run: |
         if aws rds describe-db-instances --db-instance-identifier "cbt" > /dev/null 2>&1; then
-          echo "RDS_EXISTS=true" >> $GITHUB_ENV
           terraform -chdir=backend/aws-infra/ import module.rds.aws_db_instance.rds_instance cbt
-        else
-          echo "RDS_EXISTS=false" >> $GITHUB_ENV
         fi
 
     - name: Check if ELB exists and import
@@ -100,7 +97,6 @@ jobs:
       run: |
           terraform -chdir=backend/aws-infra/ apply \
             -var="oauth_token=${{ secrets.OAUTH_TOKEN_GITHUB }}" \
-            -var="s3_key=${{ env.ARTIFACT_KEY }}" \
             -var="aws_key=${{ secrets.AWS_ACCESS_KEY_ID_PIPELINE }}" \
             -var="aws_secret=${{ secrets.AWS_SECRET_ACCESS_KEY_PIPELINE }}" \
             -auto-approve \

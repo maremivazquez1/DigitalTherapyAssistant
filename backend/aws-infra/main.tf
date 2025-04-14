@@ -174,7 +174,6 @@ module "ec2" {
 module "rds" {
   source                = "./modules/rds"
   db_name               = var.db_name
-  rds_exists            = var.rds_exists
   vpc_id                = var.vpc_id
   ec2_security_group_id = aws_security_group.ec2_sg.id
 }

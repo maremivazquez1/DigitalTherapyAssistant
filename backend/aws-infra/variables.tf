@@ -28,11 +28,6 @@ variable "db_name" {
   type        = string
 }
 
-variable "rds_exists" {
-  description = "Flag to indicate if an RDS instance already exists."
-  type        = bool
-}
-
 variable "aws_key" {
   description = "AWS key name"
   type        = string
