@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import harvard.capstone.digitaltherapy.aws.service.RekognitionService;
 import harvard.capstone.digitaltherapy.llm.service.LLMProcessingService;
 import harvard.capstone.digitaltherapy.aws.service.PollyService;
 import harvard.capstone.digitaltherapy.aws.service.TranscribeService;
@@ -25,6 +26,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.concurrent.CompletableFuture;
 
 @Controller
 public class CBTController {
@@ -36,20 +38,22 @@ public class CBTController {
     private final TranscribeService transcribeService;
     private final LLMProcessingService llmProcessingService;
     private final PollyService pollyService;
-
+    private final RekognitionService rekognitionService;
+    private String currentModality = "";
     @Autowired
     public CBTController(ObjectMapper objectMapper,
                          S3Utils s3Service,
                          CBTHelper cbtHelper,
                          TranscribeService transcribeService,
                          LLMProcessingService llmProcessingService,
-                         PollyService pollyService) {
+                         PollyService pollyService, RekognitionService rekognitionService) {
         this.objectMapper = objectMapper;
         this.s3Service = s3Service;
         this.cbtHelper = cbtHelper;
         this.transcribeService = transcribeService;
         this.llmProcessingService = llmProcessingService;
         this.pollyService = pollyService;
+        this.rekognitionService = rekognitionService;
     }
 
 
@@ -58,7 +62,15 @@ public class CBTController {
             handleAudioMessage(session, requestJson, requestId);
         } else {
             String content = requestJson.has("text") ? requestJson.get("text").asText() : "";
-            handleTextMessage(session, requestJson);
+            // Check if modality field exists
+            if (requestJson.has("modality")) {
+                // Assuming you have a class variable like 'currentModality'
+                this.currentModality = requestJson.get("modality").asText();
+            } else {
+                // If no modality field exists, call handleTextMessage
+                handleTextMessage(session, requestJson);
+                return; // Exit the method after handling text message
+            }
         }
     }
 
@@ -117,87 +129,115 @@ public class CBTController {
             ByteBuffer buffer = message.getPayload();
             byte[] audioData = new byte[buffer.remaining()];
             buffer.get(audioData);
-
-            // Create a temporary file to store the audio
-            File tempFile = File.createTempFile("audio_", ".mp3");
-            try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-                fos.write(audioData);
-            }
-
-            // Process the audio using existing functionality
-            String keyName = "audio_" + sessionId + ".mp3";
-            // Upload to S3
-            long s3AudioFileUploadTime  = System.currentTimeMillis();
-            String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
-            logger.info("S3 Audio File Upload took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
-            long transcribeServiceTime  = System.currentTimeMillis();
-            String transcribedS3Path = transcribeService.startTranscriptionJob(response, sessionId);
-            logger.info("transcribe Service took {} ms", System.currentTimeMillis() - transcribeServiceTime);
-            tempFile.delete(); // Cleanup temp file
-            String transcribedText = "";
-            String transcribedResponseText = "";
-            String transcript = "";
-            try {
-                File transcribedFile = s3Service.downloadFileFromS3("dta-root",
-                        transcribedS3Path.replace("https://s3.amazonaws.com/dta-root/", ""));
-                transcribedText = new String(Files.readAllBytes(transcribedFile.toPath()), StandardCharsets.UTF_8);
-                try {
-                    JsonNode rootNode = objectMapper.readTree(transcribedText);
-                    JsonNode transcriptsNode = rootNode.path("results").path("transcripts");
-
-                    if (!transcriptsNode.isEmpty() && transcriptsNode.get(0).has("transcript")) {
-                        transcript = transcriptsNode.get(0).path("transcript").asText();
-                    } else {
-                        logger.warn("Transcript not found in the expected JSON structure");
-                        transcript = "Transcription failed";
-                    }
-                } catch (JsonProcessingException e) {
-                    logger.error("Error parsing transcription JSON: {}", e.getMessage());
-                    transcript = "Error processing transcription";
+            File tempFile = null;
+            String keyName ="";
+             if(currentModality.equalsIgnoreCase("video")){
+                tempFile = File.createTempFile("video_", ".mp4");
+                try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+                    fos.write(audioData);
                 }
-                transcribedFile.delete(); // Cleanup
-            } catch (Exception e) {
-                logger.error("Error reading transcribed text: {}", e.getMessage(), e);
+
+                // Process the audio using existing functionality
+                keyName = "video_" + sessionId + ".mp4";
+                 long s3AudioFileUploadTime  = System.currentTimeMillis();
+                 String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
+                 logger.info("S3 Video File Upload took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
+                 CompletableFuture<Object> facialExpressionAnalysis=  rekognitionService.detectFacesFromVideoAsync(response)
+                         .thenApply(result -> {
+                             // You can do additional processing here if needed
+                             String processedResult = result != null ? result : "No analysis available";
+                             try {
+                                 session.sendMessage(new TextMessage(processedResult));
+                             } catch (IOException e) {
+                                 throw new RuntimeException(e);
+                             }
+                             return null;
+                         })
+                         .exceptionally(throwable -> {
+                             // Handle any errors
+                             return "Error analyzing facial expressions";
+                         });
+
+             }else if(currentModality.equalsIgnoreCase("audio")){
+                tempFile = File.createTempFile("audio_", ".mp3");
+                try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+                    fos.write(audioData);
+                }
+
+                // Process the audio using existing functionality
+                 keyName = "audio_" + sessionId + ".mp3";
+                 // Upload to S3
+                 long s3AudioFileUploadTime  = System.currentTimeMillis();
+                 String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
+                 logger.info("S3 Audio File Upload took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
+                 long transcribeServiceTime  = System.currentTimeMillis();
+                 String transcribedS3Path = transcribeService.startTranscriptionJob(response, sessionId);
+                 logger.info("transcribe Service took {} ms", System.currentTimeMillis() - transcribeServiceTime);
+                 tempFile.delete(); // Cleanup temp file
+                 String transcribedText = "";
+                 String transcribedResponseText = "";
+                 String transcript = "";
+                 try {
+                     File transcribedFile = s3Service.downloadFileFromS3("dta-root",
+                             transcribedS3Path.replace("https://s3.amazonaws.com/dta-root/", ""));
+                     transcribedText = new String(Files.readAllBytes(transcribedFile.toPath()), StandardCharsets.UTF_8);
+                     try {
+                         JsonNode rootNode = objectMapper.readTree(transcribedText);
+                         JsonNode transcriptsNode = rootNode.path("results").path("transcripts");
+
+                         if (!transcriptsNode.isEmpty() && transcriptsNode.get(0).has("transcript")) {
+                             transcript = transcriptsNode.get(0).path("transcript").asText();
+                         } else {
+                             logger.warn("Transcript not found in the expected JSON structure");
+                             transcript = "Transcription failed";
+                         }
+                     } catch (JsonProcessingException e) {
+                         logger.error("Error parsing transcription JSON: {}", e.getMessage());
+                         transcript = "Error processing transcription";
+                     }
+                     transcribedFile.delete(); // Cleanup
+                 } catch (Exception e) {
+                     logger.error("Error reading transcribed text: {}", e.getMessage(), e);
+                 }
+                 // Send transcribed text as a text message
+                 ObjectNode textResponse = objectMapper.createObjectNode();
+                 textResponse.put("type", "input-transcription");
+                 textResponse.put("text", transcript);
+                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textResponse)));
+
+                 String s3Path = transcribedS3Path.replace("https://s3.amazonaws.com/", "s3://");
+                 long llmResponseTime  = System.currentTimeMillis();
+                 String llmResponse = llmProcessingService.process(s3Path);
+                 try {
+                     File transcribedResponseFile = s3Service.downloadFileFromS3("dta-root",
+                             llmResponse.replace("s3://dta-root/", ""));
+                     transcribedResponseText = new String(Files.readAllBytes(transcribedResponseFile.toPath()), StandardCharsets.UTF_8);
+                     transcribedResponseFile.delete(); // Cleanup
+                 } catch (Exception e) {
+                     logger.error("Error reading transcribed text: {}", e.getMessage(), e);
+                 }
+                 // Send transcribed text as a text message
+                 ObjectNode textLLMResponse = objectMapper.createObjectNode();
+                 textLLMResponse.put("type", "output-transcription");
+                 textLLMResponse.put("text", transcribedResponseText);
+                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textLLMResponse)));
+
+                 logger.info("llm Response Time took {} ms", System.currentTimeMillis() - llmResponseTime);
+                 long pollyServiceTime  = System.currentTimeMillis();
+                 String textToSpeechResponse = pollyService.convertTextToSpeech(llmResponse, sessionId);
+                 logger.info("Polly Service Response Time took {} ms", System.currentTimeMillis() - pollyServiceTime);
+                 textToSpeechResponse= textToSpeechResponse.replace("https://dta-root.s3.amazonaws.com/", "");
+                 long S3DownloadTime  = System.currentTimeMillis();
+                 File responseFile = s3Service.downloadFileFromS3("dta-root", textToSpeechResponse);
+                 logger.info("S3 response download Time took {} ms", System.currentTimeMillis() - S3DownloadTime);
+                 // Convert processed file to binary message
+                 byte[] processedAudio = Files.readAllBytes(responseFile.toPath());
+                 BinaryMessage responseMessage = new BinaryMessage(processedAudio);
+                 // Send the binary response
+                 session.sendMessage(responseMessage);
+                 // Cleanup
+                 responseFile.delete();
             }
-            // Send transcribed text as a text message
-            ObjectNode textResponse = objectMapper.createObjectNode();
-            textResponse.put("type", "input-transcription");
-            textResponse.put("text", transcript);
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textResponse)));
-
-            String s3Path = transcribedS3Path.replace("https://s3.amazonaws.com/", "s3://");
-            long llmResponseTime  = System.currentTimeMillis();
-            String llmResponse = llmProcessingService.process(s3Path);
-            try {
-                File transcribedResponseFile = s3Service.downloadFileFromS3("dta-root",
-                        llmResponse.replace("s3://dta-root/", ""));
-                transcribedResponseText = new String(Files.readAllBytes(transcribedResponseFile.toPath()), StandardCharsets.UTF_8);
-                transcribedResponseFile.delete(); // Cleanup
-            } catch (Exception e) {
-                logger.error("Error reading transcribed text: {}", e.getMessage(), e);
-            }
-            // Send transcribed text as a text message
-            ObjectNode textLLMResponse = objectMapper.createObjectNode();
-            textLLMResponse.put("type", "output-transcription");
-            textLLMResponse.put("text", transcribedResponseText);
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textLLMResponse)));
-
-            logger.info("llm Response Time took {} ms", System.currentTimeMillis() - llmResponseTime);
-            long pollyServiceTime  = System.currentTimeMillis();
-            String textToSpeechResponse = pollyService.convertTextToSpeech(llmResponse, sessionId);
-            logger.info("Polly Service Response Time took {} ms", System.currentTimeMillis() - pollyServiceTime);
-            textToSpeechResponse= textToSpeechResponse.replace("https://dtaroot.s3.amazonaws.com/", "");
-            long S3DownloadTime  = System.currentTimeMillis();
-            File responseFile = s3Service.downloadFileFromS3("dtaroot", textToSpeechResponse);
-            logger.info("S3 response download Time took {} ms", System.currentTimeMillis() - S3DownloadTime);
-            // Convert processed file to binary message
-            byte[] processedAudio = Files.readAllBytes(responseFile.toPath());
-            BinaryMessage responseMessage = new BinaryMessage(processedAudio);
-            // Send the binary response
-            session.sendMessage(responseMessage);
-            // Cleanup
-            responseFile.delete();
-
         } catch (Exception e) {
             logger.error("Error processing binary message from session {}: {}", sessionId, e.getMessage(), e);
             try {

@@ -2,6 +2,7 @@ package harvard.capstone.digitaltherapy.cbt.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import harvard.capstone.digitaltherapy.aws.service.RekognitionService;
 import harvard.capstone.digitaltherapy.llm.service.LLMProcessingService;
 import harvard.capstone.digitaltherapy.aws.service.PollyService;
 import harvard.capstone.digitaltherapy.aws.service.TranscribeService;
@@ -56,6 +57,8 @@ class CBTControllerTest {
     private JsonNode textNode;
     @Mock
     private MultipartFile multipartFile;
+    @Mock
+    private  RekognitionService rekognitionService;
 
     private CBTController cbtController;
 
@@ -67,7 +70,8 @@ class CBTControllerTest {
                 cbtHelper,
                 transcribeService,
                 llmProcessingService,
-                pollyService
+                pollyService,
+                rekognitionService
         );
     }
 
@@ -83,7 +87,8 @@ class CBTControllerTest {
                 cbtHelper,
                 transcribeService,
                 llmProcessingService,
-                pollyService
+                pollyService,
+                rekognitionService
         );
 
         assertNotNull(cbtController, "CBTController should be instantiated successfully");
@@ -103,7 +108,8 @@ class CBTControllerTest {
                 cbtHelper,
                 transcribeService,
                 llmProcessingService,
-                pollyService
+                pollyService,
+                rekognitionService
         );
         String content = "Test content";
         String requestId = "123";
