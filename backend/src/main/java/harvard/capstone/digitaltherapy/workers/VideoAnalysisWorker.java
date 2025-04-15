@@ -134,21 +134,14 @@ public class VideoAnalysisWorker {
             faceDetail.setConfidence(faceDetection.face().confidence());
             
             // Map emotions
-            List<Emotion> emotions = new ArrayList<>();
-            Emotion topEmotion = null;
-            for (software.amazon.awssdk.services.rekognition.model.Emotion rekEmotion : faceDetection.face().emotions()) {
-                Emotion current = new Emotion(rekEmotion.typeAsString(), rekEmotion.confidence());
-                if (topEmotion == null || current.getConfidence() > topEmotion.getConfidence()) {
-                    topEmotion = current;
-                }
-            }
-            if (topEmotion != null) {
-                emotions.add(topEmotion);
-            }
-            faceDetail.setEmotions(emotions);
-
+            List<software.amazon.awssdk.services.rekognition.model.Emotion> rekEmotions = faceDetection.face().emotions();
+            List<Emotion> topEmotions = rekEmotions.stream()
+                .sorted((a, b) -> Double.compare(b.confidence(), a.confidence()))
+                .limit(3)
+                .map(e -> new Emotion(e.typeAsString(), e.confidence()))
+                .toList();
+            faceDetail.setEmotions(topEmotions);
             customFaceDetection.setFace(faceDetail);
-
             faceDetections.add(customFaceDetection);
         }
         customResponse.setFaces(faceDetections);
