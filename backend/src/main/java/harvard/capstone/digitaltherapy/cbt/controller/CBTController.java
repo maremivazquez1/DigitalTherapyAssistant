@@ -13,6 +13,7 @@ import harvard.capstone.digitaltherapy.utility.S3Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -46,7 +47,8 @@ public class CBTController {
     private final PollyService pollyService;
     private final RekognitionService rekognitionService;
     private String currentModality = "";
-    private String ffmeg_path ="/opt/homebrew/bin/ffmpeg";
+    @Value("${ffmeg_path}")
+    private String ffmeg_path;
     @Autowired
     public CBTController(ObjectMapper objectMapper,
                          S3Utils s3Service,
