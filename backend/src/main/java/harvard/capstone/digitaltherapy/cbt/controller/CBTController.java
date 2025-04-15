@@ -46,6 +46,7 @@ public class CBTController {
     private final PollyService pollyService;
     private final RekognitionService rekognitionService;
     private String currentModality = "";
+    private String ffmeg_path ="/opt/homebrew/bin/ffmpeg";
     @Autowired
     public CBTController(ObjectMapper objectMapper,
                          S3Utils s3Service,
@@ -173,7 +174,7 @@ public class CBTController {
 
                     // Use ProcessBuilder directly for more control
                     List<String> command = Arrays.asList(
-                            "/opt/homebrew/bin/ffmpeg",
+                            ffmeg_path,
                             "-i", webmFile.getAbsolutePath(),
                             "-c:v", "h264",
                             "-c:a", "aac",
