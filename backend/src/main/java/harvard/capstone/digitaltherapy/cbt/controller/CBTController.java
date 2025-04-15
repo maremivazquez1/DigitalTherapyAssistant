@@ -25,13 +25,14 @@ import ws.schild.jave.*;
 import ws.schild.jave.encode.AudioAttributes;
 import ws.schild.jave.encode.EncodingAttributes;
 import ws.schild.jave.encode.VideoAttributes;
+import ws.schild.jave.process.ffmpeg.DefaultFFMPEGLocator;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.concurrent.CompletableFuture;
-
+import ws.schild.jave.*;
 @Controller
 public class CBTController {
     private static final Logger logger = LoggerFactory.getLogger(CBTController.class);
@@ -135,68 +136,59 @@ public class CBTController {
             buffer.get(audioData);
             File tempFile = null;
             String keyName ="";
+
             if (currentModality.equalsIgnoreCase("video")) {
-                // Step 1: Save incoming WebM data to a temp file
-                File webmFile = File.createTempFile("video_temp_", ".webm");
-                try (FileOutputStream fos = new FileOutputStream(webmFile)) {
-                    fos.write(audioData);
-                }
-
-                // Step 2: Create target MP4 file
-                File mp4File = new File(webmFile.getParent(), "converted_" + webmFile.getName().replace(".webm", ".mp4"));
-
-                AudioAttributes audio = new AudioAttributes();
-                audio.setCodec("aac");
-                audio.setBitRate(128000);
-                audio.setChannels(2);
-                audio.setSamplingRate(44100);
-
-                // Set video attributes
-                VideoAttributes video = new VideoAttributes();
-                video.setCodec("libx264");
-                video.setBitRate(800000);
-                video.setFrameRate(30);
-
-                EncodingAttributes attrs = new EncodingAttributes();
-                attrs.setOutputFormat("mp4");
-                attrs.setAudioAttributes(audio);
-                attrs.setVideoAttributes(video);
-
-                Encoder encoder = new Encoder();
+                File webmFile = null;
+                File mp4File = null;
                 try {
+                    // Step 1: Save incoming WebM data to a temp file
+                    webmFile = File.createTempFile("video_temp_", ".webm");
+                    try (FileOutputStream fos = new FileOutputStream(webmFile)) {
+                        fos.write(audioData);
+                    }
+
+                    // Step 2: Create target MP4 file
+                    mp4File = new File(webmFile.getParent(), "converted_" + webmFile.getName().replace(".webm", ".mp4"));
+
+                    // Configure audio attributes
+                    AudioAttributes audio = new AudioAttributes();
+                    audio.setCodec("aac");
+                    audio.setBitRate(128000);
+                    audio.setChannels(2);
+                    audio.setSamplingRate(44100);
+
+                    // Configure video attributes
+                    VideoAttributes video = new VideoAttributes();
+                    video.setCodec("h264");  // Using h264 instead of libx264
+                    video.setBitRate(800000);
+                    video.setFrameRate(30);
+
+                    // Configure encoding attributes
+                    EncodingAttributes attrs = new EncodingAttributes();
+                    attrs.setOutputFormat("mp4");
+                    attrs.setAudioAttributes(audio);
+                    attrs.setVideoAttributes(video);
+
+                    // Create encoder and perform conversion
+                    DefaultFFMPEGLocator locator = new DefaultFFMPEGLocator();
+                    Encoder encoder = new Encoder(locator);
+
                     encoder.encode(new MultimediaObject(webmFile), mp4File, attrs);
-                } catch (EncoderException e) {
+
+                } catch (Exception e) {
                     throw new RuntimeException("Video conversion failed: " + e.getMessage(), e);
+                } finally {
+                    // Clean up temporary files
+                    if (webmFile != null && webmFile.exists()) {
+                        webmFile.delete();
+                    }
+                    // Only delete MP4 file if conversion failed
+                    if (mp4File != null && mp4File.exists() && mp4File.length() == 0) {
+                        mp4File.delete();
+                    }
                 }
-
-                // Step 4: Clean up WebM temp file
-                webmFile.delete();
-
-                // Step 5: Upload MP4 to S3
-                tempFile = mp4File;
-                keyName = "video_" + sessionId + ".mp4";
-                long s3AudioFileUploadTime = System.currentTimeMillis();
-
-                String response = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
-                logger.info("S3 Video File Upload took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
-
-                // Step 6: Process video with AWS Rekognition
-                CompletableFuture<Object> facialExpressionAnalysis = rekognitionService.detectFacesFromVideoAsync(response)
-                        .thenApply(result -> {
-                            String processedResult = result != null ? result : "No analysis available";
-                            try {
-                                session.sendMessage(new TextMessage(processedResult));
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                            return null;
-                        })
-                        .exceptionally(throwable -> {
-                            // Log error and notify client if needed
-                            logger.error("Error analyzing facial expressions", throwable);
-                            return "Error analyzing facial expressions";
-                        });
             }
+
 
             else if(currentModality.equalsIgnoreCase("audio")){
                 tempFile = File.createTempFile("audio_", ".mp3");
