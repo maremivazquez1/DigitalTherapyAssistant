@@ -9,6 +9,7 @@ import harvard.capstone.digitaltherapy.llm.service.LLMProcessingService;
 import harvard.capstone.digitaltherapy.aws.service.PollyService;
 import harvard.capstone.digitaltherapy.aws.service.TranscribeService;
 import harvard.capstone.digitaltherapy.cbt.service.CBTHelper;
+import harvard.capstone.digitaltherapy.orchestration.DTASessionOrchestrator;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,13 +41,16 @@ public class CBTController {
     private final PollyService pollyService;
     private final RekognitionService rekognitionService;
     private String currentModality = "";
+    private final DTASessionOrchestrator dtaSessionOrchestrator;
     @Autowired
     public CBTController(ObjectMapper objectMapper,
                          S3Utils s3Service,
                          CBTHelper cbtHelper,
                          TranscribeService transcribeService,
                          LLMProcessingService llmProcessingService,
-                         PollyService pollyService, RekognitionService rekognitionService) {
+                         PollyService pollyService,
+                         RekognitionService rekognitionService,
+                         DTASessionOrchestrator dtaSessionOrchestrator) {
         this.objectMapper = objectMapper;
         this.s3Service = s3Service;
         this.cbtHelper = cbtHelper;
@@ -54,6 +58,7 @@ public class CBTController {
         this.llmProcessingService = llmProcessingService;
         this.pollyService = pollyService;
         this.rekognitionService = rekognitionService;
+        this.dtaSessionOrchestrator =  dtaSessionOrchestrator;
     }
 
 
@@ -91,6 +96,7 @@ public class CBTController {
             String uploadResponse = s3Service.uploadFile(tempFile.getAbsolutePath(), fileName);
             // Get processed content
             String llmResponse = llmProcessingService.process(uploadResponse);
+            //String llmResponse = dtaSessionOrchestrator.processUserMessage(session.getId(), uploadResponse);
             llmResponse=llmResponse.replace("s3://dta-root/", "");
             ResponseEntity<StreamingResponseBody> processedResponse = cbtHelper.downloadTextFile(llmResponse);
             if (processedResponse.getStatusCode() == HttpStatus.OK && processedResponse.getBody() != null) {
@@ -207,20 +213,22 @@ public class CBTController {
 
                  String s3Path = transcribedS3Path.replace("https://s3.amazonaws.com/", "s3://");
                  long llmResponseTime  = System.currentTimeMillis();
-                 String llmResponse = llmProcessingService.process(s3Path);
-                 try {
+                 //String llmResponse = llmProcessingService.process(s3Path);
+                 String sessionID= dtaSessionOrchestrator.createSession();
+                 String llmResponse = dtaSessionOrchestrator.processUserMessage(sessionID, objectMapper.writeValueAsString(textResponse));
+               /*  try {
                      File transcribedResponseFile = s3Service.downloadFileFromS3("dta-root",
                              llmResponse.replace("s3://dta-root/", ""));
                      transcribedResponseText = new String(Files.readAllBytes(transcribedResponseFile.toPath()), StandardCharsets.UTF_8);
                      transcribedResponseFile.delete(); // Cleanup
                  } catch (Exception e) {
                      logger.error("Error reading transcribed text: {}", e.getMessage(), e);
-                 }
+                 }*/
                  // Send transcribed text as a text message
                  ObjectNode textLLMResponse = objectMapper.createObjectNode();
                  textLLMResponse.put("type", "output-transcription");
                  textLLMResponse.put("text", transcribedResponseText);
-                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textLLMResponse)));
+                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(llmResponse)));
 
                  logger.info("llm Response Time took {} ms", System.currentTimeMillis() - llmResponseTime);
                  long pollyServiceTime  = System.currentTimeMillis();
