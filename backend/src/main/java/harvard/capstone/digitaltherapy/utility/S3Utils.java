@@ -13,12 +13,13 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.io.*;
 import java.nio.file.*;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
+import java.net.URL;
 
 @Service
 public class S3Utils {
@@ -169,6 +170,23 @@ public class S3Utils {
                 }
             } catch (S3Exception e) {
                 throw new IOException("Error streaming file from S3: " + e.getMessage(), e);
+            }
+        }
+
+        public static String generatePresignedUrl(String bucket, String key, Duration duration) {
+            try (S3Presigner presigner = S3Presigner.create()) {
+                GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                        .bucket(bucket)
+                        .key(key)
+                        .build();
+
+                GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                        .signatureDuration(duration)
+                        .getObjectRequest(getObjectRequest)
+                        .build();
+
+                URL signedUrl = presigner.presignGetObject(presignRequest).url();
+                return signedUrl.toString();
             }
         }
     }
