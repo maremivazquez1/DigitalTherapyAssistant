@@ -70,6 +70,20 @@ public class DTASessionOrchestrator implements TherapySessionService {
         return sessionId;
     }
 
+    public String associateSession(String sessionId) {
+        List<ChatMessage> messages = new ArrayList<>();
+
+        // Add the initial system message for a CBT therapy context
+        messages.add(SystemMessage.from(
+                "You are a CBT therapist guiding a patient through a CBT session. " +
+                        "Use concise and empathetic language. Focus on helping the patient " +
+                        "identify and reframe negative thought patterns."
+        ));
+
+        sessionMessages.put(sessionId, messages);
+        return sessionId;
+    }
+
     /**
      * Processes a user message and generates a response
      *
@@ -83,7 +97,6 @@ public class DTASessionOrchestrator implements TherapySessionService {
         if (!sessionMessages.containsKey(sessionId)) {
             throw new IllegalArgumentException("Invalid session ID: " + sessionId);
         }
-
         List<ChatMessage> messages = sessionMessages.get(sessionId);
 
         // Add the user message to the conversation history
