@@ -31,6 +31,8 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import ws.schild.jave.*;
 @Controller
@@ -140,6 +142,7 @@ public class CBTController {
             if (currentModality.equalsIgnoreCase("video")) {
                 File webmFile = null;
                 File mp4File = null;
+                keyName = "video_" + sessionId + ".mp4";
                 try {
                     // Step 1: Save incoming WebM data to a temp file
                     webmFile = File.createTempFile("video_temp_", ".webm");
@@ -159,7 +162,7 @@ public class CBTController {
 
                     // Configure video attributes
                     VideoAttributes video = new VideoAttributes();
-                    video.setCodec("h264");  // Using h264 instead of libx264
+                    video.setCodec("h264");
                     video.setBitRate(800000);
                     video.setFrameRate(30);
 
@@ -169,25 +172,49 @@ public class CBTController {
                     attrs.setAudioAttributes(audio);
                     attrs.setVideoAttributes(video);
 
-                    // Create encoder and perform conversion
-                    DefaultFFMPEGLocator locator = new DefaultFFMPEGLocator();
-                    Encoder encoder = new Encoder(locator);
+                    // Use ProcessBuilder directly for more control
+                    List<String> command = Arrays.asList(
+                            "/opt/homebrew/bin/ffmpeg",
+                            "-i", webmFile.getAbsolutePath(),
+                            "-c:v", "h264",
+                            "-c:a", "aac",
+                            "-b:a", "128k",
+                            "-b:v", "800k",
+                            "-r", "30",
+                            mp4File.getAbsolutePath()
+                    );
 
-                    encoder.encode(new MultimediaObject(webmFile), mp4File, attrs);
-
+                    ProcessBuilder pb = new ProcessBuilder(command);
+                    pb.redirectErrorStream(true);
+                    Process process = pb.start();
+                    int exitCode = process.waitFor();
+                    if (exitCode != 0) {
+                        throw new RuntimeException("FFmpeg process failed with exit code: " + exitCode);
+                    }
                 } catch (Exception e) {
+                    e.printStackTrace();
                     throw new RuntimeException("Video conversion failed: " + e.getMessage(), e);
-                } finally {
-                    // Clean up temporary files
-                    if (webmFile != null && webmFile.exists()) {
-                        webmFile.delete();
-                    }
-                    // Only delete MP4 file if conversion failed
-                    if (mp4File != null && mp4File.exists() && mp4File.length() == 0) {
-                        mp4File.delete();
-                    }
                 }
+                long s3AudioFileUploadTime  = System.currentTimeMillis();
+                String response = s3Service.uploadFile(mp4File.getAbsolutePath(), keyName);
+                logger.info("S3 Video File Upload took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
+                CompletableFuture<Object> facialExpressionAnalysis=  rekognitionService.detectFacesFromVideoAsync(response)
+                        .thenApply(result -> {
+                            // You can do additional processing here if needed
+                            String processedResult = result != null ? result : "No analysis available";
+                            try {
+                                session.sendMessage(new TextMessage(processedResult));
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                            return null;
+                        })
+                        .exceptionally(throwable -> {
+                            // Handle any errors
+                            return "Error analyzing facial expressions";
+                        });
             }
+
 
 
             else if(currentModality.equalsIgnoreCase("audio")){
