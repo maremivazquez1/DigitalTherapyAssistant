@@ -66,6 +66,7 @@ if [ -d "$BACKEND_DIR" ]; then
     mysql -u root -p <<EOF
 CREATE DATABASE IF NOT EXISTS cbt;
 USE cbt;
+DROP TABLE users;
 CREATE TABLE IF NOT EXISTS users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
