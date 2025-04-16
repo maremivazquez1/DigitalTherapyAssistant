@@ -141,9 +141,7 @@ const CBTInterface: React.FC = () => {
       const videoOnlyStream = new MediaStream([videoTrack]);
 
       // Setup Audio Recorder
-      const audioRecorder = new MediaRecorder(audioOnlyStream, {
-        mimeType: "audio/webm;codecs=opus",
-      });
+      const audioRecorder = new MediaRecorder(audioOnlyStream);
       audioChunksRef.current = [];
       audioRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -178,8 +176,6 @@ const CBTInterface: React.FC = () => {
           timestamp: new Date(),
         };
         setChatMessages((prev) => [...prev, pendingUserMsg]);
-        sendMessage(JSON.stringify(headerMessageAudio));
-        console.log("[Audio Recorder] Sent header:", headerMessageAudio);
         const completeAudioBlob = new Blob(audioChunksRef.current, {
           type: "audio/webm;codecs=opus",
         });
@@ -207,7 +203,13 @@ const CBTInterface: React.FC = () => {
           audioRecorderRef.current?.start(500);
         }
         if (!videoRecorderRef.current) {
-          const videoRecorder = new MediaRecorder(videoOnlyStream, { mimeType: "video/webm" });
+          let options: { mimeType?: string } = {};
+          if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) {
+            options.mimeType = "video/webm;codecs=vp8";
+          }
+          // Else leave options empty for Safari
+          const videoRecorder = new MediaRecorder(videoOnlyStream, options);
+          //const videoRecorder = new MediaRecorder(videoOnlyStream, { mimeType: "video/webm" });
           videoChunksRef.current = [];
           videoRecorder.ondataavailable = (e) => {
             if (e.data.size > 0) {
@@ -226,9 +228,6 @@ const CBTInterface: React.FC = () => {
               timestamp_end: new Date().toISOString(),
               user_id: "user_12345",
             };
-            sendMessage(JSON.stringify(headerMessageVideo));
-            console.log("[Video Recorder] Sent header:", headerMessageVideo);
-            
             sendMessage(JSON.stringify(headerMessageVideo));
             console.log("[Video Recorder] Sent header:", headerMessageVideo);
             const completeVideoBlob = new Blob(videoChunksRef.current, { type: "video/webm" });
