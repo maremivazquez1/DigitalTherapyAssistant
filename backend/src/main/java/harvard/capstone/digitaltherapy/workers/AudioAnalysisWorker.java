@@ -217,6 +217,29 @@ public class AudioAnalysisWorker {
                             }
                         }
 
+                        // Extract full transcript text for compatibility with AWS Transcribe-like formats
+                        StringBuilder transcriptBuilder = new StringBuilder();
+                        for (JsonNode group : groupedPredictions) {
+                            JsonNode predictions = group.path("predictions");
+                            if (predictions != null && predictions.isArray()) {
+                                for (JsonNode utterance : predictions) {
+                                    JsonNode emotions = utterance.path("emotions");
+                                    if (emotions.isArray() && emotions.size() > 0) {
+                                        List<Map<String, Object>> top = extractTopRawEmotions(emotions, 3);
+                                        ((ObjectNode) utterance).putPOJO("emotions", top);
+                                    }
+                                    String text = utterance.path("text").asText();
+                                    if (text != null && !text.isBlank()) {
+                                        transcriptBuilder.append(text).append(" ");
+                                    }
+                                }
+                            }
+                        }
+
+                        // Inject top-level transcript field
+                        ((ObjectNode) root.get(0).path("results").path("predictions").get(0))
+                            .put("transcript", transcriptBuilder.toString().trim());
+
                         String filteredJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
                         System.out.println(filteredJson);
                         future.complete(filteredJson);
