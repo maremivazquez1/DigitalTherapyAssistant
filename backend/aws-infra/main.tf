@@ -163,6 +163,8 @@ module "ec2" {
   ec2_security_group_id = aws_security_group.ec2_sg.id
   aws_key               = var.aws_key
   aws_secret            = var.aws_secret
+  hume_key              = var.hume_key
+  gemini_key            = var.gemini_key
 
   # RDS parameters.
   db_endpoint = module.rds.rds_endpoint

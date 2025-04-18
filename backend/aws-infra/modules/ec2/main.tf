@@ -40,6 +40,8 @@ resource "aws_instance" "springboot_backend" {
     export DB_PORT="${var.db_port}"
     export DB_USER="${var.db_username}"
     export DB_PASSWORD="${var.db_password}"
+    export HUME_API_KEY="${var.hume_key}"
+    export GEMINI_API_KEY="${var.gemini_key}"
     export PUBLIC_IP=$${PUBLIC_IP}
     EOL
 

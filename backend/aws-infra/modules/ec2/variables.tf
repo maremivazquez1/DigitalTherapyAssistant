@@ -62,3 +62,13 @@ variable "aws_secret" {
   description = "AWS key"
   type        = string
 }
+
+variable "hume_key" {
+  description = "HUME key"
+  type        = string
+}
+
+variable "gemini_key" {
+  description = "GEMINI key"
+  type        = string
+}

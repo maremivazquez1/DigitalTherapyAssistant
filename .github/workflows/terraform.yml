@@ -10,6 +10,8 @@ name: 'Terraform Deployment'
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PIPELINE }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PIPELINE }}
+  HUME_API_KEY: ${{ secrets.HUME_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
 on:
   push:
@@ -50,13 +52,9 @@ jobs:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-access-key-id: ${{ AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1  # Change this to your region
-
-    - name: Create tfvars file
-      run: |
-        echo "oauth_token = \"${{ secrets.OAUTH_TOKEN_GITHUB }}\"" > terraform.tfvars
 
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
@@ -97,7 +95,9 @@ jobs:
       run: |
           terraform -chdir=backend/aws-infra/ apply \
             -var="oauth_token=${{ secrets.OAUTH_TOKEN_GITHUB }}" \
-            -var="aws_key=${{ secrets.AWS_ACCESS_KEY_ID_PIPELINE }}" \
-            -var="aws_secret=${{ secrets.AWS_SECRET_ACCESS_KEY_PIPELINE }}" \
+            -var="aws_key=${{ AWS_ACCESS_KEY_ID }}" \
+            -var="aws_secret=${{ AWS_SECRET_ACCESS_KEY }}" \
+            -var="hume_key=${{ HUME_API_KEY }}" \
+            -var="gemini_key=${{ GEMINI_API_KEY }}" \
             -auto-approve \
             -input=false
