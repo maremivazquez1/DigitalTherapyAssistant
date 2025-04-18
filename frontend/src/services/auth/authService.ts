@@ -11,7 +11,6 @@
  * - Logout users by clearing authentication data (`logout`).
  * - Retrieve authentication tokens (`getAuthToken`).
  * - Check if a user is authenticated (`isAuthenticated`).
- * - Handle authentication-related errors (`handleAuthError`).
  */
 
 import api from '../config/axiosConfig';
@@ -52,18 +51,4 @@ export const getAuthToken = (): string | null => {
  */
 export const isAuthenticated = (): boolean => {
   return !!localStorage.getItem('token');
-};
-
-/**
- * Centralized error handling for authentication requests.
- */
-const handleAuthError = (error: unknown): string => {
-  if (error instanceof Error) {
-    return error.message;
-  } else if (typeof error === "object" && error !== null && "response" in error) {
-    const axiosError = error as { response?: { data?: { message?: string } } };
-    return axiosError.response?.data?.message || "Authentication error";
-  } else {
-    return "An unknown authentication error occurred";
-  }
 };
