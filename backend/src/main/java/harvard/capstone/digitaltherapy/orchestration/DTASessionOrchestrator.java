@@ -7,6 +7,8 @@ import dev.langchain4j.store.embedding.EmbeddingMatch;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
 import harvard.capstone.digitaltherapy.workers.MessageWorker;
 import harvard.capstone.digitaltherapy.workers.TextAnalysisWorker;
+import harvard.capstone.digitaltherapy.workers.VideoAnalysisWorker;
+import harvard.capstone.digitaltherapy.workers.AudioAnalysisWorker;
 
 import dev.langchain4j.data.segment.TextSegment;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,8 @@ public class DTASessionOrchestrator implements TherapySessionService {
     private final MessageWorker messageWorker;
     private final MultimodalSynthesisService synthesisService;
     private final VectorDatabaseService vectorDatabaseService;
+    private final VideoAnalysisWorker videoAnalysisWorker;
+    private final AudioAnalysisWorker audioAnalysisWorker;
 
     // Simple in-memory session tracking (would use Redis in production)
     private final Map<String, List<ChatMessage>> sessionMessages = new HashMap<>();
@@ -40,6 +44,8 @@ public class DTASessionOrchestrator implements TherapySessionService {
         this.messageWorker = new MessageWorker();
         this.synthesisService = new MultimodalSynthesisService();
         this.vectorDatabaseService = new VectorDatabaseService();
+        this.videoAnalysisWorker = new VideoAnalysisWorker();
+        this.audioAnalysisWorker = new AudioAnalysisWorker();
     }
 
     /**
@@ -51,6 +57,20 @@ public class DTASessionOrchestrator implements TherapySessionService {
     @Override
     public String createSession() {
         String sessionId = UUID.randomUUID().toString();
+        List<ChatMessage> messages = new ArrayList<>();
+
+        // Add the initial system message for a CBT therapy context
+        messages.add(SystemMessage.from(
+                "You are a CBT therapist guiding a patient through a CBT session. " +
+                        "Use concise and empathetic language. Focus on helping the patient " +
+                        "identify and reframe negative thought patterns."
+        ));
+
+        sessionMessages.put(sessionId, messages);
+        return sessionId;
+    }
+
+    public String associateSession(String sessionId) {
         List<ChatMessage> messages = new ArrayList<>();
 
         // Add the initial system message for a CBT therapy context
@@ -77,7 +97,6 @@ public class DTASessionOrchestrator implements TherapySessionService {
         if (!sessionMessages.containsKey(sessionId)) {
             throw new IllegalArgumentException("Invalid session ID: " + sessionId);
         }
-
         List<ChatMessage> messages = sessionMessages.get(sessionId);
 
         // Add the user message to the conversation history

@@ -9,6 +9,8 @@ import harvard.capstone.digitaltherapy.llm.service.LLMProcessingService;
 import harvard.capstone.digitaltherapy.aws.service.PollyService;
 import harvard.capstone.digitaltherapy.aws.service.TranscribeService;
 import harvard.capstone.digitaltherapy.cbt.service.CBTHelper;
+import harvard.capstone.digitaltherapy.llm.service.S3StorageService;
+import harvard.capstone.digitaltherapy.orchestration.DTASessionOrchestrator;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,12 +43,14 @@ public class CBTController {
 
     private final ObjectMapper objectMapper;
     private final S3Utils s3Service;
+    private final S3StorageService s3StorageService;
     private final CBTHelper cbtHelper;
     private final TranscribeService transcribeService;
     private final LLMProcessingService llmProcessingService;
     private final PollyService pollyService;
     private final RekognitionService rekognitionService;
     private String currentModality = "";
+    private final DTASessionOrchestrator dtaSessionOrchestrator;
     @Value("${ffmeg_path}")
     private String ffmeg_path;
     @Autowired
@@ -55,7 +59,10 @@ public class CBTController {
                          CBTHelper cbtHelper,
                          TranscribeService transcribeService,
                          LLMProcessingService llmProcessingService,
-                         PollyService pollyService, RekognitionService rekognitionService) {
+                         PollyService pollyService,
+                         RekognitionService rekognitionService,
+                         DTASessionOrchestrator dtaSessionOrchestrator,
+                         S3StorageService s3StorageService) {
         this.objectMapper = objectMapper;
         this.s3Service = s3Service;
         this.cbtHelper = cbtHelper;
@@ -63,6 +70,8 @@ public class CBTController {
         this.llmProcessingService = llmProcessingService;
         this.pollyService = pollyService;
         this.rekognitionService = rekognitionService;
+        this.dtaSessionOrchestrator =  dtaSessionOrchestrator;
+        this.s3StorageService = s3StorageService;
     }
 
 
@@ -236,7 +245,6 @@ public class CBTController {
                  logger.info("transcribe Service took {} ms", System.currentTimeMillis() - transcribeServiceTime);
                  tempFile.delete(); // Cleanup temp file
                  String transcribedText = "";
-                 String transcribedResponseText = "";
                  String transcript = "";
                  try {
                      File transcribedFile = s3Service.downloadFileFromS3("dta-root",
@@ -268,24 +276,19 @@ public class CBTController {
 
                  String s3Path = transcribedS3Path.replace("https://s3.amazonaws.com/", "s3://");
                  long llmResponseTime  = System.currentTimeMillis();
-                 String llmResponse = llmProcessingService.process(s3Path);
-                 try {
-                     File transcribedResponseFile = s3Service.downloadFileFromS3("dta-root",
-                             llmResponse.replace("s3://dta-root/", ""));
-                     transcribedResponseText = new String(Files.readAllBytes(transcribedResponseFile.toPath()), StandardCharsets.UTF_8);
-                     transcribedResponseFile.delete(); // Cleanup
-                 } catch (Exception e) {
-                     logger.error("Error reading transcribed text: {}", e.getMessage(), e);
-                 }
+                 dtaSessionOrchestrator.associateSession(sessionId);
+                 String llmResponse = dtaSessionOrchestrator.processUserMessage(sessionId, objectMapper.writeValueAsString(textResponse));
                  // Send transcribed text as a text message
                  ObjectNode textLLMResponse = objectMapper.createObjectNode();
                  textLLMResponse.put("type", "output-transcription");
-                 textLLMResponse.put("text", transcribedResponseText);
-                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textLLMResponse)));
-
+                 textLLMResponse.put("text", llmResponse);
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textLLMResponse)));
+                String outputPath = generateOutputPath(s3Path);
+                s3StorageService.writeTextToS3(outputPath, llmResponse);
+                String rootOutputPath ="s3://dta-root/"+ outputPath;
                  logger.info("llm Response Time took {} ms", System.currentTimeMillis() - llmResponseTime);
                  long pollyServiceTime  = System.currentTimeMillis();
-                 String textToSpeechResponse = pollyService.convertTextToSpeech(llmResponse, sessionId);
+                 String textToSpeechResponse = pollyService.convertTextToSpeech(rootOutputPath, sessionId);
                  logger.info("Polly Service Response Time took {} ms", System.currentTimeMillis() - pollyServiceTime);
                  textToSpeechResponse= textToSpeechResponse.replace("https://dta-root.s3.amazonaws.com/", "");
                  long S3DownloadTime  = System.currentTimeMillis();
@@ -383,6 +386,17 @@ public class CBTController {
         errorJson.put("code", code);
         errorJson.put("requestId", requestId);
         session.sendMessage(new TextMessage(errorJson.toString()));
+    }
+
+    private String generateOutputPath(String inputPath) {
+        String outputPath= inputPath.replace("s3://dta-root/", "");
+        int dotIndex = outputPath.lastIndexOf('.');
+        if (dotIndex > 0) {
+            outputPath = outputPath.substring(0, dotIndex) + "-response.txt";
+            return outputPath;
+        } else {
+            return outputPath + "-response.txt";
+        }
     }
 
 }
