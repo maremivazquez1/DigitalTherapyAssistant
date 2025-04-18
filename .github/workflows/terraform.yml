@@ -52,8 +52,8 @@ jobs:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ AWS_SECRET_ACCESS_KEY }}
+        aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1  # Change this to your region
 
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
@@ -95,9 +95,9 @@ jobs:
       run: |
           terraform -chdir=backend/aws-infra/ apply \
             -var="oauth_token=${{ secrets.OAUTH_TOKEN_GITHUB }}" \
-            -var="aws_key=${{ AWS_ACCESS_KEY_ID }}" \
-            -var="aws_secret=${{ AWS_SECRET_ACCESS_KEY }}" \
-            -var="hume_key=${{ HUME_API_KEY }}" \
-            -var="gemini_key=${{ GEMINI_API_KEY }}" \
+            -var="aws_key=${{ env.AWS_ACCESS_KEY_ID }}" \
+            -var="aws_secret=${{ env.AWS_SECRET_ACCESS_KEY }}" \
+            -var="hume_key=${{ env.HUME_API_KEY }}" \
+            -var="gemini_key=${{ env.GEMINI_API_KEY }}" \
             -auto-approve \
             -input=false
