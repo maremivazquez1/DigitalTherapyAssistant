@@ -10,8 +10,6 @@ import java.util.concurrent.TimeUnit;
 public class TokenService {
 
     private static final String TOKEN_PREFIX = "token:";
-    private static final long TOKEN_REFRESH_INTERVAL = 10; // 10 minutes
-    private static final long TOKEN_EXPIRATION = 60; // 60 minutes
 
     private final RedisTemplate<String, String> redisTemplate;
     private final JwtTokenProvider jwtTokenProvider;
@@ -67,7 +65,7 @@ public class TokenService {
             // Create new token
             String newToken = jwtTokenProvider.createToken(username);
             // Store new token with expiration
-            storeToken(newToken, username, TOKEN_EXPIRATION);
+            storeToken(newToken, username, JwtTokenProvider.TOKEN_EXPIRATION_MINUTES);
             return newToken;
         }
         return null;
@@ -82,6 +80,6 @@ public class TokenService {
     public boolean isTokenExpiring(String username) {
         String key = TOKEN_PREFIX + username;
         Long ttl = redisTemplate.getExpire(key, TimeUnit.MINUTES);
-        return ttl != null && ttl <= TOKEN_REFRESH_INTERVAL;
+        return ttl != null && ttl <= JwtTokenProvider.TOKEN_REFRESH_INTERVAL_MINUTES;
     }
 }

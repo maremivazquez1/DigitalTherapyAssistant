@@ -1,5 +1,6 @@
 package harvard.capstone.digitaltherapy.authentication.service;
 
+import harvard.capstone.digitaltherapy.config.SecurityConstants;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -12,11 +13,15 @@ public class JwtTokenProvider {
 
     // Automatically generate secret key for token
     private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    private final long validityInMilliseconds = 3600000; // 1 hour validity
+    
+    // Token expiration and refresh interval
+    public static final long TOKEN_REFRESH_INTERVAL_MINUTES = 10;
+    public static final long TOKEN_EXPIRATION_MINUTES = 60;
+    public static final long TOKEN_EXPIRATION_MILLISECONDS = TOKEN_EXPIRATION_MINUTES * 60 * 1000;
 
     public String createToken(String username) {
         Date now = new Date();
-        Date validity = new Date(now.getTime() + validityInMilliseconds);
+        Date validity = new Date(now.getTime() + TOKEN_EXPIRATION_MILLISECONDS);
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(now)
