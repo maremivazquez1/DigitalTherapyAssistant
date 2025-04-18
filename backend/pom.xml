@@ -70,6 +70,16 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<groupId>ws.schild</groupId>
+			<artifactId>jave-core</artifactId>
+			<version>3.3.1</version>
+		</dependency>
+		<dependency>
+			<groupId>ws.schild</groupId>
+			<artifactId>jave-nativebin-osx64</artifactId>
+			<version>3.3.1</version>
+		</dependency>
+		<dependency>
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-junit-jupiter</artifactId>
 			<scope>test</scope>
@@ -108,6 +118,13 @@
 			<groupId>software.amazon.awssdk</groupId>
 			<artifactId>bedrockruntime</artifactId>
 		</dependency>
+
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>rekognition</artifactId>
+		</dependency>
+
+		
 		<dependency>
 			<groupId>software.amazon.awssdk</groupId>
 			<artifactId>sts</artifactId>
@@ -148,6 +165,42 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j</artifactId>
+			<version>1.0.0-beta2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-google-ai-gemini</artifactId>
+			<version>1.0.0-beta2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-open-ai</artifactId>
+			<version>1.0.0-beta2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-opensearch</artifactId>
+			<version>1.0.0-beta2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-embeddings-all-minilm-l6-v2</artifactId>
+			<version>1.0.0-beta2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-anthropic</artifactId>
+			<version>1.0.0-beta3</version>
+		</dependency>
+
+
 	</dependencies>
 
 	<build>

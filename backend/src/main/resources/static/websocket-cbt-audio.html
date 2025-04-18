@@ -187,7 +187,7 @@
 
   <div class="input-container">
     <input type="text" id="messageInput" placeholder="Type your message here..." disabled />
-    <input type="file" id="audioInput" accept="audio/mp3" disabled />
+    <input type="file" id="audioInput" accept="audio/mp3,video/mp4, video/webm" disabled />
     <button id="sendButton" disabled>Send</button>
   </div>
 
@@ -279,41 +279,61 @@
 
   function sendMessage() {
     if (socket && socket.readyState === WebSocket.OPEN) {
-      const message = messageInput.value.trim();
-      const audioFile = document.getElementById('audioInput').files[0];
+    const message = messageInput.value.trim();
+    const mediaFile = document.getElementById('audioInput').files[0];
 
-      if (audioFile) {
-        // Handle audio file as binary
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          // Send the binary data directly
-          socket.send(reader.result);
+    if (mediaFile) {
+      // Determine file type
+      const isVideo = mediaFile.type === 'video/webm';
+      const isAudio = mediaFile.type === 'audio/mp3';
 
-          // Add message to UI
-          const messageElement = document.createElement('div');
-          messageElement.classList.add('message', 'user');
-          messageElement.textContent = `Sent audio file: ${audioFile.name}`;
-          messageArea.appendChild(messageElement);
+      // Send metadata first
+      const metadata = {
+        modality: isVideo ? "video" : "audio",
+        contentType: mediaFile.type,
+        fileName: mediaFile.name,
+        fileSize: mediaFile.size,
+        user_id: "user_12345",
+        session_id: "session_123"
+      };
+      // Send metadata
+      socket.send(JSON.stringify(metadata));
 
-          // Clear inputs
-          messageInput.value = '';
-          document.getElementById('audioInput').value = '';
-          document.querySelector('.audio-preview').style.display = 'none';
-        };
-        reader.readAsArrayBuffer(audioFile);
-      } else if (message) {
-        // Handle text-only message
-        const messageObj = {
-          type: 'text',
-          text: message
-        };
+      // Handle file
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        // Send the binary data
+        socket.send(reader.result);
 
-        const jsonMessage = JSON.stringify(messageObj);
-        socket.send(jsonMessage);
-        addMessage(jsonMessage, 'user');
+        // Add message to UI
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message', 'user');
+        messageElement.textContent = `Sent ${isVideo ? 'video' : 'audio'} file: ${mediaFile.name} (${Math.round(mediaFile.size / 1024 / 1024 * 100) / 100} MB)`;
+        messageArea.appendChild(messageElement);
+
+        // Clear inputs
         messageInput.value = '';
-      }
+        document.getElementById('audioInput').value = '';
+        document.querySelector('.audio-preview').style.display = 'none';
+      };
+
+      reader.onerror = function(error) {
+        addMessage('Error reading file: ' + error.message, 'error');
+      };
+
+      reader.readAsArrayBuffer(mediaFile);
+    } else if (message) {
+      // Handle text message
+      const messageObj = {
+        type: 'text',
+        text: message
+      };
+      socket.send(JSON.stringify(messageObj));
+      addMessage(JSON.stringify(messageObj), 'user');
+      messageInput.value = '';
     }
+  }
+
   }
 
   // Add audio preview functionality

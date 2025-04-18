@@ -28,7 +28,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())  // Disable CSRF for REST APIs
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                // Permit access to login and registration endpoints
+                // only permit access to login and registration endpoints if unauthenticated
                 .requestMatchers("/api/login", "/api/register").permitAll()
                 .anyRequest().authenticated()
             )

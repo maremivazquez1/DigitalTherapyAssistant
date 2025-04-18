@@ -50,5 +50,6 @@ export const getAuthToken = (): string | null => {
  * Checks if a user is authenticated by verifying if a token exists.
  */
 export const isAuthenticated = (): boolean => {
-  return !!localStorage.getItem('token');
+  const token = localStorage.getItem('token');
+  return !!token && token !== 'undefined';
 };

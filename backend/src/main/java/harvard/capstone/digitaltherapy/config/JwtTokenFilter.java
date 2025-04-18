@@ -31,11 +31,26 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     }
 
     private String resolveToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
+        String token = request.getHeader("Authorization");
+        // case if using websocket
+        if (token == null && "websocket".equalsIgnoreCase(request.getHeader("Upgrade"))) {
+            String query = request.getQueryString();
+            if (query != null && query.contains("token=")) {
+                String[] parts = query.split("token=");
+                if (parts.length > 1) {
+                    token = parts[1];
+                    // remove extra stuff after '&'
+                    if (token.contains("&")) {
+                        token = token.substring(0, token.indexOf("&"));
+                    }
+                }
+            }
         }
-        return null;
+        // typical HTTP request
+        if (token != null && token.startsWith("Bearer ")) {
+            return token.substring(7);
+        }
+        return token;
     }
 
     @Override
