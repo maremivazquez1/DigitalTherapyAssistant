@@ -1,6 +1,5 @@
 package harvard.capstone.digitaltherapy.config;
 
-import harvard.capstone.digitaltherapy.config.JwtTokenFilter;
 import harvard.capstone.digitaltherapy.authentication.service.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -13,6 +12,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import java.util.Arrays;
 
 @Configuration
@@ -20,7 +20,7 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    private JwtTokenFilter jwtTokenFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -28,12 +28,12 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())  // Disable CSRF for REST APIs
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                // only permit access to the following if without valid login (also always allow initial web socket HTTP)
-                .requestMatchers("/api/login", "/api/register", "/ws/cbt/**").permitAll()
+                // Permit access to login and registration endpoints
+                .requestMatchers("/api/login", "/api/register").permitAll()
                 .anyRequest().authenticated()
             )
-            // Register JWT filter to check valid token first before usual username/pass authentication
-            .addFilterBefore(new JwtTokenFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
+            // Add the JWT filter to the filter chain
+            .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class)
             .httpBasic(Customizer.withDefaults());
 
         return http.build();

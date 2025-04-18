@@ -1,11 +1,15 @@
 package harvard.capstone.digitaltherapy.config;
 
 import harvard.capstone.digitaltherapy.authentication.service.JwtTokenProvider;
+import harvard.capstone.digitaltherapy.authentication.service.TokenService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,12 +18,25 @@ import java.io.IOException;
 import java.util.Collections;
 
 // Token filter checks HTTP requests before going to normal authorization checks
+@Component
 public class JwtTokenFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenService tokenService;
 
-    public JwtTokenFilter(JwtTokenProvider jwtTokenProvider) {
+    @Autowired
+    public JwtTokenFilter(JwtTokenProvider jwtTokenProvider, TokenService tokenService) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.tokenService = tokenService;
+    }
+
+
+    private String resolveToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 
     @Override
@@ -28,22 +45,15 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
         String token = resolveToken(request);
-        if (token != null && jwtTokenProvider.validateToken(token)) {
+        if (token != null &&
+            jwtTokenProvider.validateToken(token) &&
+            tokenService.isTokenValid(token)) {
             String username = jwtTokenProvider.getUsername(token);
-            // Create a simple authentication token (you can extend this to load roles/authorities)
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                    username, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                            username, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(auth);
         }
         filterChain.doFilter(request, response);
-    }
-
-    // Helper method to extract the token from the Authorization header
-    private String resolveToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
-        }
-        return null;
     }
 }
