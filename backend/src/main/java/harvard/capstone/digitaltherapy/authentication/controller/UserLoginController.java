@@ -5,7 +5,6 @@ import harvard.capstone.digitaltherapy.authentication.model.LoginRequest;
 import harvard.capstone.digitaltherapy.authentication.service.UserLoginService;
 import harvard.capstone.digitaltherapy.authentication.service.JwtTokenProvider;
 import harvard.capstone.digitaltherapy.authentication.service.TokenService;
-import harvard.capstone.digitaltherapy.config.SecurityConstants;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

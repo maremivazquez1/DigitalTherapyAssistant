@@ -1,6 +1,5 @@
 package harvard.capstone.digitaltherapy.authentication.service;
 
-import harvard.capstone.digitaltherapy.config.SecurityConstants;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
