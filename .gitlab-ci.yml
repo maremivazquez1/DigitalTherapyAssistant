@@ -1,83 +1,98 @@
-# .gitlab-ci.yml  ─────────  MR‑only pipeline  ───────────────────────────────
-stages:
-  - build-backend
-  - test-backend
-  - build-frontend
-  - test-frontend
+name: PR CI
 
-workflow:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      when: always
-    - when: never
+on:
+  pull_request:                        # only on PRs
+    types: [opened, synchronize, reopened]
 
-variables:
+env:
   MAVEN_CLI_OPTS: "-B -e -V"
-  NODE_ENV: "ci"
+  NODE_ENV: ci
 
-cache:
-  key: "${CI_PROJECT_ID}"
-  paths:
-    - backend/.m2/repository/
-    - frontend/node_modules/
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    container: maven:3.9.9-eclipse-temurin-23   # Maven 3.9.9 + JDK 23 
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ hashFiles('**/pom.xml') }}
+      - name: Build JAR (skip tests)
+        run: |
+          cd backend
+          mvn $MAVEN_CLI_OPTS clean package -DskipTests
+      - uses: actions/upload-artifact@v4       # keep the jar for later jobs if needed
+        with:
+          name: backend-jar
+          path: backend/target/*.jar
 
-# Uses official image that already bundles Maven 3.9.9 + Eclipse‑Temurin JDK 23
-# https://hub.docker.com/_/maven  tag: 3.9.9-eclipse-temurin-23  :contentReference[oaicite:0]{index=0}
-.build-backend-template: &build-backend-image
-  image: maven:3.9.9-eclipse-temurin-23
+  test-backend:
+    needs: build-backend
+    runs-on: ubuntu-latest
+    container: maven:3.9.9-eclipse-temurin-23
+    continue-on-error: true                   # allowed to failure
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ hashFiles('**/pom.xml') }}
+      - name: Run unit tests
+        run: |
+          cd backend
+          mvn $MAVEN_CLI_OPTS test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports/*.xml
 
-build-backend:
-  <<: *build-backend-image
-  stage: build-backend
-  script:
-    - cd backend
-    - mvn $MAVEN_CLI_OPTS clean package -DskipTests
-  artifacts:
-    paths:
-      - backend/target/*.jar
-    expire_in: 1 hour
+  build-frontend:
+    runs-on: ubuntu-latest
+    container: node:23.11.0-bullseye-slim
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure npm 10.9.2
+        run: npm install -g npm@10.9.2
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: npm-${{ hashFiles('frontend/package-lock.json') }}
+      - name: Build Vite app
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
 
-test-backend:
-  <<: *build-backend-image
-  stage: test-backend
-  script:
-    - cd backend
-    - mvn $MAVEN_CLI_OPTS test
-  allow_failure: true
-  artifacts:
-    when: always
-    reports:
-      junit: backend/target/surefire-reports/*.xml
-
-# ────────────── frontend ──────────────
-# Official Node 23.11.0 image exists on Docker Hub  :contentReference[oaicite:1]{index=1}
-# We pin npm to 10.9.2 explicitly, because Node 23 ships a slightly older npm.
-.frontend-image: &frontend-image
-  image: node:23.11.0-slim
-
-build-frontend:
-  <<: *frontend-image
-  stage: build-frontend
-  script:
-    - cd frontend
-    - npm install -g npm@10.9.2
-    - npm ci
-    - npm run build
-  artifacts:
-    paths:
-      - frontend/dist/
-    expire_in: 1 hour
-
-test-frontend:
-  <<: *frontend-image
-  stage: test-frontend
-  script:
-    - cd frontend
-    - npm install -g npm@10.9.2
-    - npm ci
-    - npm test -- --coverage
-  allow_failure: true
-  artifacts:
-    when: always
-    reports:
-      junit: frontend/jest-results.xml
+  test-frontend:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    container: node:23.11.0-bullseye-slim
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure npm 10.9.2
+        run: npm install -g npm@10.9.2
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: npm-${{ hashFiles('frontend/package-lock.json') }}
+      - name: Run unit tests
+        run: |
+          cd frontend
+          npm ci
+          npm test -- --coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jest-results
+          path: frontend/jest-results.xml
