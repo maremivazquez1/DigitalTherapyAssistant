@@ -247,8 +247,8 @@ public class CBTController {
                  String transcribedText = "";
                  String transcript = "";
                  try {
-                     File transcribedFile = s3Service.downloadFileFromS3("dta-root",
-                             transcribedS3Path.replace("https://s3.amazonaws.com/dta-root/", ""));
+                     File transcribedFile = s3Service.downloadFileFromS3("dtaroot",
+                             transcribedS3Path.replace("https://s3.amazonaws.com/dtaroot/", ""));
                      transcribedText = new String(Files.readAllBytes(transcribedFile.toPath()), StandardCharsets.UTF_8);
                      try {
                          JsonNode rootNode = objectMapper.readTree(transcribedText);
@@ -285,14 +285,14 @@ public class CBTController {
                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(textLLMResponse)));
                 String outputPath = generateOutputPath(s3Path);
                 s3StorageService.writeTextToS3(outputPath, llmResponse);
-                String rootOutputPath ="s3://dta-root/"+ outputPath;
+                String rootOutputPath ="s3://dtaroot/"+ outputPath;
                  logger.info("llm Response Time took {} ms", System.currentTimeMillis() - llmResponseTime);
                  long pollyServiceTime  = System.currentTimeMillis();
                  String textToSpeechResponse = pollyService.convertTextToSpeech(rootOutputPath, sessionId);
                  logger.info("Polly Service Response Time took {} ms", System.currentTimeMillis() - pollyServiceTime);
-                 textToSpeechResponse= textToSpeechResponse.replace("https://dta-root.s3.amazonaws.com/", "");
+                 textToSpeechResponse= textToSpeechResponse.replace("https://dtaroot.s3.amazonaws.com/", "");
                  long S3DownloadTime  = System.currentTimeMillis();
-                 File responseFile = s3Service.downloadFileFromS3("dta-root", textToSpeechResponse);
+                 File responseFile = s3Service.downloadFileFromS3("dtaroot", textToSpeechResponse);
                  logger.info("S3 response download Time took {} ms", System.currentTimeMillis() - S3DownloadTime);
                  // Convert processed file to binary message
                  byte[] processedAudio = Files.readAllBytes(responseFile.toPath());
@@ -389,7 +389,7 @@ public class CBTController {
     }
 
     private String generateOutputPath(String inputPath) {
-        String outputPath= inputPath.replace("s3://dta-root/", "");
+        String outputPath= inputPath.replace("s3://dtaroot/", "");
         int dotIndex = outputPath.lastIndexOf('.');
         if (dotIndex > 0) {
             outputPath = outputPath.substring(0, dotIndex) + "-response.txt";
