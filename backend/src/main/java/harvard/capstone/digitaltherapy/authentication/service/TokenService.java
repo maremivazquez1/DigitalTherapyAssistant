@@ -9,37 +9,79 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class TokenService {
 
+    private static final String TOKEN_PREFIX = "token:";
+    private static final long TOKEN_REFRESH_INTERVAL = 10; // 10 minutes
+    private static final long TOKEN_EXPIRATION = 60; // 60 minutes
+
+    private final RedisTemplate<String, String> redisTemplate;
+    private final JwtTokenProvider jwtTokenProvider;
+
     @Autowired
-    private RedisTemplate<String, String> redisTemplate;
+    public TokenService(RedisTemplate<String, String> redisTemplate, JwtTokenProvider jwtTokenProvider) {
+        this.redisTemplate = redisTemplate;
+        this.jwtTokenProvider = jwtTokenProvider;
+    }
 
     /**
      * Stores the token with an associated username and TTL.
      *
      * @param token the JWT token
      * @param username the associated username
-     * @param expirationInSeconds expiration time in seconds
+     * @param expirationInMinutes expiration time in minutes
      */
-    public void storeToken(String token, String username, long expirationInSeconds) {
-        redisTemplate.opsForValue().set(token, username, expirationInSeconds, TimeUnit.SECONDS);
+    public void storeToken(String token, String username, long expirationInMinutes) {
+        String key = TOKEN_PREFIX + username;
+        redisTemplate.opsForValue().set(key, token, expirationInMinutes, TimeUnit.MINUTES);
     }
 
     /**
-     * Checks whether a token exists in Redis.
+     * Retrieves the token for a given username.
      *
-     * @param token the JWT token to check
-     * @return true if the token exists, false otherwise
+     * @param username the associated username
+     * @return the JWT token
      */
-    public boolean isTokenValid(String token) {
-        Boolean exists = redisTemplate.hasKey(token);
-        return exists != null && exists;
+    public String getToken(String username) {
+        String key = TOKEN_PREFIX + username;
+        return redisTemplate.opsForValue().get(key);
     }
 
     /**
      * Deletes a token from Redis.
      *
-     * @param token the JWT token to delete
+     * @param username the associated username
      */
-    public void deleteToken(String token) {
-        redisTemplate.delete(token);
+    public void deleteToken(String username) {
+        String key = TOKEN_PREFIX + username;
+        redisTemplate.delete(key);
+    }
+
+    /**
+     * Refreshes the token for a given username.
+     *
+     * @param username the associated username
+     * @return the refreshed JWT token
+     */
+    public String refreshToken(String username) {
+        String currentToken = getToken(username);
+        if (currentToken != null && jwtTokenProvider.validateToken(currentToken)) {
+            // Create new token
+            String newToken = jwtTokenProvider.createToken(username);
+            // Store new token with expiration
+            storeToken(newToken, username, TOKEN_EXPIRATION);
+            return newToken;
+        }
+        return null;
+    }
+
+    /**
+     * Checks whether a token is expiring within the refresh interval.
+     *
+     * @param username the associated username
+     * @return true if the token is expiring within the refresh interval, false otherwise
+     */
+    public boolean isTokenExpiring(String username) {
+        String key = TOKEN_PREFIX + username;
+        Long ttl = redisTemplate.getExpire(key, TimeUnit.MINUTES);
+        return ttl != null && ttl <= TOKEN_REFRESH_INTERVAL;
     }
 }

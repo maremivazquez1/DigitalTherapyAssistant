@@ -30,7 +30,6 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         this.tokenService = tokenService;
     }
 
-
     private String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
@@ -41,18 +40,49 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+                                  HttpServletResponse response,
+                                  FilterChain filterChain)
             throws ServletException, IOException {
         String token = resolveToken(request);
-        if (token != null &&
-            jwtTokenProvider.validateToken(token) &&
-            tokenService.isTokenValid(token)) {
-            String username = jwtTokenProvider.getUsername(token);
-            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                            username, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
-            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(auth);
+        
+        if (token != null) {
+            try {
+                // First validate the token
+                if (!jwtTokenProvider.validateToken(token)) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("Token has expired");
+                    return;
+                }
+
+                String username = jwtTokenProvider.getUsername(token);
+                
+                // Check if token exists in Redis
+                String storedToken = tokenService.getToken(username);
+                if (storedToken == null || !storedToken.equals(token)) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("Invalid token");
+                    return;
+                }
+                
+                // Check if token needs refresh
+                if (tokenService.isTokenExpiring(username)) {
+                    String newToken = tokenService.refreshToken(username);
+                    if (newToken != null) {
+                        response.setHeader("X-New-Token", newToken);
+                    }
+                }
+
+                // Set up Spring Security context
+                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                    username, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+                );
+                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            } catch (Exception e) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Invalid token");
+                return;
+            }
         }
         filterChain.doFilter(request, response);
     }
