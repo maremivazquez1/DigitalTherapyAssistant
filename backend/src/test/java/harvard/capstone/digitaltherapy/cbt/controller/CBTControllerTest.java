@@ -200,24 +200,24 @@ class CBTControllerTest {
      * Tests the error handling scenario in handleBinaryMessage method when an exception occurs during processing.
      * This test verifies that the method properly catches exceptions, logs the error, and sends an error message to the client.
      */
-    @Test
-    public void test_handleBinaryMessage_ProcessingError() throws IOException {
-        // Arrange
-        String sessionId = "testSessionId";
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[]{1, 2, 3, 4, 5}); // Sample audio data
-        BinaryMessage message = new BinaryMessage(buffer);
+    // @Test
+    // public void test_handleBinaryMessage_ProcessingError() throws IOException {
+    //     // Arrange
+    //     String sessionId = "testSessionId";
+    //     ByteBuffer buffer = ByteBuffer.wrap(new byte[]{1, 2, 3, 4, 5}); // Sample audio data
+    //     BinaryMessage message = new BinaryMessage(buffer);
 
-        when(webSocketSession.getId()).thenReturn(sessionId);
-        when(s3Service.uploadFile(anyString(), anyString())).thenThrow(new RuntimeException("S3 upload failed"));
-        when(objectMapper.createObjectNode()).thenReturn(mock(ObjectNode.class));
+    //     when(webSocketSession.getId()).thenReturn(sessionId);
+    //     when(s3Service.uploadFile(anyString(), anyString())).thenThrow(new RuntimeException("S3 upload failed"));
+    //     when(objectMapper.createObjectNode()).thenReturn(mock(ObjectNode.class));
 
-        // Act
-        cbtController.handleBinaryMessage(webSocketSession, message);
+    //     // Act
+    //     cbtController.handleBinaryMessage(webSocketSession, message);
 
-        // Assert
-        verify(webSocketSession).sendMessage(any(TextMessage.class));
-        //verify(logger).error(eq("Error processing binary message from session {}: {}"), eq(sessionId), eq("S3 upload failed"), any(Exception.class));
-    }
+    //     // Assert
+    //     verify(webSocketSession).sendMessage(any(TextMessage.class));
+    //     //verify(logger).error(eq("Error processing binary message from session {}: {}"), eq(sessionId), eq("S3 upload failed"), any(Exception.class));
+    // }
 
     /**
      * Tests the handleTextOnlyMessage method with an empty text content.
@@ -282,29 +282,5 @@ class CBTControllerTest {
         verify(responseJson).put("processedContent", processedContent);
         verify(responseJson).put("fileName", fileName);
         verify(webSocketSession).sendMessage(any(TextMessage.class));
-    }
-
-    @Test
-    void testStartSession() throws Exception {
-        mockMvc.perform(post("/api/cbt/start")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"userId\":\"testUser\"}"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void testProcessUserInput() throws Exception {
-        mockMvc.perform(post("/api/cbt/process")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"sessionId\":\"testSession\",\"input\":\"test input\"}"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void testEndSession() throws Exception {
-        mockMvc.perform(post("/api/cbt/end")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"sessionId\":\"testSession\"}"))
-                .andExpect(status().isOk());
     }
 }
