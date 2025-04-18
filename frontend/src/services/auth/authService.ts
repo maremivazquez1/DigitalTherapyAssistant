@@ -11,7 +11,6 @@
  * - Logout users by clearing authentication data (`logout`).
  * - Retrieve authentication tokens (`getAuthToken`).
  * - Check if a user is authenticated (`isAuthenticated`).
- * - Refresh authentication tokens if supported (`refreshToken`).
  * - Handle authentication-related errors (`handleAuthError`).
  */
 
@@ -53,22 +52,6 @@ export const getAuthToken = (): string | null => {
  */
 export const isAuthenticated = (): boolean => {
   return !!localStorage.getItem('token');
-};
-
-/**
- * Attempts to refresh the authentication token.
- * If the refresh fails, the user is logged out.
- */
-export const refreshToken = async (): Promise<AuthResponse | null> => {
-  try {
-    const response = await api.post<AuthResponse>('/auth/refresh');
-    localStorage.setItem('token', response.data.token);
-    return response.data;
-  } catch (error: unknown) {
-    logout(); // Logout if refresh fails
-    handleAuthError(error);
-    return null;
-  }
 };
 
 /**
