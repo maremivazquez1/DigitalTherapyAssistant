@@ -3,6 +3,7 @@ package harvard.capstone.digitaltherapy.authentication.controller;
 import harvard.capstone.digitaltherapy.authentication.model.ApiResponse;
 import harvard.capstone.digitaltherapy.authentication.model.LoginRequest;
 import harvard.capstone.digitaltherapy.authentication.service.UserLoginService;
+import harvard.capstone.digitaltherapy.authentication.service.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +21,10 @@ class UserLoginControllerTest {
 
     @Mock
     private UserLoginService loginService;
+    
+    // Added mock for JwtTokenProvider
+    @Mock
+    private JwtTokenProvider jwtTokenProvider;
 
     @InjectMocks
     private UserLoginController userLoginController;
@@ -39,13 +44,14 @@ class UserLoginControllerTest {
         invalidLoginRequest.setPassword("wrongPassword");
     }
 
-
-   @Test
+    @Test
     void loginUser_WithValidCredentials_ReturnsSuccessResponse() {
         // Arrange
-        when(loginService.authenticateUser(validLoginRequest.getUsername(),
-                                        validLoginRequest.getPassword()))
+        when(loginService.authenticateUser(validLoginRequest.getUsername(), validLoginRequest.getPassword()))
             .thenReturn(true);
+        // Stub token creation
+        when(jwtTokenProvider.createToken(validLoginRequest.getUsername()))
+            .thenReturn("dummyToken");
 
         // Act
         ResponseEntity<ApiResponse> response = userLoginController.loginUser(validLoginRequest);
@@ -56,13 +62,13 @@ class UserLoginControllerTest {
         assertNotNull(response.getBody());
         assertEquals("success", response.getBody().getStatus());
         assertEquals("Login successful!", response.getBody().getMessage());
+        assertEquals("dummyToken", response.getBody().getToken());
     }
 
     @Test
     void loginUser_WithInvalidCredentials_ReturnsErrorResponse() {
         // Arrange
-        when(loginService.authenticateUser(invalidLoginRequest.getUsername(),
-                                        invalidLoginRequest.getPassword()))
+        when(loginService.authenticateUser(invalidLoginRequest.getUsername(), invalidLoginRequest.getPassword()))
             .thenReturn(false);
 
         // Act
@@ -74,17 +80,15 @@ class UserLoginControllerTest {
         assertNotNull(response.getBody());
         assertEquals("error", response.getBody().getStatus());
         assertEquals("Invalid credentials", response.getBody().getMessage());
+        // Token should be null on failure
+        assertNull(response.getBody().getToken());
     }
 
-
- @Test
+    @Test
     void loginUser_WithNullRequest_ThrowsException() {
         // Act & Assert
         assertThrows(NullPointerException.class, () -> {
             userLoginController.loginUser(null);
         });
     }
-
-
 }
-

@@ -5,6 +5,8 @@ package harvard.capstone.digitaltherapy.config;
  * Registers the CBTWebSocketHandler at the endpoint "/ws/cbt" to handle incoming WebSocket connections.
  */
 import harvard.capstone.digitaltherapy.websocket.CBTWebSocketHandler;
+import harvard.capstone.digitaltherapy.authentication.service.JwtHandshakeInterceptor;
+import harvard.capstone.digitaltherapy.authentication.service.JwtTokenProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,14 +21,17 @@ import org.springframework.web.socket.server.standard.ServletServerContainerFact
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final CBTWebSocketHandler cbtWebSocketHandler;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public WebSocketConfig(CBTWebSocketHandler cbtWebSocketHandler) {
+    public WebSocketConfig(CBTWebSocketHandler cbtWebSocketHandler, JwtTokenProvider jwtTokenProvider) {
         this.cbtWebSocketHandler = cbtWebSocketHandler;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(cbtWebSocketHandler, "/ws/cbt")
+                .addInterceptors(new JwtHandshakeInterceptor(jwtTokenProvider))
                 .setAllowedOrigins("*");
     }
 
@@ -39,5 +44,4 @@ public class WebSocketConfig implements WebSocketConfigurer {
         container.setMaxSessionIdleTimeout(15 * 60 * 1000L); // 15 minutes
         return container;
     }
-
 }

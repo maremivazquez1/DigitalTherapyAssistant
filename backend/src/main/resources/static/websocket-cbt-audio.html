@@ -187,7 +187,7 @@
 
   <div class="input-container">
     <input type="text" id="messageInput" placeholder="Type your message here..." disabled />
-    <input type="file" id="audioInput" accept="audio/mp3,video/mp4" disabled />
+    <input type="file" id="audioInput" accept="audio/mp3,video/mp4, video/webm" disabled />
     <button id="sendButton" disabled>Send</button>
   </div>
 
@@ -284,7 +284,7 @@
 
     if (mediaFile) {
       // Determine file type
-      const isVideo = mediaFile.type === 'video/mp4';
+      const isVideo = mediaFile.type === 'video/webm';
       const isAudio = mediaFile.type === 'audio/mp3';
 
       // Send metadata first
