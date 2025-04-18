@@ -33,9 +33,19 @@ import org.springframework.web.socket.BinaryMessage;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import harvard.capstone.digitaltherapy.llm.service.S3StorageService;
+import harvard.capstone.digitaltherapy.orchestration.DTASessionOrchestrator;
 
 @ExtendWith(MockitoExtension.class)
 class CBTControllerTest {
+
+    private MockMvc mockMvc;
 
     @Mock
     private ObjectMapper objectMapper;
@@ -59,11 +69,16 @@ class CBTControllerTest {
     private MultipartFile multipartFile;
     @Mock
     private  RekognitionService rekognitionService;
+    @Mock
+    private DTASessionOrchestrator dtaSessionOrchestrator;
+    @Mock
+    private S3StorageService s3StorageService;
 
     private CBTController cbtController;
 
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.openMocks(this);
         cbtController = new CBTController(
                 objectMapper,
                 s3Service,
@@ -71,8 +86,11 @@ class CBTControllerTest {
                 transcribeService,
                 llmProcessingService,
                 pollyService,
-                rekognitionService
+                rekognitionService,
+                dtaSessionOrchestrator,
+                s3StorageService
         );
+        mockMvc = MockMvcBuilders.standaloneSetup(cbtController).build();
     }
 
     /**
@@ -88,7 +106,9 @@ class CBTControllerTest {
                 transcribeService,
                 llmProcessingService,
                 pollyService,
-                rekognitionService
+                rekognitionService,
+                dtaSessionOrchestrator,
+                s3StorageService
         );
 
         assertNotNull(cbtController, "CBTController should be instantiated successfully");
@@ -109,7 +129,9 @@ class CBTControllerTest {
                 transcribeService,
                 llmProcessingService,
                 pollyService,
-                rekognitionService
+                rekognitionService,
+                dtaSessionOrchestrator,
+                s3StorageService
         );
         String content = "Test content";
         String requestId = "123";
@@ -260,5 +282,29 @@ class CBTControllerTest {
         verify(responseJson).put("processedContent", processedContent);
         verify(responseJson).put("fileName", fileName);
         verify(webSocketSession).sendMessage(any(TextMessage.class));
+    }
+
+    @Test
+    void testStartSession() throws Exception {
+        mockMvc.perform(post("/api/cbt/start")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"userId\":\"testUser\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testProcessUserInput() throws Exception {
+        mockMvc.perform(post("/api/cbt/process")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sessionId\":\"testSession\",\"input\":\"test input\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testEndSession() throws Exception {
+        mockMvc.perform(post("/api/cbt/end")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sessionId\":\"testSession\"}"))
+                .andExpect(status().isOk());
     }
 }
