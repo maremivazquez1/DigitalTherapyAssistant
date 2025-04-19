@@ -9,7 +9,7 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['**/*.test.(ts|tsx)'],
     coverage: {
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html']
     },
   },
 });
