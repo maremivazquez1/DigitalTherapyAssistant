@@ -13,6 +13,14 @@ resource "aws_instance" "springboot_backend" {
     sudo dnf install java-17-amazon-corretto git maven -y
     sudo dnf install nc -y
     sudo dnf install nodejs npm -y
+
+    # Install ffmpeg (statically bc it's not available on dnf)
+    wget https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz
+    sudo mkdir -p /usr/local/ffmpeg
+    sudo tar -xJf ffmpeg-master-latest-*.tar.xz -C /usr/local/ffmpeg --strip-components=1
+    sudo ln -s /usr/local/ffmpeg/bin/ffmpeg /usr/bin/ffmpeg
+    sudo ln -s /usr/local/ffmpeg/bin/ffprobe /usr/bin/ffprobe
+    FFMPEG_PATH=/usr/bin/ffmpeg
     
     # Inject OAuth token into the repo URL
     REPO_URL=$(echo "${var.repo_url}" | sed "s|https://|https://${var.oauth_token}@|")
@@ -43,6 +51,8 @@ resource "aws_instance" "springboot_backend" {
     export HUME_API_KEY="${var.hume_key}"
     export GEMINI_API_KEY="${var.gemini_key}"
     export PUBLIC_IP=$${PUBLIC_IP}
+    export JAVA_TOOL_OPTIONS="-Xmx1g" # prevents running out of heap (or use image with more RAM)
+    export FFMPEG_PATH=$${FFMPEG_PATH}
     EOL
 
     # Source to include variables in current run
