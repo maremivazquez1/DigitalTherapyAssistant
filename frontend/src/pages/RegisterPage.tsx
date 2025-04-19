@@ -1,8 +1,10 @@
 
 import RegistrationForm from "../components/RegistrationForm";
 
-export default function Register() {
+const RegisterPage: React.FC = () => {
   return (
     <RegistrationForm />
   );
-}
+};
+
+export default RegisterPage;
