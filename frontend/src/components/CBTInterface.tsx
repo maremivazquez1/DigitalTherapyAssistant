@@ -3,7 +3,6 @@ import therapyRoom from "../assets/therapy-room-1.svg";
 import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash } from "react-icons/fa";
 import hark from "hark";
 import { useWebSocket } from "../hooks/useWebSocket";
-
 import { WebSocketHeaderMessage } from "../types/CBTSession/webSocketMessage";
 
 interface ChatMessage {
@@ -111,8 +110,6 @@ const CBTInterface: React.FC = () => {
         default:
           console.warn("[useEffect] Unrecognized message type:", msg.type);
       }
-      default:
-        console.warn("[useEffect] Unrecognized message type:", msg.type);
     }
     // Update the last processed index to the current message count.
     lastProcessedIndex.current = messages.length;
@@ -211,7 +208,6 @@ const CBTInterface: React.FC = () => {
           }
           // Else leave options empty for Safari
           const videoRecorder = new MediaRecorder(videoOnlyStream, options);
-          //const videoRecorder = new MediaRecorder(videoOnlyStream, { mimeType: "video/webm" });
           videoChunksRef.current = [];
           videoRecorder.ondataavailable = (e) => {
             if (e.data.size > 0) {
@@ -397,12 +393,18 @@ const CBTInterface: React.FC = () => {
 
       {/* MIC & CAMERA CONTROLS */}
       <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 flex items-center gap-4">
-        <button onClick={toggleMic} className={`btn btn-circle btn-sm ${micMuted ? "bg-warning" : "bg-neutral"}`}>
+        <button
+          onClick={toggleMic}
+          className={`btn btn-circle btn-sm ${micMuted ? "bg-warning" : "bg-neutral"}`}
+        >
           <span className="text-neutral-content">
             {micMuted ? <FaMicrophoneSlash /> : <FaMicrophone />}
           </span>
         </button>
-        <button onClick={handleCamClick} className={`btn btn-circle btn-sm ${cameraOn ? "bg-neutral" : "bg-warning"}`}>
+        <button
+          onClick={handleCamClick}
+          className={`btn btn-circle btn-sm ${cameraOn ? "bg-neutral" : "bg-warning"}`}
+        >
           <span className="text-neutral-content">
             {cameraOn ? <FaVideo /> : <FaVideoSlash />}
           </span>
