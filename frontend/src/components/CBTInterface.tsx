@@ -27,6 +27,8 @@ const CBTInterface: React.FC = () => {
   const [sessionActive, setSessionActive] = useState(false);
   const [micMuted, setMicMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(true);
+  // Track if the assistant is still generating a reply.
+  const [isAwaitingResponse, setIsAwaitingResponse] = useState(false);
 
   // --------------------- REFS ---------------------
   const combinedStreamRef = useRef<MediaStream | null>(null);
@@ -41,8 +43,17 @@ const CBTInterface: React.FC = () => {
   const utteranceFileIdRef = useRef<string | null>(null);
   const utteranceStartTimeRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
-  // Tracks the last processed message index
+  // Tracks the last processed message index.
   const lastProcessedIndex = useRef(0);
+  // A counter for the user messages (or "turns")—optional for logging.
+  const userMessageCountRef = useRef<number>(0);
+  // A ref to track the awaiting response flag synchronously.
+  const isAwaitingResponseRef = useRef(false);
+
+  // Synchronize the ref with state whenever isAwaitingResponse changes.
+  useEffect(() => {
+    isAwaitingResponseRef.current = isAwaitingResponse;
+  }, [isAwaitingResponse]);
 
   // --------------------- WEBSOCKET ---------------------
   const { messages, sendMessage } = useWebSocket("ws://localhost:8080/ws/cbt", sessionActive);
@@ -76,13 +87,20 @@ const CBTInterface: React.FC = () => {
           break;
         }
         case "output-transcription": {
+          // Final assistant text response.
           const assistantMsg: ChatMessage = {
             id: Date.now(),
             sender: "Assistant",
             message: msg.text,
             timestamp: new Date(),
           };
-          setChatMessages((prev) => [...prev, assistantMsg]);
+          // Replace any pending assistant messages with the final one.
+          setChatMessages((prev) => [
+            ...prev.filter((m) => m.sender !== "Assistant" || !m.pending),
+            assistantMsg,
+          ]);
+          // Clear the awaiting flag so new input is allowed.
+          setIsAwaitingResponse(false);
           break;
         }
         case "audio": {
@@ -105,13 +123,15 @@ const CBTInterface: React.FC = () => {
               ttsAudioRef.current = null;
             };
           }
+          // When the audio response completes, allow new input.
+          setIsAwaitingResponse(false);
           break;
         }
         default:
           console.warn("[useEffect] Unrecognized message type:", msg.type);
       }
     }
-    // Update the last processed index to the current message count.
+    // Update the last processed index.
     lastProcessedIndex.current = messages.length;
   }, [messages]);
 
@@ -150,10 +170,25 @@ const CBTInterface: React.FC = () => {
       };
       audioRecorder.onstop = () => {
         console.log("[Audio Recorder] Stopped. Finalizing audio...");
+
         if (audioChunksRef.current.length === 0) {
           console.warn("No audio chunks — not sending.");
           return;
         }
+        // Block new input if already awaiting response.
+        if (isAwaitingResponseRef.current) {
+          console.warn("Assistant response is pending; new audio will not be sent.");
+          return;
+        }
+        // Increment the user message count (for logging or future use).
+        const newTurn = userMessageCountRef.current + 1;
+        userMessageCountRef.current = newTurn;
+
+        // Set the flag indicating we're awaiting the assistant's response.
+        setIsAwaitingResponse(true);
+        isAwaitingResponseRef.current = true;
+
+        // Optionally send a header.
         const headerMessageAudio: WebSocketHeaderMessage = {
           type: "header",
           session_id: sessionIdRef.current,
@@ -165,8 +200,8 @@ const CBTInterface: React.FC = () => {
         };
         sendMessage(JSON.stringify(headerMessageAudio));
         console.log("[Audio Recorder] Sent header:", headerMessageAudio);
-        
-        // Add a pending bubble before sending
+
+        // Add a pending user message.
         const pendingUserMsg: ChatMessage = {
           id: Date.now(),
           sender: "User",
@@ -175,12 +210,16 @@ const CBTInterface: React.FC = () => {
           timestamp: new Date(),
         };
         setChatMessages((prev) => [...prev, pendingUserMsg]);
+
+        // Create the audio blob and send it.
         const completeAudioBlob = new Blob(audioChunksRef.current, {
           type: "audio/webm;codecs=opus",
         });
         console.log("Final audio Blob size:", completeAudioBlob.size);
         sendMessage(completeAudioBlob);
         console.log("[Audio Recorder] Sent complete audio blob.");
+
+        // Clear the audio chunks for the next utterance.
         audioChunksRef.current = [];
         utteranceFileIdRef.current = null;
         utteranceStartTimeRef.current = null;
@@ -190,6 +229,11 @@ const CBTInterface: React.FC = () => {
       // Setup Hark for speech detection
       const harkInstance = hark(audioOnlyStream, { interval: 50, threshold: -50 });
       harkInstance.on("speaking", () => {
+        // Use the ref to block new recording if awaiting a response.
+        if (isAwaitingResponseRef.current) {
+          console.warn("Already awaiting response; ignoring new user speech.");
+          return;
+        }
         console.log("[Hark] speaking");
         if (ttsAudioRef.current) {
           ttsAudioRef.current.pause();
@@ -198,15 +242,16 @@ const CBTInterface: React.FC = () => {
           utteranceFileIdRef.current = `utterance_${Date.now()}`;
           utteranceStartTimeRef.current = new Date().toISOString();
           console.log("[Hark] New utterance started with file ID:", utteranceFileIdRef.current);
+          // Start recording since no response is pending.
           audioChunksRef.current = [];
           audioRecorderRef.current?.start(500);
         }
+        // Optionally, start the video recorder if not already started.
         if (!videoRecorderRef.current) {
           let options: { mimeType?: string } = {};
           if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) {
             options.mimeType = "video/webm;codecs=vp8";
           }
-          // Else leave options empty for Safari
           const videoRecorder = new MediaRecorder(videoOnlyStream, options);
           videoChunksRef.current = [];
           videoRecorder.ondataavailable = (e) => {
