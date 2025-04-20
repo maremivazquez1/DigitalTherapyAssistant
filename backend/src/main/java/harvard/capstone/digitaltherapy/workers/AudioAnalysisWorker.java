@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 
+import javax.net.ssl.SSLContext;
 import java.net.URI;
 import java.net.http.*;
 import java.time.Duration;
@@ -14,7 +15,7 @@ import java.util.concurrent.*;
 
 public class AudioAnalysisWorker {
 
-    private static final String HUME_API_KEY = System.getenv("HUME_API_KEY");
+    private static final String HUME_API_KEY = "4uQuBCZQWwZzhUNUvBSDruAoSPdU8WfJMu9dejNszNnREaC2";
     private static final String HUME_JOB_ENDPOINT = "https://api.hume.ai/v0/batch/jobs";
 
     private final HttpClient httpClient;
@@ -26,12 +27,25 @@ public class AudioAnalysisWorker {
         if (HUME_API_KEY == null || HUME_API_KEY.isBlank()) {
             throw new IllegalStateException("HUME_API_KEY environment variable is not set.");
         }
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+        try {
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, null, null);
+            System.setProperty("https.proxyHost", "proxy.example.com");
+            System.setProperty("https.proxyPort", "8080");
+            System.setProperty("jdk.internal.httpclient.disableHostnameVerification", "true");
+
+            this.httpClient = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(30))
+                    .sslContext(sslContext)
+                    .version(HttpClient.Version.HTTP_2)
+                    .followRedirects(HttpClient.Redirect.NORMAL)
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize HTTP client", e);
+        }
     }
 
-    public CompletableFuture<String> analyzeAudioAsync(String audioUrl) {
+        public CompletableFuture<String> analyzeAudioAsync(String audioUrl) {
         CompletableFuture<String> future = new CompletableFuture<>();
         submitJob(audioUrl).thenAccept(jobId -> {
             jobFutures.put(jobId, future);
