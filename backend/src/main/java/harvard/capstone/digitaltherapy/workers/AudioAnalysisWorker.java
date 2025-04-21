@@ -5,17 +5,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-
-import javax.net.ssl.SSLContext;
 import java.net.URI;
 import java.net.http.*;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 
+/**
+ * Worker responsible for submitting audio files to Hume AI's prosody analysis model,
+ * polling the analysis job, and parsing the resulting emotions.
+ *
+ * This class supports asynchronous job submission and result retrieval with filtered output
+ * to include only the top 3 emotions per utterance.
+ *
+ * Used in the Digital Therapy Assistant for intonation/emotion detection from audio.
+ */
 public class AudioAnalysisWorker {
 
-    private static final String HUME_API_KEY = "4uQuBCZQWwZzhUNUvBSDruAoSPdU8WfJMu9dejNszNnREaC2";
+    private static final String HUME_API_KEY = System.getenv("HUME_API_KEY");
     private static final String HUME_JOB_ENDPOINT = "https://api.hume.ai/v0/batch/jobs";
 
     private final HttpClient httpClient;
@@ -23,29 +30,25 @@ public class AudioAnalysisWorker {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     private final Map<String, CompletableFuture<String>> jobFutures = new ConcurrentHashMap<>();
 
+    /**
+     * Constructs a AudioAnalysisWorker instance with env level HUME credentials
+     */
     public AudioAnalysisWorker() {
         if (HUME_API_KEY == null || HUME_API_KEY.isBlank()) {
             throw new IllegalStateException("HUME_API_KEY environment variable is not set.");
         }
-        try {
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, null, null);
-            System.setProperty("https.proxyHost", "proxy.example.com");
-            System.setProperty("https.proxyPort", "8080");
-            System.setProperty("jdk.internal.httpclient.disableHostnameVerification", "true");
-
-            this.httpClient = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(30))
-                    .sslContext(sslContext)
-                    .version(HttpClient.Version.HTTP_2)
-                    .followRedirects(HttpClient.Redirect.NORMAL)
-                    .build();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to initialize HTTP client", e);
-        }
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
     }
 
-        public CompletableFuture<String> analyzeAudioAsync(String audioUrl) {
+    /**
+     * Submits an audio analysis job to Hume and begins polling for completion.
+     *
+     * @param audioUrl a pre-signed S3 URL pointing to the audio file
+     * @return CompletableFuture that completes with a filtered JSON result or an error
+     */
+    public CompletableFuture<String> analyzeAudioAsync(String audioUrl) {
         CompletableFuture<String> future = new CompletableFuture<>();
         submitJob(audioUrl).thenAccept(jobId -> {
             jobFutures.put(jobId, future);
@@ -57,6 +60,12 @@ public class AudioAnalysisWorker {
         return future;
     }
 
+    /**
+     * Constructs and sends the job submission request to Hume AI.
+     *
+     * @param audioUrl a public or pre-signed URL to an audio file
+     * @return CompletableFuture resolving to the Hume job ID
+     */
     private CompletableFuture<String> submitJob(String audioUrl) {
         try {
             Map<String, Object> requestBody = Map.of(
@@ -107,10 +116,17 @@ public class AudioAnalysisWorker {
         }
     }
 
+    /**
+     * Polls Hume AI for the status of a submitted job. If completed, it fetches and filters results.
+     *
+     * @param jobId the Hume job ID to track
+     * @param future the future to complete with the result or error
+     * @param attempt how many times we've polled already (used to time out)
+     */
     private void pollJob(String jobId, CompletableFuture<String> future, int attempt) {
         scheduler.schedule(() -> {
             try {
-                System.out.printf("📡 Polling job %s (attempt %d)...%n", jobId, attempt + 1);
+                System.out.printf("\uD83D\uDCF1 Polling job %s (attempt %d)...%n", jobId, attempt + 1);
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(HUME_JOB_ENDPOINT + "/" + jobId))
@@ -151,24 +167,30 @@ public class AudioAnalysisWorker {
         }, 5, TimeUnit.SECONDS);
     }
 
+    /**
+     * Fetches prediction results from Hume and injects top-3 emotions into each utterance.
+     *
+     * @param jobId the ID of the Hume job
+     * @param future the async response to complete with the final JSON
+     */
     private void fetchPredictions(String jobId, CompletableFuture<String> future) {
         String predictionUrl = HUME_JOB_ENDPOINT + "/" + jobId + "/predictions";
-    
+
         HttpRequest predictionRequest = HttpRequest.newBuilder()
                 .uri(URI.create(predictionUrl))
                 .header("X-Hume-Api-Key", HUME_API_KEY)
                 .GET()
                 .build();
-    
+
         httpClient.sendAsync(predictionRequest, HttpResponse.BodyHandlers.ofString())
                 .thenAccept(predictionResponse -> {
                     try {
                         JsonNode root = objectMapper.readTree(predictionResponse.body());
-    
+
                         if (!root.isArray() || root.size() == 0) {
                             throw new RuntimeException("Unexpected prediction format: root is not an array.");
                         }
-    
+
                         JsonNode groupedPredictions = root.get(0)
                                 .path("results")
                                 .path("predictions")
@@ -176,11 +198,12 @@ public class AudioAnalysisWorker {
                                 .path("models")
                                 .path("prosody")
                                 .path("grouped_predictions");
-    
+
                         if (groupedPredictions == null || !groupedPredictions.isArray()) {
                             throw new RuntimeException("Missing or invalid grouped_predictions.");
                         }
-    
+
+                        // For each utterance, replace full emotion array with the top 3 emotions only
                         for (JsonNode group : groupedPredictions) {
                             JsonNode predictions = group.path("predictions");
                             if (predictions != null && predictions.isArray()) {
@@ -193,31 +216,60 @@ public class AudioAnalysisWorker {
                                 }
                             }
                         }
-    
+
+                        // Extract full transcript text for compatibility with AWS Transcribe-like formats
+                        StringBuilder transcriptBuilder = new StringBuilder();
+                        for (JsonNode group : groupedPredictions) {
+                            JsonNode predictions = group.path("predictions");
+                            if (predictions != null && predictions.isArray()) {
+                                for (JsonNode utterance : predictions) {
+                                    JsonNode emotions = utterance.path("emotions");
+                                    if (emotions.isArray() && emotions.size() > 0) {
+                                        List<Map<String, Object>> top = extractTopRawEmotions(emotions, 3);
+                                        ((ObjectNode) utterance).putPOJO("emotions", top);
+                                    }
+                                    String text = utterance.path("text").asText();
+                                    if (text != null && !text.isBlank()) {
+                                        transcriptBuilder.append(text).append(" ");
+                                    }
+                                }
+                            }
+                        }
+
+                        // Inject top-level transcript field
+                        ((ObjectNode) root.get(0).path("results").path("predictions").get(0))
+                                .put("transcript", transcriptBuilder.toString().trim());
+
                         String filteredJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
                         System.out.println(filteredJson);
                         future.complete(filteredJson);
                         jobFutures.remove(jobId);
-    
+
                     } catch (Exception e) {
                         future.completeExceptionally(new RuntimeException("Failed to parse prediction response.", e));
                         jobFutures.remove(jobId);
                     }
                 });
     }
-    
-    
+
+    /**
+     * Filters the emotion array to retain only the top-N scoring entries.
+     *
+     * @param emotionArray the array of emotion objects from Hume
+     * @param maxCount the maximum number of top emotions to retain
+     * @return list of emotion maps with name and score
+     */
     public static List<Map<String, Object>> extractTopRawEmotions(JsonNode emotionArray, int maxCount) {
         List<Map.Entry<String, Double>> all = new ArrayList<>();
-    
+
         for (JsonNode emotion : emotionArray) {
             String name = emotion.path("name").asText();
             double score = emotion.path("score").asDouble();
             all.add(Map.entry(name, score));
         }
-    
+
         all.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
-    
+
         List<Map<String, Object>> topEmotions = new ArrayList<>();
         for (int i = 0; i < Math.min(maxCount, all.size()); i++) {
             Map<String, Object> emotionObj = new LinkedHashMap<>();
@@ -225,31 +277,8 @@ public class AudioAnalysisWorker {
             emotionObj.put("score", all.get(i).getValue());
             topEmotions.add(emotionObj);
         }
-    
+
         return topEmotions;
     }
-    
 
-    public static List<String> extractTopEmotions(JsonNode emotionArray, double threshold, int maxCount) {
-        List<Map.Entry<String, Double>> filtered = new ArrayList<>();
-    
-        for (JsonNode emotion : emotionArray) {
-            String name = emotion.path("name").asText();
-            double score = emotion.path("score").asDouble();
-    
-            if (score >= threshold) {
-                filtered.add(Map.entry(name, score));
-            }
-        }
-    
-        // Sort descending by score
-        filtered.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
-    
-        // Limit to top N
-        return filtered.stream()
-                .limit(maxCount)
-                .map(entry -> String.format("%s (%.0f%%)", entry.getKey(), entry.getValue() * 100))
-                .toList();
-    }
-    
 }
