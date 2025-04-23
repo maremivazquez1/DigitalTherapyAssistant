@@ -1,12 +1,9 @@
-
 package harvard.capstone.digitaltherapy.websocket;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import harvard.capstone.digitaltherapy.cbt.controller.CBTController;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +13,8 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-import java.io.*;
+
+import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -27,6 +25,7 @@ public class CBTWebSocketHandler extends TextWebSocketHandler {
 
     // Store active sessions
     private final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+
     @Autowired
     public CBTWebSocketHandler(ObjectMapper objectMapper, CBTController cbtController) {
         this.objectMapper = objectMapper;
@@ -37,7 +36,14 @@ public class CBTWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String sessionId = session.getId();
         sessions.put(sessionId, session);
-        logger.info("New WebSocket connection established: {}", sessionId);
+        
+        // Retrieve the username from handshake attributes (set by JwtHandshakeInterceptor)
+        String username = (String) session.getAttributes().get("username");
+        if (username != null) {
+            logger.info("New WebSocket connection established for user {} with session: {}", username, sessionId);
+        } else {
+            logger.info("New WebSocket connection established with session: {}", sessionId);
+        }
 
         // Send welcome message
         ObjectNode welcomeMessage = objectMapper.createObjectNode();
@@ -45,6 +51,7 @@ public class CBTWebSocketHandler extends TextWebSocketHandler {
         welcomeMessage.put("message", "Connected successfully");
         session.sendMessage(new TextMessage(welcomeMessage.toString()));
     }
+
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String sessionId = session.getId();
@@ -57,25 +64,20 @@ public class CBTWebSocketHandler extends TextWebSocketHandler {
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
         String sessionId = session.getId();
         logger.error("Transport error for session {}: {}", sessionId, exception.getMessage(), exception);
-
-        // Optionally close the session on transport error
         if (session.isOpen()) {
             session.close(CloseStatus.SERVER_ERROR);
         }
         sessions.remove(sessionId);
     }
 
-
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
         String sessionId = session.getId();
         logger.info("Received message from session {}", sessionId);
-
         try {
             JsonNode requestJson = objectMapper.readTree(message.getPayload());
             String messageType = requestJson.has("type") ? requestJson.get("type").asText() : "text";
             String requestId = requestJson.has("requestId") ? requestJson.get("requestId").asText() : "unknown";
-
             cbtController.handleMessage(session, requestJson, messageType, requestId);
         } catch (Exception e) {
             logger.error("Error processing message from session {}: {}", sessionId, e.getMessage(), e);

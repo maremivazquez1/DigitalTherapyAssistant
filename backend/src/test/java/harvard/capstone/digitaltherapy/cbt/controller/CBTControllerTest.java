@@ -30,9 +30,19 @@ import org.springframework.web.socket.BinaryMessage;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import harvard.capstone.digitaltherapy.llm.service.S3StorageService;
+import harvard.capstone.digitaltherapy.orchestration.DTASessionOrchestrator;
 
 @ExtendWith(MockitoExtension.class)
 class CBTControllerTest {
+
+    private MockMvc mockMvc;
 
     @Mock
     private ObjectMapper objectMapper;
@@ -56,7 +66,9 @@ class CBTControllerTest {
     private MultipartFile multipartFile;
     @Mock
     private  RekognitionService rekognitionService;
-    private CBTController cbtController;
+   
+  private CBTController cbtController;
+  
     @Mock
     private OrchestrationService orchestrationService;
     @Mock
@@ -64,6 +76,7 @@ class CBTControllerTest {
 
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.openMocks(this);
         cbtController = new CBTController(
                 objectMapper,
                 s3Service,
@@ -75,6 +88,7 @@ class CBTControllerTest {
                 orchestrationService,
                 s3StorageService
         );
+        mockMvc = MockMvcBuilders.standaloneSetup(cbtController).build();
     }
     @Test
     public void testCBTControllerConstructor() {

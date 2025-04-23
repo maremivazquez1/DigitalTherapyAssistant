@@ -1,0 +1,98 @@
+name: PR CI
+
+on:
+  pull_request:                        # only on PRs
+    types: [opened, synchronize, reopened]
+
+env:
+  MAVEN_CLI_OPTS: "-B -e -V"
+  NODE_ENV: ci
+
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    container: maven:3.9.9-eclipse-temurin-23   # Maven 3.9.9 + JDK 23 
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ hashFiles('**/pom.xml') }}
+      - name: Build JAR (skip tests)
+        run: |
+          cd backend
+          mvn $MAVEN_CLI_OPTS clean package -DskipTests
+      - uses: actions/upload-artifact@v4       # keep the jar for later jobs if needed
+        with:
+          name: backend-jar
+          path: backend/target/*.jar
+
+  test-backend:
+    needs: build-backend
+    runs-on: ubuntu-latest
+    container: maven:3.9.9-eclipse-temurin-23
+    continue-on-error: true                   # allowed to failure
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ hashFiles('**/pom.xml') }}
+      - name: Run unit tests
+        run: |
+          cd backend
+          mvn $MAVEN_CLI_OPTS test -Dnet.bytebuddy.experimental=true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports/*.xml
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    container: node:23.11.0-bullseye-slim
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure npm 10.9.2
+        run: npm install -g npm@10.9.2
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: npm-${{ hashFiles('frontend/package-lock.json') }}
+      - name: Build Vite app
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+  test-frontend:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    container: node:23.11.0-bullseye-slim
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure npm 10.9.2
+        run: npm install -g npm@10.9.2
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: npm-${{ hashFiles('frontend/package-lock.json') }}
+      - name: Run unit tests
+        run: |
+          cd frontend
+          npm ci
+          npm test -- --coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jest-results
+          path: frontend/jest-results.xml
