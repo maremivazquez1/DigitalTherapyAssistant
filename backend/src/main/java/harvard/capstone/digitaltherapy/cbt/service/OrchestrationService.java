@@ -9,7 +9,6 @@ import harvard.capstone.digitaltherapy.workers.MessageWorker;
 import harvard.capstone.digitaltherapy.workers.TextAnalysisWorker;
 import harvard.capstone.digitaltherapy.workers.VideoAnalysisWorker;
 import harvard.capstone.digitaltherapy.workers.AudioAnalysisWorker;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,7 +32,7 @@ public class OrchestrationService {
     // Simple in-memory session tracking (would use Redis in production)
     private final Map<String, List<ChatMessage>> sessionMessages = new HashMap<>();
 
-    public OrchestrationService() {
+    public OrchestrationService(){
         this.textAnalysisWorker = new TextAnalysisWorker();
         this.messageWorker = new MessageWorker();
         this.synthesisService = new MultimodalSynthesisService();
@@ -115,7 +114,7 @@ public class OrchestrationService {
                 }
                 default -> "Unsupported modality type: " + modalityType;
             };
-
+            vectorDatabaseService.indexSessionMessage(sessionId, "user", analysisContent, false);
             messages.add(UserMessage.from(analysisContent));
         });
         // 5. Generate the response using the MessageWorker

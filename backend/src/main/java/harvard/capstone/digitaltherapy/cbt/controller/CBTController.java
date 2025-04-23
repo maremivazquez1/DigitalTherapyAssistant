@@ -42,6 +42,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -161,7 +162,6 @@ public class CBTController {
             File tempFile = null;
             String keyName ="";
             String input_transcript = "";
-
             if (currentModality.equalsIgnoreCase("video")) {
                 File webmFile = null;
                 File mp4File = null;
@@ -231,7 +231,9 @@ public class CBTController {
                 }
                  keyName = "audio_" + sessionId + ".mp3";
                  audio_s3_path = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
-                 input.put("audio", audio_s3_path);
+                 String bucketName = "dta-root";
+                 String presignedUrl = S3Utils.generatePresignedUrl(bucketName, keyName, Duration.ofMinutes(15));
+                 input.put("audio", presignedUrl);
                  tempFile.delete(); // Cleanup temp file
                 if(input.size()==2){
                     processFinalMessage(session,audio_s3_path);
