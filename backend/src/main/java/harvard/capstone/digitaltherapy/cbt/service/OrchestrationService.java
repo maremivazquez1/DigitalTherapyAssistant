@@ -3,7 +3,6 @@ package harvard.capstone.digitaltherapy.cbt.service;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.ChatMessage;
-import harvard.capstone.digitaltherapy.orchestration.MultimodalSynthesisService;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
 import harvard.capstone.digitaltherapy.workers.MessageWorker;
 import harvard.capstone.digitaltherapy.workers.TextAnalysisWorker;
@@ -24,7 +23,6 @@ public class OrchestrationService {
 
     private final TextAnalysisWorker textAnalysisWorker;
     private final MessageWorker messageWorker;
-    private final MultimodalSynthesisService synthesisService;
     private final VectorDatabaseService vectorDatabaseService;
     private final VideoAnalysisWorker videoAnalysisWorker;
     private final AudioAnalysisWorker audioAnalysisWorker;
@@ -35,7 +33,6 @@ public class OrchestrationService {
     public OrchestrationService(){
         this.textAnalysisWorker = new TextAnalysisWorker();
         this.messageWorker = new MessageWorker();
-        this.synthesisService = new MultimodalSynthesisService();
         this.vectorDatabaseService = new VectorDatabaseService();
         this.videoAnalysisWorker = new VideoAnalysisWorker();
         this.audioAnalysisWorker = new AudioAnalysisWorker();
