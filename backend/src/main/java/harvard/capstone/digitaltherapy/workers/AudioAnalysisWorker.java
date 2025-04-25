@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
-
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.net.URI;
 import java.net.http.*;
-import java.time.Duration;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -17,12 +20,12 @@ import java.util.concurrent.*;
  *
  * This class supports asynchronous job submission and result retrieval with filtered output
  * to include only the top 3 emotions per utterance.
- * 
+ *
  * Used in the Digital Therapy Assistant for intonation/emotion detection from audio.
  */
 public class AudioAnalysisWorker {
 
-    private static final String HUME_API_KEY = System.getenv("HUME_API_KEY");
+    private static final String HUME_API_KEY = "4uQuBCZQWwZzhUNUvBSDruAoSPdU8WfJMu9dejNszNnREaC2";
     private static final String HUME_JOB_ENDPOINT = "https://api.hume.ai/v0/batch/jobs";
 
     private final HttpClient httpClient;
@@ -37,8 +40,31 @@ public class AudioAnalysisWorker {
         if (HUME_API_KEY == null || HUME_API_KEY.isBlank()) {
             throw new IllegalStateException("HUME_API_KEY environment variable is not set.");
         }
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
+        this.httpClient = createTrustedHttpClient();
+    }
+
+    private HttpClient createTrustedHttpClient() {
+        SSLContext sslContext = null;
+        try {
+            sslContext = SSLContext.getInstance("TLS");
+
+        TrustManager[] trustAllCerts = new TrustManager[]{
+                new X509TrustManager() {
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return null;
+                    }
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                    }
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                    }
+                }
+        };
+        sslContext.init(null, trustAllCerts, new SecureRandom());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return HttpClient.newBuilder()
+                .sslContext(sslContext)
                 .build();
     }
 
@@ -238,7 +264,7 @@ public class AudioAnalysisWorker {
 
                         // Inject top-level transcript field
                         ((ObjectNode) root.get(0).path("results").path("predictions").get(0))
-                            .put("transcript", transcriptBuilder.toString().trim());
+                                .put("transcript", transcriptBuilder.toString().trim());
 
                         String filteredJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
                         System.out.println(filteredJson);
@@ -280,5 +306,5 @@ public class AudioAnalysisWorker {
 
         return topEmotions;
     }
-    
+
 }
