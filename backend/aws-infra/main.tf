@@ -118,7 +118,7 @@ resource "aws_lb_target_group" "springboot_tg" {
     unhealthy_threshold = 2
     timeout             = 5
     interval            = 30
-    path                = "/"
+    path                = "/actuator/health"
     matcher             = "200-399"
   }
 
