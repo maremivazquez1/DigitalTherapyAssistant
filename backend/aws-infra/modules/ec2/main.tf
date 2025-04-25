@@ -74,7 +74,7 @@ resource "aws_instance" "springboot_backend" {
     # Build and run the Spring Boot application
     cd /home/ec2-user/app/backend
     sed -i "s/localhost/$(curl -s https://169.254.169.254/latest/meta-data/public-ipv4)/g" src/main/resources/static/websocket-cbt-audio.html
-    mvn spring-boot:run  -Dspring-boot.run.arguments="--spring.datasource.username=$DB_USER --spring.datasource.url=jdbc:mysql://$DB_HOST/cbt --spring.datasource.password=$DB_PASSWORD"
+    mvn spring-boot:run
   EOF
 
   tags = {
