@@ -51,8 +51,8 @@ public class CBTController {
     private final RekognitionService rekognitionService;
     private String currentModality = "";
     private final DTASessionOrchestrator dtaSessionOrchestrator;
-    @Value("${ffmeg_path}")
-    private String ffmeg_path;
+    @Value("${ffmpeg.path}")
+    private String ffmpegPath;
     @Autowired
     public CBTController(ObjectMapper objectMapper,
                          S3Utils s3Service,
@@ -185,7 +185,7 @@ public class CBTController {
 
                     // Use ProcessBuilder directly for more control
                     List<String> command = Arrays.asList(
-                            ffmeg_path,
+                            ffmpegPath,
                             "-i", webmFile.getAbsolutePath(),
                             "-c:v", "h264",
                             "-c:a", "aac",
