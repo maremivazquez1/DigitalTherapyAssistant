@@ -1,15 +1,23 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { login as loginService } from '../services/auth/authService';
 
-interface LoginFormProps {
-  onSuccess: (token: string) => void;
+interface LocationState {
+  from?: {
+    pathname: string;
+  };
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
+const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  // go back to attempted accessed page, but default to /
+  const state = location.state as LocationState;
+  const from  = state?.from?.pathname || '/';
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -23,10 +31,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     };
 
     try {
-      const response = await loginService(payload);
-      // Use the returned token or a dummy token for now
-      const token = response.token || 'dummy-token';
-      onSuccess(token);
+      await loginService(payload);
+      // Handle successful login (e.g., redirect)
+      navigate(from, { replace: true });
     } catch (err: any) {
       setError(err.message || 'Login failed');
     }

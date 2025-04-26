@@ -23,7 +23,7 @@ public class TranscribeService {
      *
      * @param mediUri .mp3 S3 asset URI. Expected format: s3://dta-root/dta-speech-translation-storage/[autiofileID].mp3
      * @param jobName user/job id string for the AWS Transcribe service
-     * @return The translated text from the Transcribe job
+     * @return The URL for the translated file from the Transcribe job
      */
     public String startTranscriptionJob(String mediaUri, String jobName) {
         if (mediaUri == null || mediaUri.isEmpty()) {
@@ -62,11 +62,17 @@ public class TranscribeService {
         TranscriptionJob job = result.getTranscriptionJob();
 
         // Wait for the job to complete
+        int requestDelayMs = 200;
+        int maxDelayMs = 5000;
         while (!job.getTranscriptionJobStatus().equals("COMPLETED") && 
                !job.getTranscriptionJobStatus().equals("FAILED")) {
             try {
                 // Sleep for a short interval before checking the status again
-                Thread.sleep(5000);  // Wait for 5 seconds
+                Thread.sleep(requestDelayMs);  // Wait request delay
+                if (requestDelayMs < maxDelayMs)
+                    requestDelayMs += 500;
+                else
+                    requestDelayMs = maxDelayMs;
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 return "Job interrupted";

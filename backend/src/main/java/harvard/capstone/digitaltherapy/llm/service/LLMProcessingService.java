@@ -1,4 +1,4 @@
-package harvard.capstone.digitaltherapy.aws.service;
+package harvard.capstone.digitaltherapy.llm.service;
 
 /**
  * LLMProcessingService orchestrates the full workflow of text generation using AWS Bedrock.

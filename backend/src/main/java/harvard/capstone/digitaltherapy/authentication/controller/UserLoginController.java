@@ -3,6 +3,7 @@ package harvard.capstone.digitaltherapy.authentication.controller;
 import harvard.capstone.digitaltherapy.authentication.model.ApiResponse;
 import harvard.capstone.digitaltherapy.authentication.model.LoginRequest;
 import harvard.capstone.digitaltherapy.authentication.service.UserLoginService;
+import harvard.capstone.digitaltherapy.authentication.service.JwtTokenProvider;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,27 +13,24 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api")
 public class UserLoginController {
+
     @Autowired
     private UserLoginService loginService;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse> loginUser(@Valid @RequestBody LoginRequest loginRequest) {
         boolean isAuthenticated = loginService.authenticateUser(loginRequest.getUsername(), loginRequest.getPassword());
         if (isAuthenticated) {
-            ApiResponse response = new ApiResponse(
-                    "success",
-                    "Login successful!"
-            );
+            // Make JWT token and send with response
+            String token = jwtTokenProvider.createToken(loginRequest.getUsername());
+            ApiResponse response = new ApiResponse("success", "Login successful!", token);
             return ResponseEntity.ok(response);
         } else {
-            ApiResponse response = new ApiResponse(
-                    "error",
-                    "Invalid credentials"
-            );
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body(response);
+            ApiResponse response = new ApiResponse("error", "Invalid credentials");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
-
     }
 }
