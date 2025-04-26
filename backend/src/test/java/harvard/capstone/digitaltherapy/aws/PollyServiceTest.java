@@ -57,10 +57,10 @@ public class PollyServiceTest {
         when(amazonPolly.synthesizeSpeech(any(SynthesizeSpeechRequest.class))).thenReturn(mockResult);
 
         // Call the method with a mock S3 URL
-        String resultUrl = pollyService.convertTextToSpeech("https://dtaroot.s3.amazonaws.com/dta-speech-translation-storage/sample.txt", "test-file");
+        String resultUrl = pollyService.convertTextToSpeech("https://dta-root.s3.amazonaws.com/dta-speech-translation-storage/sample.txt", "test-file");
 
         // Expected S3 file URL
-        String expectedUrl = "https://dtaroot.s3.amazonaws.com/dta-speech-translation-storage/test-file.mp3";
+        String expectedUrl = "https://dta-root.s3.amazonaws.com/dta-speech-translation-storage/test-file.mp3";
         assertEquals(expectedUrl, resultUrl, "S3 URL should match the expected format");
 
         // Verify Polly was called with the correct request
@@ -77,7 +77,7 @@ public class PollyServiceTest {
         verify(amazonS3).putObject(putRequestCaptor.capture());
 
         PutObjectRequest capturedPutRequest = putRequestCaptor.getValue();
-        assertEquals("dtaroot", capturedPutRequest.getBucketName());
+        assertEquals("dta-root", capturedPutRequest.getBucketName());
         assertEquals("dta-speech-translation-storage/test-file.mp3", capturedPutRequest.getKey());
     }
 

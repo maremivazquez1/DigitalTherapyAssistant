@@ -32,7 +32,7 @@ public class CBTHelper {
             // Create streaming response
             StreamingResponseBody responseBody = outputStream -> {
                 try {
-                    s3Service.streamFileFromS3("dtaroot", fileName, outputStream);
+                    s3Service.streamFileFromS3("dta-root", fileName, outputStream);
                 } catch (IOException e) {
                     logger.error("Error streaming file: {}", e.getMessage());
                     throw new RuntimeException("Error streaming file", e);

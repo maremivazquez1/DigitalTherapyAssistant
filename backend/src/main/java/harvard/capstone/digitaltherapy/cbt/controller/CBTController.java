@@ -122,7 +122,7 @@ public class CBTController {
             String uploadResponse = s3Service.uploadFile(tempFile.getAbsolutePath(), fileName);
             // Get processed content
             String llmResponse = llmProcessingService.process(uploadResponse);
-            llmResponse=llmResponse.replace("s3://dtaroot/", "");
+            llmResponse=llmResponse.replace("s3://dta-root/", "");
             ResponseEntity<StreamingResponseBody> processedResponse = cbtHelper.downloadTextFile(llmResponse);
             if (processedResponse.getStatusCode() == HttpStatus.OK && processedResponse.getBody() != null) {
                 // Convert StreamingResponseBody to String
@@ -268,7 +268,7 @@ public class CBTController {
             convertedFile.delete(); // Cleanup temp file
 
             // Download processed file
-            File responseFile = s3Service.downloadFileFromS3("dtaroot", keyName);
+            File responseFile = s3Service.downloadFileFromS3("dta-root", keyName);
 
             // Convert processed file to base64 for WebSocket response
             String processedAudioBase64 = cbtHelper.convertFileToBase64(responseFile);
@@ -326,7 +326,7 @@ public class CBTController {
     }
 
     private String generateOutputPath(String inputPath) {
-        String outputPath= inputPath.replace("s3://dtaroot/", "");
+        String outputPath= inputPath.replace("s3://dta-root/", "");
         int dotIndex = outputPath.lastIndexOf('.');
         if (dotIndex > 0) {
             outputPath = outputPath.substring(0, dotIndex) + "-response.txt";
