@@ -25,7 +25,6 @@ const LoginForm: React.FC = () => {
 
     if (!email || !password) return;
 
-    // Transform email into username for the backend
     const payload = {
       username: email,
       password,

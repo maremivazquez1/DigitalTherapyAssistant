@@ -10,6 +10,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 const App: React.FC = () => {
   return (
     <div data-theme="calming">
+      <Navbar />
+      
       <Routes>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
