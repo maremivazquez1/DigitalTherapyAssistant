@@ -1,123 +1,177 @@
-import React, { useState, useEffect, ChangeEvent } from "react";
+// src/components/BurnoutAssessment.tsx
+import React, { useState, useEffect } from "react";
+import { FaArrowRight } from "react-icons/fa";
 import LikertQuestion from "./LikertQuestion";
 import TextQuestion from "./TextQuestion";
 import VlogQuestion from "./VlogQuestion";
 
-interface Question {
-  id: number;
-  type: "likert" | "open_text" | "vlog";
-  content: string;
-  // Additional fields if necessary
-}
+// --- import shared types ---
+import type {
+  BurnoutQuestion,
+  SessionPayload,
+  AnswerPayload,
+} from "../types/burnout/assessment";
 
-// Mock questions array for styling adjustments
-const mockQuestions: Question[] = [
-    {
-      id: 1,
-      type: "likert",
-      content: "How often in the past 2 weeks have you felt stressed at work?",
-    },
-    {
-      id: 2,
-      type: "open_text",
-      content: "Can you describe any factors that contributed to your stress?",
-    },
-    {
-      id: 3,
-      type: "vlog",
-      content: "Record a short video about your energy levels today.",
-    },
-    {
-      id: 4,
-      type: "likert",
-      content: "How often in the past 2 weeks have you felt fatigued?",
-    },
-    {
-      id: 5,
-      type: "open_text",
-      content: "What steps have you taken to manage your stress?",
-    },
-  ];
+
+export const mockQuestions: BurnoutQuestion[] = [
+  // Likert questions
+  {
+    id: 1,
+    type: "likert",
+    content: "How often in the past 2 weeks have you felt overwhelmed at work?",
+    subtitle: "Consider your busiest days",
+  },
+  {
+    id: 2,
+    type: "likert",
+    content: "How often in the past 2 weeks have you found it hard to concentrate?",
+  },
+  {
+    id: 3,
+    type: "likert",
+    content: "How often in the past 2 weeks have you felt emotionally drained?",
+  },
+
+  // Vlog questions
+  {
+    id: 4,
+    type: "vlog",
+    content: "Record a 30-second video describing your current energy levels.",
+  },
+  {
+    id: 5,
+    type: "vlog",
+    content: "Record a short clip telling us what you do to unwind after a stressful day.",
+  },
+];
+
+
 
 const BurnoutAssessment: React.FC = () => {
-  const [questions, setQuestions] = useState<Question[]>(mockQuestions);
+  const [sessionId, setSessionId] = useState<SessionPayload["sessionId"] | null>(null);
+  //const [questions, setQuestions] = useState<BurnoutQuestion[]>([]);
+  const [questions, setQuestions] = useState<BurnoutQuestion[]>(mockQuestions);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [responses, setResponses] = useState<{ [key: number]: string }>({});
+  const [responses, setResponses] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch("/api/assessment")
-      .then((res) => res.json())
-      .then((data: Question[]) => {
-        setQuestions(data);
+  // 1. On mount: fetch session + questions
+ /*  useEffect(() => {
+    fetch("/api/assessment") // your endpoint that returns SessionPayload
+      .then((res) => {
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        return res.json() as Promise<SessionPayload>;
+      })
+      .then(({ sessionId, questions }) => {
+        setSessionId(sessionId);
+        setQuestions(questions);
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Error fetching assessment questions:", err);
+        console.error(err);
+        setError("Could not load assessment. Please try again.");
         setLoading(false);
       });
-  }, []);
+  }, []); */
 
+// skip the fetch in useEffect until your backend is up
+useEffect(() => {
+  setLoading(false);
+}, []);
+
+  // 2. Handle each answer immediately
   const handleAnswer = (questionId: number, answer: string) => {
+    // locally mark as answered (to enable Next button)
     setResponses((prev) => ({ ...prev, [questionId]: answer }));
+
+    if (!sessionId) {
+      console.warn("No session yet; skipping send");
+      return;
+    }
+
+    // find the questionType
+    const questionType = questions.find((q) => q.id === questionId)!.type;
+
+    const payload: AnswerPayload = {
+      sessionId,
+      questionId,
+      questionType,
+      answer,
+    };
+
+    fetch(`/api/assessment/${sessionId}/responses`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch((err) => {
+      console.error("Failed to submit answer:", err);
+      // optionally queue retry logic here
+    });
   };
 
+  // 3. Move to next question or finish
   const handleNext = () => {
     if (currentIndex < questions.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
+      setCurrentIndex((i) => i + 1);
     } else {
-      // Final submission logic goes here.
-      console.log("All responses:", responses);
+      alert("All done—thanks for completing the assessment!");
     }
   };
 
-  const renderQuestion = (q: Question) => {
-    switch (q.type) {
-      case "likert":
-        return <LikertQuestion question={q} onChange={handleAnswer} />;
-      case "open_text":
-        return <TextQuestion question={q} onChange={handleAnswer} />;
-      case "vlog":
-        return <VlogQuestion question={q} onChange={handleAnswer} />;
-      default:
-        return <div>Unknown question type: {q.type}</div>;
-    }
-  };
-
+  // 4. Render loading / error / empty states
   if (loading) {
-    return <div>Loading assessment...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="loading loading-spinner text-primary"></span>
+      </div>
+    );
   }
-
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <p className="text-red-500 mb-4">{error}</p>
+        <button className="btn btn-secondary" onClick={() => window.location.reload()}>
+          Retry
+        </button>
+      </div>
+    );
+  }
   if (!questions.length) {
-    return <div>No questions available.</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>No questions available.</p>
+      </div>
+    );
   }
 
+  // 5. Main render: Typeform-like layout
+  const q = questions[currentIndex];
   return (
     <div
-      // Full-screen hero section
       className="min-h-screen w-full bg-base-200 flex flex-col justify-center items-center px-4"
       data-theme="calming"
     >
-      {/* Question container */}
       <div className="max-w-3xl w-full text-center py-10">
-        <h1 className="text-3xl font-bold mb-2">
-          {questions[currentIndex].content}
-        </h1>
+        <h1 className="text-3xl font-bold mb-2">{q.content}</h1>
+        {q.subtitle && (
+          <p className="text-sm text-gray-600 mb-8">{q.subtitle}</p>
+        )}
 
-        {/* Render the question component */}
         <div className="mb-10">
-        {renderQuestion(questions[currentIndex])}
+          {q.type === "likert" && <LikertQuestion question={q} onChange={handleAnswer} />}
+          {q.type === "open_text" && <TextQuestion question={q} onChange={handleAnswer} />}
+          {q.type === "vlog" && <VlogQuestion question={q} onChange={handleAnswer} />}
         </div>
 
-        {/* Next/Submit button */}
         <button
           onClick={handleNext}
-          className="btn btn-primary px-8 py-3 text-lg"
+          disabled={responses[q.id] == null}
+          className="btn btn-primary btn-circle btn-lg"
         >
-          {currentIndex === questions.length - 1 ? "Submit" : "Next"}
+          <FaArrowRight className="text-xl" />
         </button>
 
-        {/* Optional question indicator */}
         <p className="text-gray-500 text-sm mt-4">
           Question {currentIndex + 1} of {questions.length}
         </p>
