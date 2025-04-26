@@ -7,13 +7,14 @@ import RegisterPage from "./pages/RegisterPage";
 import CBTPage from "./pages/CBTPage";
 import BurnoutAssessmentPage from "./pages/BurnoutAssessmentPage";
 import { ProtectedRoute } from './components/ProtectedRoute';
+import NavBar from "./components/NavBar";
 
 
 
 const App: React.FC = () => {
   return (
     <div data-theme="calming">
-      <Navbar />
+      <NavBar />
       
       <Routes>
         <Route path="/register" element={<RegisterPage />} />
