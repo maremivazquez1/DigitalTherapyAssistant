@@ -8,8 +8,8 @@
 
 name: 'Terraform Deployment'
 env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PIPELINE }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PIPELINE }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   HUME_API_KEY: ${{ secrets.HUME_API_KEY }}
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
