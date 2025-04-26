@@ -14,7 +14,7 @@ const NavBar: React.FC = () => {
   };
 
   return (
-    <div className="navbar bg-base-100 shadow-sm">
+    <div className="navbar bg-base-200 shadow-sm">
       <div className="flex-1">
         <Link to="/" className="btn btn-ghost text-xl">
           Digital Therapy Assistant
