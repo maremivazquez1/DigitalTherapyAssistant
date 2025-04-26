@@ -29,16 +29,18 @@ const Dashboard = () => {
           </Link>
 
           {/* Take a Burnout Assessment Card */}
-          <div className="group">
-            <div className="flex flex-col justify-center p-8 bg-base-200 rounded-3xl shadow-lg opacity-50 cursor-not-allowed min-h-[200px] border border-gray-200">
-              <h2 className="text-3xl font-semibold text-base-content mb-4">
-                Take a Burnout Assessment
-              </h2>
-              <p className="text-lg text-base-content/70">
-                Coming soon: Evaluate your stress and burnout levels.
-              </p>
-            </div>
-          </div>
+          <Link to="/burnout" className="group">
+            <div className="flex flex-col justify-center p-8 bg-base-200 rounded-3xl shadow-lg transition-transform transform duration-300 ease-out group-hover:scale-105 min-h-[200px] border border-gray-200">
+                <h2 className="text-3xl font-semibold text-base-content mb-4">
+                  Take a Burnout Assessment
+                </h2>
+                <p className="text-lg text-base-content/70">
+                  Evaluate your stress and burnout levels.
+                </p>
+              </div>
+          </Link>
+
+          {/* Track Your Progress Card */}
 
           {/* Check on Your Mood Card */}
           <div className="group">
