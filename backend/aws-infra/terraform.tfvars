@@ -1,5 +1,5 @@
 repo_url        = "https://github.com/maremivazquez1/DigitalTherapyAssistant.git"
-key_name        = "cscis49a-keypair"
+key_name        = "DTAkey"
 db_name         = "cbt"
 oauth_token     = "xxx"
 vpc_id          = "vpc-0b16ee135cfc0938e"
