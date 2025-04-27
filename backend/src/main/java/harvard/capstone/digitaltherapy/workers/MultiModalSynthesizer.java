@@ -1,21 +1,18 @@
 package harvard.capstone.digitaltherapy.workers;
 
+import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
+import harvard.capstone.digitaltherapy.cbt.model.AnalysisResult;
 import org.bsc.langgraph4j.action.NodeAction;
 import org.bsc.langgraph4j.state.AgentState;
-
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
-import dev.langchain4j.model.openai.OpenAiChatModel;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 
 /**
  * MultiModalSynthesizer is a node in your LangGraph4J workflow that:
@@ -31,11 +28,12 @@ public class MultiModalSynthesizer implements NodeAction<AgentState> {
     private final ObjectMapper objectMapper;
 
     public MultiModalSynthesizer() {
-        // Create the chat model (OpenAiChatModel).
-        this.chatModel = OpenAiChatModel.builder()
-                .baseUrl("http://langchain4j.dev/demo/openai/v1")
-                //.apiKey("demo")
-                .modelName("gpt-4o-mini")
+        this.chatModel = GoogleAiGeminiChatModel.builder()
+                .apiKey(System.getenv("GEMINI_API_KEY"))
+                .modelName("gemini-1.5-flash")
+                .temperature(0.1) // Lower temperature for analysis tasks
+                .topP(0.95)
+                .maxOutputTokens(3000)
                 .build();
 
         // Initialize Jackson's ObjectMapper for JSON parsing.
@@ -70,7 +68,7 @@ public class MultiModalSynthesizer implements NodeAction<AgentState> {
         String llmOutput = response.aiMessage().text();
 
         // Parse the JSON response into an Analysis object.
-        Analysis analysis = parseLLMResponse(llmOutput);
+        AnalysisResult analysis = parseLLMResponse(llmOutput);
 
         // Return a map that merges our updates into AgentState.
         return Map.of("multimodalAnalysis", analysis);
@@ -84,9 +82,9 @@ public class MultiModalSynthesizer implements NodeAction<AgentState> {
             Map<String, Object> voiceInsights,
             Map<String, Object> videoInsights
     ) {
-        double textScore  = getScore(textInsights,  "wordsScore");
-        double voiceScore = getScore(voiceInsights, "toneScore");
-        double videoScore = getScore(videoInsights, "facialScore");
+        double textScore  = getScore(textInsights,  "wordScore");
+        double voiceScore = getScore(voiceInsights, "audioScore");
+        double videoScore = getScore(videoInsights, "videoScore");
 
         String prompt = ""
                 + "You are an expert in psychological analysis and data interpretation.\n"
@@ -119,12 +117,11 @@ public class MultiModalSynthesizer implements NodeAction<AgentState> {
         }
         return 0.0;
     }
-
     /**
      * Parses the LLM's JSON response into an Analysis object.
      */
-    private Analysis parseLLMResponse(String jsonResponse) {
-        Analysis analysis = new Analysis();
+    private AnalysisResult parseLLMResponse(String jsonResponse) {
+        AnalysisResult analysis = new AnalysisResult();
         try {
             // Trim whitespace
             jsonResponse = jsonResponse.trim();
@@ -139,10 +136,9 @@ public class MultiModalSynthesizer implements NodeAction<AgentState> {
             if (jsonResponse.endsWith("```")) {
                 jsonResponse = jsonResponse.substring(0, jsonResponse.length() - 3).trim();
             }
-
             // Debug: print the cleaned JSON string.
             System.out.println("Cleaned JSON Output: " + jsonResponse);
-
+            //String cleanedJson = jsonResponse.substring(0, jsonResponse.lastIndexOf('"')) + "\"}";
             JsonNode root = objectMapper.readTree(jsonResponse);
             analysis.setCongruenceScore(root.path("congruenceScore").asDouble());
             analysis.setDominantEmotion(root.path("dominantEmotion").asText());
@@ -170,91 +166,5 @@ public class MultiModalSynthesizer implements NodeAction<AgentState> {
             e.printStackTrace();
         }
         return analysis;
-    }
-
-    /**
-     * Represents the analysis results returned by the LLM.
-     */
-    public static class Analysis {
-        private double congruenceScore;
-        private String dominantEmotion;
-        private String[] cognitiveDistortions;
-        private String interpretation;
-        private String[] followUpPrompts;
-
-        public double getCongruenceScore() {
-            return congruenceScore;
-        }
-        public void setCongruenceScore(double cs) {
-            this.congruenceScore = cs;
-        }
-
-        public String getDominantEmotion() {
-            return dominantEmotion;
-        }
-        public void setDominantEmotion(String de) {
-            this.dominantEmotion = de;
-        }
-
-        public String[] getCognitiveDistortions() {
-            return cognitiveDistortions;
-        }
-        public void setCognitiveDistortions(String[] cd) {
-            this.cognitiveDistortions = cd;
-        }
-
-        public String getInterpretation() {
-            return interpretation;
-        }
-        public void setInterpretation(String i) {
-            this.interpretation = i;
-        }
-
-        public String[] getFollowUpPrompts() {
-            return followUpPrompts;
-        }
-        public void setFollowUpPrompts(String[] fp) {
-            this.followUpPrompts = fp;
-        }
-
-        @Override
-        public String toString() {
-            return "Analysis{" +
-                    "congruenceScore=" + congruenceScore +
-                    ", dominantEmotion='" + dominantEmotion + '\'' +
-                    ", cognitiveDistortions=" + String.join(", ", cognitiveDistortions) +
-                    ", interpretation='" + interpretation + '\'' +
-                    ", followUpPrompts=" + String.join(", ", followUpPrompts) +
-                    '}';
-        }
-    }
-
-    /**
-     * Main method for testing this node in isolation.
-     */
-    public static void main(String[] args) {
-        // Prepare initial data for AgentState
-        Map<String, Object> initData = new HashMap<>();
-
-        Map<String, Object> textInsights = Map.of("wordsScore", 0.85);
-        Map<String, Object> voiceInsights = Map.of("toneScore", 0.20);
-        Map<String, Object> videoInsights = Map.of("facialScore", 0.78);
-
-        initData.put("textInsights", textInsights);
-        initData.put("voiceInsights", voiceInsights);
-        initData.put("videoInsights", videoInsights);
-
-        // Create AgentState with this initial map
-        AgentState state = new AgentState(initData);
-
-        // Instantiate the node
-        MultiModalSynthesizer node = new MultiModalSynthesizer();
-
-        // Apply the node
-        Map<String, Object> result = node.apply(state);
-
-        // Retrieve and print the final Analysis
-        Analysis analysis = (Analysis) result.get("multimodalAnalysis");
-        System.out.println("Multimodal Analysis: " + analysis);
     }
 }
