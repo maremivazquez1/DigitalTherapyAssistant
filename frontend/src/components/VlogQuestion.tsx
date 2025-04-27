@@ -12,7 +12,7 @@ interface VlogQuestionProps {
 }
 
 const VlogQuestion: React.FC<VlogQuestionProps> = ({
-  question: { id: questionId, content },
+  question: { id: questionId },
   sessionId,
   onChange,
 }) => {
