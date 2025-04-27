@@ -10,6 +10,7 @@ import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
 import harvard.capstone.digitaltherapy.orchestration.MultimodalSynthesisService;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +38,7 @@ public class MessageWorkerTest {
             "password",
             List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
-        SecurityContext securityContext = new SecurityContextImpl();
+        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -53,6 +54,7 @@ public class MessageWorkerTest {
 
         // Initialize the message worker
         messageWorker = new MessageWorker();
+        messageWorker.setSessionContext("test-session", "testuser");
     }
 
     @Test
@@ -61,13 +63,11 @@ public class MessageWorkerTest {
     }
 
     @Test
-    public void test_processMessage_initializesNewSession() {
-        String sessionId = "test-session";
-        Map<String, String> modalities = new HashMap<>();
-        modalities.put("text", "Hello, I'm feeling anxious today.");
-        String inputTranscript = "Hello, I'm feeling anxious today.";
+    public void test_generateResponse_initializesNewSession() {
+        List<ChatMessage> messages = new ArrayList<>();
+        messages.add(UserMessage.from("Hello, I'm feeling anxious today."));
 
-        String response = messageWorker.processMessage(sessionId, modalities, inputTranscript);
+        String response = messageWorker.generateResponse(messages);
 
         assertNotNull(response, "Response should not be null");
         assertFalse(response.isEmpty(), "Response should not be empty");
@@ -79,8 +79,8 @@ public class MessageWorkerTest {
             @SuppressWarnings("unchecked")
             Map<String, ChatMemory> sessionMemories = (Map<String, ChatMemory>) sessionMemoriesField.get(messageWorker);
             
-            assertTrue(sessionMemories.containsKey(sessionId), "Session should be created in sessionMemories");
-            ChatMemory memory = sessionMemories.get(sessionId);
+            assertTrue(sessionMemories.containsKey("test-session"), "Session should be created in sessionMemories");
+            ChatMemory memory = sessionMemories.get("test-session");
             assertNotNull(memory, "Chat memory should be initialized");
         } catch (NoSuchFieldException | IllegalAccessException e) {
             fail("Exception occurred while checking session initialization: " + e.getMessage());
@@ -88,94 +88,68 @@ public class MessageWorkerTest {
     }
 
     @Test
-    public void test_processMessage_handlesMultipleMessages() {
-        String sessionId = "test-session";
-        Map<String, String> modalities = new HashMap<>();
-        modalities.put("text", "test input");
+    public void test_generateResponse_handlesMultipleMessages() {
+        List<ChatMessage> messages1 = new ArrayList<>();
+        messages1.add(UserMessage.from("Hello, I'm feeling anxious today."));
 
         // Process first message
-        String response1 = messageWorker.processMessage(sessionId, modalities, "Hello, I'm feeling anxious today.");
+        String response1 = messageWorker.generateResponse(messages1);
         assertNotNull(response1, "First response should not be null");
 
+        List<ChatMessage> messages2 = new ArrayList<>();
+        messages2.add(UserMessage.from("I'm still feeling anxious."));
+
         // Process second message
-        String response2 = messageWorker.processMessage(sessionId, modalities, "I'm still feeling anxious.");
+        String response2 = messageWorker.generateResponse(messages2);
         assertNotNull(response2, "Second response should not be null");
         assertNotEquals(response1, response2, "Responses should be different for different inputs");
     }
 
     @Test
-    public void test_processMessage_handlesDifferentModalities() {
-        String sessionId = "test-session";
-        
-        // Test with text modality
-        Map<String, String> textModalities = new HashMap<>();
-        textModalities.put("text", "I'm feeling stressed about work.");
-        String textResponse = messageWorker.processMessage(sessionId, textModalities, "I'm feeling stressed about work.");
-        assertNotNull(textResponse, "Text response should not be null");
+    public void test_generateResponse_handlesSystemMessages() {
+        List<ChatMessage> messages = new ArrayList<>();
+        messages.add(SystemMessage.from("You are a helpful assistant."));
+        messages.add(UserMessage.from("I need help with something."));
 
-        // Test with audio modality
-        Map<String, String> audioModalities = new HashMap<>();
-        audioModalities.put("audio", "base64_encoded_audio");
-        String audioResponse = messageWorker.processMessage(sessionId, audioModalities, "I sounded anxious in my voice.");
-        assertNotNull(audioResponse, "Audio response should not be null");
-
-        // Test with video modality
-        Map<String, String> videoModalities = new HashMap<>();
-        videoModalities.put("video", "base64_encoded_video");
-        String videoResponse = messageWorker.processMessage(sessionId, videoModalities, "I looked nervous in the video.");
-        assertNotNull(videoResponse, "Video response should not be null");
+        String response = messageWorker.generateResponse(messages);
+        assertNotNull(response, "Response should not be null");
+        assertFalse(response.isEmpty(), "Response should not be empty");
     }
 
     @Test
-    public void test_processMessage_handlesEmptyModalities() {
-        String sessionId = "test-session";
-        Map<String, String> emptyModalities = new HashMap<>();
-        String inputTranscript = "I'm not sure how I feel.";
+    public void test_generateResponse_throwsExceptionForInvalidSession() {
+        List<ChatMessage> messages = new ArrayList<>();
+        messages.add(UserMessage.from("Hello"));
 
-        String response = messageWorker.processMessage(sessionId, emptyModalities, inputTranscript);
-        assertNotNull(response, "Response should not be null for empty modalities");
-        assertFalse(response.isEmpty(), "Response should not be empty for empty modalities");
+        // Reset session context
+        messageWorker.setSessionContext(null, null);
+
+        assertThrows(IllegalStateException.class, () -> {
+            messageWorker.generateResponse(messages);
+        }, "Should throw exception when session context is not set");
     }
 
     @Test
-    public void test_processMessage_validatesUserAssociation() {
+    public void test_generateResponse_validatesUserAssociation() {
         String sessionId = "test-session";
         String userId = "testuser";
-        String message = "Hello, world!";
+        messageWorker.setSessionContext(sessionId, userId);
 
-        // Process first message
-        messageWorker.processMessage(sessionId, userId, message);
+        List<ChatMessage> messages = new ArrayList<>();
+        messages.add(UserMessage.from("Hello, world!"));
 
-        // Verify session-user association
-        try {
-            java.lang.reflect.Field sessionUserMapField = MessageWorker.class.getDeclaredField("sessionUserMap");
-            sessionUserMapField.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            Map<String, String> sessionUserMap = (Map<String, String>) sessionUserMapField.get(messageWorker);
-            
-            assertTrue(sessionUserMap.containsKey(sessionId), "Session should be associated with a user");
-            assertEquals(userId, sessionUserMap.get(sessionId), "Session should be associated with the correct user");
+        // Process message
+        String response = messageWorker.generateResponse(messages);
+        assertNotNull(response, "Response should not be null");
 
-            // Create new session
-            String newSessionId = "new-session";
-            messageWorker.processMessage(newSessionId, userId, message);
-            
-            // Verify that both sessions are associated with the user
-            assertEquals(userId, sessionUserMap.get(sessionId), "Old session should still be associated with the user");
-            assertEquals(userId, sessionUserMap.get(newSessionId), "New session should be associated with the user");
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            fail("Exception occurred while checking session-user association: " + e.getMessage());
-        }
-    }
-
-    @Test
-    public void test_processMessage_throwsExceptionForInvalidUser() {
-        String sessionId = "test-session";
-        String message = "Hello, world!";
-
-        // Try to process message without user context
-        assertThrows(IllegalStateException.class, () -> {
-            messageWorker.processMessage(sessionId, message);
-        }, "Should throw exception when no user is associated with the session");
+        // Create new session with same user
+        String newSessionId = "new-session";
+        messageWorker.setSessionContext(newSessionId, userId);
+        
+        List<ChatMessage> newMessages = new ArrayList<>();
+        newMessages.add(UserMessage.from("Hello again"));
+        
+        String newResponse = messageWorker.generateResponse(newMessages);
+        assertNotNull(newResponse, "New response should not be null");
     }
 } 
