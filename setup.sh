@@ -96,6 +96,16 @@ CREATE TABLE IF NOT EXISTS users (
 EOF
     echo "✅ MySQL setup completed."
 
+
+    echo "🔍 Checking ffmpeg dependency..."
+    if command -v ffmpeg &> /dev/null; then
+        echo "🔄 ffmpeg is already installed. Updating..."
+        brew upgrade ffmpeg || echo "✅ ffmpeg is already up to date."
+    else
+        echo "Installing ffmpeg dependency..."
+        brew install ffmpeg
+    fi
+
     # Build and run backend
     echo "🚀 Building the backend..."
     mvn clean install
