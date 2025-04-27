@@ -136,4 +136,46 @@ public class MessageWorkerTest {
         assertNotNull(response, "Response should not be null for empty modalities");
         assertFalse(response.isEmpty(), "Response should not be empty for empty modalities");
     }
+
+    @Test
+    public void test_processMessage_validatesUserAssociation() {
+        String sessionId = "test-session";
+        String userId = "testuser";
+        String message = "Hello, world!";
+
+        // Process first message
+        messageWorker.processMessage(sessionId, userId, message);
+
+        // Verify session-user association
+        try {
+            java.lang.reflect.Field sessionUserMapField = MessageWorker.class.getDeclaredField("sessionUserMap");
+            sessionUserMapField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, String> sessionUserMap = (Map<String, String>) sessionUserMapField.get(messageWorker);
+            
+            assertTrue(sessionUserMap.containsKey(sessionId), "Session should be associated with a user");
+            assertEquals(userId, sessionUserMap.get(sessionId), "Session should be associated with the correct user");
+
+            // Create new session
+            String newSessionId = "new-session";
+            messageWorker.processMessage(newSessionId, userId, message);
+            
+            // Verify that both sessions are associated with the user
+            assertEquals(userId, sessionUserMap.get(sessionId), "Old session should still be associated with the user");
+            assertEquals(userId, sessionUserMap.get(newSessionId), "New session should be associated with the user");
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            fail("Exception occurred while checking session-user association: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void test_processMessage_throwsExceptionForInvalidUser() {
+        String sessionId = "test-session";
+        String message = "Hello, world!";
+
+        // Try to process message without user context
+        assertThrows(IllegalStateException.class, () -> {
+            messageWorker.processMessage(sessionId, message);
+        }, "Should throw exception when no user is associated with the session");
+    }
 } 

@@ -79,6 +79,7 @@ public class OrchestrationServiceTest {
     public void test_associateSession_initializesNewSession() {
         OrchestrationService orchestrationService = new OrchestrationService();
         String sessionId = "test-session";
+        String userId = "testuser";
 
         String result = orchestrationService.associateSession(sessionId);
 
@@ -95,8 +96,50 @@ public class OrchestrationServiceTest {
             List<ChatMessage> messages = sessionMessages.get(sessionId);
             assertFalse(messages.isEmpty(), "Session should have messages");
             assertTrue(messages.get(0) instanceof SystemMessage, "First message should be a system message");
+
+            // Verify session-user association
+            java.lang.reflect.Field sessionUserMapField = OrchestrationService.class.getDeclaredField("sessionUserMap");
+            sessionUserMapField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, String> sessionUserMap = (Map<String, String>) sessionUserMapField.get(orchestrationService);
+            
+            assertTrue(sessionUserMap.containsKey(sessionId), "Session should be associated with a user");
+            assertEquals(userId, sessionUserMap.get(sessionId), "Session should be associated with the correct user");
         } catch (NoSuchFieldException | IllegalAccessException e) {
             fail("Exception occurred while checking session initialization: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void test_associateSession_validatesUserAssociation() {
+        OrchestrationService orchestrationService = new OrchestrationService();
+        String sessionId = "test-session";
+        String userId = "testuser";
+
+        // Associate session
+        String result = orchestrationService.associateSession(sessionId);
+        assertEquals(sessionId, result, "The method should return the provided sessionId");
+
+        // Verify session-user association
+        try {
+            java.lang.reflect.Field sessionUserMapField = OrchestrationService.class.getDeclaredField("sessionUserMap");
+            sessionUserMapField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, String> sessionUserMap = (Map<String, String>) sessionUserMapField.get(orchestrationService);
+            
+            assertTrue(sessionUserMap.containsKey(sessionId), "Session should be associated with a user");
+            assertEquals(userId, sessionUserMap.get(sessionId), "Session should be associated with the correct user");
+
+            // Verify that the same user can't associate with multiple sessions
+            String newSessionId = "new-session";
+            String newResult = orchestrationService.associateSession(newSessionId);
+            assertEquals(newSessionId, newResult, "The method should return the new sessionId");
+            
+            // Verify that the old session is still associated with the user
+            assertEquals(userId, sessionUserMap.get(sessionId), "Old session should still be associated with the user");
+            assertEquals(userId, sessionUserMap.get(newSessionId), "New session should be associated with the user");
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            fail("Exception occurred while checking session-user association: " + e.getMessage());
         }
     }
 
