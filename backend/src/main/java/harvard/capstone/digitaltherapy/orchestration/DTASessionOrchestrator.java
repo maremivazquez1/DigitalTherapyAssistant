@@ -238,7 +238,7 @@ public class DTASessionOrchestrator implements TherapySessionService {
             "password",
             List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
-        SecurityContext securityContext = new SecurityContextImpl();
+        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(authentication);
         SecurityContextHolder.setContext(securityContext);
 

@@ -379,7 +379,7 @@ public class CBTController {
         s3StorageService.writeTextToS3(outputPath, llmResponse);
         String rootOutputPath ="s3://dta-root/"+ outputPath;
         long pollyServiceTime  = System.currentTimeMillis();
-        String textToSpeechResponse = pollyService.convertTextToSpeech(rootOutputPath, sessionId);
+        String textToSpeechResponse = pollyService.synthesizeSpeech(rootOutputPath, sessionId);
         logger.info("Polly Service Response Time took {} ms", System.currentTimeMillis() - pollyServiceTime);
         textToSpeechResponse= textToSpeechResponse.replace("https://dta-root.s3.amazonaws.com/", "");
         long S3DownloadTime  = System.currentTimeMillis();
