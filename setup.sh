@@ -54,6 +54,21 @@ if [ -d "$BACKEND_DIR" ]; then
         brew services start mysql
     fi
 
+
+    # Redis Setup
+    echo "🔍 Checking Redis..."
+    if command -v redis-server &> /dev/null; then
+        echo "🔄 Redis is already installed. Updating..."
+        brew upgrade redis || echo "✅ Redis is already up to date."
+    else
+        echo "📥 Installing Redis..."
+        brew install redis
+    fi
+
+    # Start Redis service
+    echo "🚀 Starting Redis service..."
+    brew services start redis || echo "✅ Redis service is already running."
+
     # Verify installations
     echo "✅ Verifying installations..."
     java -version
@@ -80,6 +95,16 @@ CREATE TABLE IF NOT EXISTS users (
 );
 EOF
     echo "✅ MySQL setup completed."
+
+
+    echo "🔍 Checking ffmpeg dependency..."
+    if command -v ffmpeg &> /dev/null; then
+        echo "🔄 ffmpeg is already installed. Updating..."
+        brew upgrade ffmpeg || echo "✅ ffmpeg is already up to date."
+    else
+        echo "Installing ffmpeg dependency..."
+        brew install ffmpeg
+    fi
 
     # Build and run backend
     echo "🚀 Building the backend..."
