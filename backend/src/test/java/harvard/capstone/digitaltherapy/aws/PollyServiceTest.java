@@ -20,6 +20,8 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,9 +37,7 @@ public class PollyServiceTest {
 
     @BeforeEach
     public void setUp() {
-        pollyService = new PollyService();
-        pollyService.amazonPolly = amazonPolly;
-        pollyService.s3Utils = s3Utils;
+        pollyService = new PollyService(amazonPolly, s3Utils);
     }
 
     @Test

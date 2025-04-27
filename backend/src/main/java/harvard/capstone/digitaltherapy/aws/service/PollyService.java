@@ -4,7 +4,6 @@ import com.amazonaws.services.polly.AmazonPolly;
 import com.amazonaws.services.polly.model.SynthesizeSpeechRequest;
 import com.amazonaws.services.polly.model.SynthesizeSpeechResult;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -20,13 +19,14 @@ import java.nio.file.Path;
 @Service
 public class PollyService {
 
-    @Autowired
-    private AmazonPolly amazonPolly;
-
-    @Autowired
-    private S3Utils s3Utils;
-
+    private final AmazonPolly amazonPolly;
+    private final S3Utils s3Utils;
     private static final String S3_BUCKET_NAME = "dta-root";
+
+    public PollyService(AmazonPolly amazonPolly, S3Utils s3Utils) {
+        this.amazonPolly = amazonPolly;
+        this.s3Utils = s3Utils;
+    }
 
     /**
      * Text-to-Speech service function
