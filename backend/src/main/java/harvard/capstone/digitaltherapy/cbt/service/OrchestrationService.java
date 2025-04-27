@@ -3,6 +3,7 @@ package harvard.capstone.digitaltherapy.cbt.service;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.ChatMessage;
+import harvard.capstone.digitaltherapy.cbt.controller.BurnoutController;
 import harvard.capstone.digitaltherapy.orchestration.MultimodalSynthesisService;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
 import harvard.capstone.digitaltherapy.workers.MessageWorker;
@@ -10,6 +11,10 @@ import harvard.capstone.digitaltherapy.workers.TextAnalysisWorker;
 import harvard.capstone.digitaltherapy.workers.VideoAnalysisWorker;
 import harvard.capstone.digitaltherapy.workers.AudioAnalysisWorker;
 import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +54,18 @@ public class OrchestrationService {
                 "You are a CBT therapist guiding a patient through a CBT session. " +
                         "Use concise and empathetic language. Focus on helping the patient " +
                         "identify and reframe negative thought patterns."
+        ));
+
+        sessionMessages.put(sessionId, messages);
+        return sessionId;
+    }
+
+    public String associateBurnoutSession(String sessionId){
+        List<ChatMessage> messages = new ArrayList<>();
+
+        // Add the initial system message for a Burnout context
+        messages.add(SystemMessage.from(
+                "TODO"
         ));
 
         sessionMessages.put(sessionId, messages);
@@ -134,4 +151,96 @@ public class OrchestrationService {
         return result.toString();
     }
 
+    public String processBurnoutMedia(String sessionId, Map<String, String> modalities) {
+        if (!sessionMessages.containsKey(sessionId)) {
+            throw new IllegalArgumentException("Invalid session ID: " + sessionId);
+        }
+        try {
+            List<CompletableFuture<Object>> analysisFutures = new ArrayList<>();
+            Map<String, CompletableFuture<Object>> modalityToFuture = new HashMap<>();
+
+            modalities.forEach((modalityType, s3Path) -> {
+                CompletableFuture<Object> analysisFuture = switch (modalityType.toLowerCase()) {
+                    case "video" -> videoAnalysisWorker.detectFacesFromVideoAsync(s3Path)
+                            .thenCompose(result -> {
+                                Map<String, Object> videoResult = new HashMap<>();
+                                videoResult.put("videoAnalysis", result);
+                                return CompletableFuture.completedFuture(videoResult);
+                            });
+
+                    case "audio" -> audioAnalysisWorker.analyzeAudioAsync(s3Path)
+                            .thenCompose(result -> {
+                                Map<String, Object> audioResult = new HashMap<>();
+                                audioResult.put("audioAnalysis", result);
+                                return CompletableFuture.completedFuture(audioResult);
+                            });
+
+                    default -> CompletableFuture.failedFuture(
+                            new IllegalArgumentException("Unsupported modality type: " + modalityType)
+                    );
+                };
+
+                analysisFutures.add(analysisFuture);
+                modalityToFuture.put(modalityType, analysisFuture);
+            });
+
+            // Wait for all analysis to complete
+            CompletableFuture.allOf(analysisFutures.toArray(new CompletableFuture[0])).join();
+
+            // Build a combined result
+            ObjectNode finalResult = new ObjectMapper().createObjectNode();
+            modalityToFuture.forEach((modalityType, future) -> {
+                try {
+                    Object analysisResult = future.join();
+                    finalResult.putPOJO(modalityType, analysisResult);
+                } catch (Exception e) {
+                    finalResult.put(modalityType, "Error during analysis: " + e.getMessage());
+                }
+            });
+
+            return finalResult.toString();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "{ \"error\": \"" + e.getMessage() + "\" }";
+        }
+    }
+
+    public String getBurnoutQuestions() {
+        return """
+        [
+          {
+            "id": 1,
+            "type": "likert",
+            "content": "How often in the past 2 weeks have you felt stressed at work?",
+            "subtitle": "Try to be honest"
+          },
+          {
+            "id": 2,
+            "type": "open_text",
+            "content": "Can you describe any factors that contributed to your stress?"
+          },
+          {
+            "id": 3,
+            "type": "vlog",
+            "content": "Record a short video about your energy levels today."
+          },
+          {
+            "id": 4,
+            "type": "likert",
+            "content": "How often in the past 2 weeks have you felt fatigued?"
+          },
+          {
+            "id": 5,
+            "type": "open_text",
+            "content": "What steps have you taken to manage your stress?"
+          }
+        ]
+        """;
+    }
+
+    public String finalizeBurnoutEvaluation(String sessionId, List<BurnoutController.QuestionResponse> responses) {
+        // Later: real LLM scoring / aggregation
+        return "{ \"summary\": \"Dummy final burnout evaluation for now\" }";
+    }
 }
