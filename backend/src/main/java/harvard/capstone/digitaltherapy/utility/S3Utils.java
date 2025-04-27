@@ -4,6 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.BinaryMessage;
+import org.springframework.web.socket.WebSocketSession;
+
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.retry.RetryPolicy;
@@ -15,10 +18,16 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import ws.schild.jave.encode.AudioAttributes;
+import ws.schild.jave.encode.EncodingAttributes;
+import ws.schild.jave.encode.VideoAttributes;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.file.*;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 import java.net.URL;
 
 @Service
@@ -26,6 +35,9 @@ public class S3Utils {
     private static final Logger logger = LoggerFactory.getLogger(S3Utils.class);
     S3Client s3Client;
     private final String bucketName;
+    public static final String rootBucket = "dta-root";
+    @Value("${ffmeg_path}")
+    private String ffmeg_path;
 
     public S3Utils(@Value("${aws.s3.bucketName}") String bucketName,
                    @Value("${aws.region}") String region) {
@@ -187,6 +199,98 @@ public class S3Utils {
 
                 URL signedUrl = presigner.presignGetObject(presignRequest).url();
                 return signedUrl.toString();
+            }
+        }
+
+        // File name: "video_" + sessionId + ".mp4";
+        public String uploadVideoBinaryFile(BinaryMessage message, String keyName){
+            try {
+                // Get the binary payload
+                ByteBuffer buffer = message.getPayload();
+                byte[] audioData = new byte[buffer.remaining()];
+                buffer.get(audioData);
+                File webmFile = null;
+                File mp4File = null;
+                // keyName = "video_" + sessionId + ".mp4";
+                try {
+                    // Step 1: Save incoming WebM data to a temp file
+                    webmFile = File.createTempFile("video_temp_", ".webm");
+                    try (FileOutputStream fos = new FileOutputStream(webmFile)) {
+                        fos.write(audioData);
+                    }
+                    // Step 2: Create target MP4 file
+                    mp4File = new File(webmFile.getParent(), "converted_" + webmFile.getName().replace(".webm", ".mp4"));
+                    // Configure audio attributes
+                    AudioAttributes audio = new AudioAttributes();
+                    audio.setCodec("aac");
+                    audio.setBitRate(128000);
+                    audio.setChannels(2);
+                    audio.setSamplingRate(44100);
+
+                    // Configure video attributes
+                    VideoAttributes video = new VideoAttributes();
+                    video.setCodec("h264");
+                    video.setBitRate(800000);
+                    video.setFrameRate(30);
+
+                    // Configure encoding attributes
+                    EncodingAttributes attrs = new EncodingAttributes();
+                    attrs.setOutputFormat("mp4");
+                    attrs.setAudioAttributes(audio);
+                    attrs.setVideoAttributes(video);
+
+                    // Use ProcessBuilder directly for more control
+                    List<String> command = Arrays.asList(
+                            ffmeg_path,
+                            "-i", webmFile.getAbsolutePath(),
+                            "-c:v", "h264",
+                            "-c:a", "aac",
+                            "-b:a", "128k",
+                            "-b:v", "800k",
+                            "-r", "30",
+                            mp4File.getAbsolutePath()
+                    );
+
+                    ProcessBuilder pb = new ProcessBuilder(command);
+                    pb.redirectErrorStream(true);
+                    Process process = pb.start();
+                    int exitCode = process.waitFor();
+                    if (exitCode != 0) {
+                        throw new RuntimeException("FFmpeg process failed with exit code: " + exitCode);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    throw new RuntimeException("Video conversion failed: " + e.getMessage(), e);
+                }
+
+                String videoURL = uploadFile(mp4File.getAbsolutePath(), keyName);
+                return videoURL;
+            }
+            catch (Exception e) {
+                logger.error("Error processing binary message: {}", e.getMessage(), e);
+                return e.getMessage();
+            }
+        }
+
+
+        // File name: keyName = "audio_" + sessionId + ".mp3";
+        public String uploadAudioBinaryFile(BinaryMessage message, String keyName){
+            try {
+                ByteBuffer buffer = message.getPayload();
+                byte[] audioData = new byte[buffer.remaining()];
+                buffer.get(audioData);
+                File tempFile = null;
+                tempFile = File.createTempFile("audio_", ".mp3");
+                try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+                    fos.write(audioData);
+                }
+                // keyName = "audio_" + sessionId + ".mp3";
+                String audioPath = uploadFile(tempFile.getAbsolutePath(), keyName);
+                return audioPath;
+            }
+            catch (Exception e) {
+                logger.error("Error processing binary message: {}", e.getMessage(), e);
+                return e.getMessage();
             }
         }
     }

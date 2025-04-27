@@ -239,7 +239,7 @@ public class BurnoutAssessmentOrchestrator {
      * @param sessionId The ID of the session to retrieve
      * @return The BurnoutAssessmentSession object
      */
-    private BurnoutAssessmentSession getSession(String sessionId) {
+    public BurnoutAssessmentSession getSession(String sessionId) {
         // Try to get from active sessions cache first
 
         // If not in cache, try to get from session manager
