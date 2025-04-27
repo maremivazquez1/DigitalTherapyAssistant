@@ -2,6 +2,9 @@ package harvard.capstone.digitaltherapy.utility;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
@@ -17,6 +20,13 @@ public class S3UtilsTest {
      */
     @Test
     void testUploadFile_S3ExceptionThrown() {
+        // Setup security context
+        Authentication authentication = Mockito.mock(Authentication.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("testuser");
+        SecurityContextHolder.setContext(securityContext);
+
         S3Client mockS3Client = Mockito.mock(S3Client.class);
         S3Utils s3Utils = new S3Utils("testBucket", "us-west-2");
         s3Utils.s3Client = mockS3Client;
@@ -25,7 +35,7 @@ public class S3UtilsTest {
                 .thenThrow(S3Exception.builder().message("S3 error").build());
 
         assertThrows(RuntimeException.class, () ->
-                s3Utils.uploadFile("/path/to/file", "testKey")
+                s3Utils.uploadFile("/path/to/file", "test.mp3")
         );
     }
 
@@ -36,6 +46,13 @@ public class S3UtilsTest {
      */
     @Test
     void testUploadFile_S3UploadFails() {
+        // Setup security context
+        Authentication authentication = Mockito.mock(Authentication.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("testuser");
+        SecurityContextHolder.setContext(securityContext);
+
         S3Client mockS3Client = Mockito.mock(S3Client.class);
         S3Utils s3Utils = new S3Utils("testBucket", "us-west-2");
         s3Utils.s3Client = mockS3Client;
@@ -46,7 +63,7 @@ public class S3UtilsTest {
                 .thenReturn(mockResponse);
 
         assertThrows(RuntimeException.class, () ->
-                s3Utils.uploadFile("/path/to/file", "testKey")
+                s3Utils.uploadFile("/path/to/file", "test.mp3")
         );
     }
 
@@ -72,6 +89,167 @@ public class S3UtilsTest {
         );
     }
 
+    @Test
+    void testUploadFile_UserSpecificPrefix() {
+        // Setup security context
+        Authentication authentication = Mockito.mock(Authentication.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("testuser");
+        SecurityContextHolder.setContext(securityContext);
 
+        S3Client mockS3Client = Mockito.mock(S3Client.class);
+        S3Utils s3Utils = new S3Utils("testBucket", "us-west-2");
+        s3Utils.s3Client = mockS3Client;
 
+        // Mock successful upload
+        PutObjectResponse mockResponse = Mockito.mock(PutObjectResponse.class);
+        when(mockResponse.sdkHttpResponse()).thenReturn(Mockito.mock(software.amazon.awssdk.http.SdkHttpResponse.class));
+        when(mockS3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(mockResponse);
+
+        // Perform upload
+        String result = s3Utils.uploadFile("/path/to/file", "test.mp3");
+
+        // Verify the key contains user-specific prefix
+        assertTrue(result.contains("users/testuser/sessions/"));
+        assertTrue(result.contains("audio_"));
+        assertTrue(result.endsWith(".mp3"));
+    }
+
+    @Test
+    void testUploadFile_SystemUserWhenNoAuth() {
+        // Clear security context
+        SecurityContextHolder.clearContext();
+
+        S3Client mockS3Client = Mockito.mock(S3Client.class);
+        S3Utils s3Utils = new S3Utils("testBucket", "us-west-2");
+        s3Utils.s3Client = mockS3Client;
+
+        // Mock successful upload
+        PutObjectResponse mockResponse = Mockito.mock(PutObjectResponse.class);
+        when(mockResponse.sdkHttpResponse()).thenReturn(Mockito.mock(software.amazon.awssdk.http.SdkHttpResponse.class));
+        when(mockS3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(mockResponse);
+
+        // Perform upload
+        String result = s3Utils.uploadFile("/path/to/file", "test.mp3");
+
+        // Verify the key contains system user prefix
+        assertTrue(result.contains("users/system/sessions/"));
+        assertTrue(result.contains("audio_"));
+        assertTrue(result.endsWith(".mp3"));
+    }
+
+    @Test
+    void testUploadAudioFile() {
+        // Setup security context
+        Authentication authentication = Mockito.mock(Authentication.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("testuser");
+        SecurityContextHolder.setContext(securityContext);
+
+        S3Client mockS3Client = Mockito.mock(S3Client.class);
+        S3Utils s3Utils = new S3Utils("testBucket", "us-west-2");
+        s3Utils.s3Client = mockS3Client;
+
+        // Mock successful upload
+        PutObjectResponse mockResponse = Mockito.mock(PutObjectResponse.class);
+        when(mockResponse.sdkHttpResponse()).thenReturn(Mockito.mock(software.amazon.awssdk.http.SdkHttpResponse.class));
+        when(mockS3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(mockResponse);
+
+        // Perform upload
+        String result = s3Utils.uploadAudioFile("/path/to/audio.mp3");
+
+        // Verify the key contains user-specific prefix and audio type
+        assertTrue(result.contains("users/testuser/sessions/"));
+        assertTrue(result.contains("audio_"));
+        assertTrue(result.endsWith(".mp3"));
+    }
+
+    @Test
+    void testUploadVideoFile() {
+        // Setup security context
+        Authentication authentication = Mockito.mock(Authentication.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("testuser");
+        SecurityContextHolder.setContext(securityContext);
+
+        S3Client mockS3Client = Mockito.mock(S3Client.class);
+        S3Utils s3Utils = new S3Utils("testBucket", "us-west-2");
+        s3Utils.s3Client = mockS3Client;
+
+        // Mock successful upload
+        PutObjectResponse mockResponse = Mockito.mock(PutObjectResponse.class);
+        when(mockResponse.sdkHttpResponse()).thenReturn(Mockito.mock(software.amazon.awssdk.http.SdkHttpResponse.class));
+        when(mockS3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(mockResponse);
+
+        // Perform upload
+        String result = s3Utils.uploadVideoFile("/path/to/video.mp4");
+
+        // Verify the key contains user-specific prefix and video type
+        assertTrue(result.contains("users/testuser/sessions/"));
+        assertTrue(result.contains("video_"));
+        assertTrue(result.endsWith(".mp4"));
+    }
+
+    @Test
+    void testUploadTextFile() {
+        // Setup security context
+        Authentication authentication = Mockito.mock(Authentication.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("testuser");
+        SecurityContextHolder.setContext(securityContext);
+
+        S3Client mockS3Client = Mockito.mock(S3Client.class);
+        S3Utils s3Utils = new S3Utils("testBucket", "us-west-2");
+        s3Utils.s3Client = mockS3Client;
+
+        // Mock successful upload
+        PutObjectResponse mockResponse = Mockito.mock(PutObjectResponse.class);
+        when(mockResponse.sdkHttpResponse()).thenReturn(Mockito.mock(software.amazon.awssdk.http.SdkHttpResponse.class));
+        when(mockS3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(mockResponse);
+
+        // Perform upload
+        String result = s3Utils.uploadTextFile("/path/to/text.txt");
+
+        // Verify the key contains user-specific prefix and text type
+        assertTrue(result.contains("users/testuser/sessions/"));
+        assertTrue(result.contains("text_"));
+        assertTrue(result.endsWith(".txt"));
+    }
+
+    @Test
+    void testUploadCustomFile() {
+        // Setup security context
+        Authentication authentication = Mockito.mock(Authentication.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("testuser");
+        SecurityContextHolder.setContext(securityContext);
+
+        S3Client mockS3Client = Mockito.mock(S3Client.class);
+        S3Utils s3Utils = new S3Utils("testBucket", "us-west-2");
+        s3Utils.s3Client = mockS3Client;
+
+        // Mock successful upload
+        PutObjectResponse mockResponse = Mockito.mock(PutObjectResponse.class);
+        when(mockResponse.sdkHttpResponse()).thenReturn(Mockito.mock(software.amazon.awssdk.http.SdkHttpResponse.class));
+        when(mockS3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(mockResponse);
+
+        // Perform upload
+        String result = s3Utils.uploadCustomFile("/path/to/custom.json", "custom", "json");
+
+        // Verify the key contains user-specific prefix and custom type
+        assertTrue(result.contains("users/testuser/sessions/"));
+        assertTrue(result.contains("custom_"));
+        assertTrue(result.endsWith(".json"));
+    }
 }

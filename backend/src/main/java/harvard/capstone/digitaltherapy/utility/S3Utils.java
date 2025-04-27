@@ -3,6 +3,8 @@ package harvard.capstone.digitaltherapy.utility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -20,6 +22,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.time.Duration;
 import java.net.URL;
+import java.util.UUID;
 
 @Service
 public class S3Utils {
@@ -46,23 +49,46 @@ public class S3Utils {
                 .build();
     }
 
+    /**
+     * Uploads a file to S3 with automatic user-specific prefixing
+     * @param filePath The local path of the file to upload
+     * @param keyName The desired S3 key name (will be prefixed with user/session info)
+     * @return The S3 URI of the uploaded file
+     */
     public String uploadFile(String filePath, String keyName) {
         try {
+            // Get user and session information from security context
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userId = authentication != null ? authentication.getName() : "system";
+            String sessionId = getCurrentSessionId(); // You'll need to implement this
+
+            // Generate a unique request ID
+            String requestId = UUID.randomUUID().toString();
+
+            // Extract file extension from the original key
+            String fileExtension = getFileExtension(keyName);
+            String fileType = getFileType(keyName);
+
+            // Create the prefixed key
+            String prefixedKey = String.format("users/%s/sessions/%s/%s_%s.%s",
+                userId, sessionId, fileType, requestId, fileExtension);
+
             // Check if bucket exists
             if (!doesBucketExist(bucketName)) {
                 createBucket(bucketName);
             }
+
             Path path = Paths.get(filePath);
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(bucketName)
-                    .key(keyName)
+                    .key(prefixedKey)
                     .build();
 
             PutObjectResponse response = s3Client.putObject(request, RequestBody.fromFile(path));
 
             if (response != null && response.sdkHttpResponse().isSuccessful()) {
-                logger.info("File successfully uploaded to S3: {}", keyName);
-                String s3Uri = String.format("s3://%s/%s", bucketName, keyName);
+                logger.info("File successfully uploaded to S3: {}", prefixedKey);
+                String s3Uri = String.format("s3://%s/%s", bucketName, prefixedKey);
                 return s3Uri;
             } else {
                 throw new RuntimeException("Failed to upload file to S3");
@@ -71,6 +97,51 @@ public class S3Utils {
             logger.error("Error uploading file to S3: {}", e.getMessage());
             throw new RuntimeException("Failed to upload file to S3: " + e.getMessage());
         }
+    }
+
+    /**
+     * Gets the current session ID from the security context or generates a new one
+     * @return The current session ID
+     */
+    private String getCurrentSessionId() {
+        // TODO: Implement session tracking
+        // For now, return a generated session ID
+        return UUID.randomUUID().toString();
+    }
+
+    /**
+     * Extracts the file extension from a key name
+     * @param keyName The S3 key name
+     * @return The file extension
+     */
+    private String getFileExtension(String keyName) {
+        int lastDotIndex = keyName.lastIndexOf('.');
+        if (lastDotIndex > 0) {
+            return keyName.substring(lastDotIndex + 1);
+        }
+        return "bin"; // Default extension if none found
+    }
+
+    /**
+     * Determines the file type based on the key name
+     * @param keyName The S3 key name
+     * @return The file type (audio, video, text, etc.)
+     */
+    private String getFileType(String keyName) {
+        // Extract the base name without extension
+        String baseName = keyName.substring(0, keyName.lastIndexOf('.'));
+        
+        // Check for common file type indicators
+        if (baseName.contains("audio") || baseName.endsWith(".mp3") || baseName.endsWith(".wav")) {
+            return "audio";
+        } else if (baseName.contains("video") || baseName.endsWith(".mp4") || baseName.endsWith(".mov")) {
+            return "video";
+        } else if (baseName.contains("text") || baseName.endsWith(".txt") || baseName.endsWith(".json")) {
+            return "text";
+        }
+        
+        // Default to the base name if no specific type is found
+        return baseName;
     }
 
     // Method to retrieve file from S3 and save it locally
@@ -134,60 +205,96 @@ public class S3Utils {
         }
     }
 
+    public void streamFileFromS3(String bucketName, String fileKey, OutputStream outputStream)
+            throws IOException {
+        try {
+            // First check if file exists
+            HeadObjectRequest headRequest = HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileKey)
+                    .build();
 
-
-        public void streamFileFromS3(String bucketName, String fileKey, OutputStream outputStream)
-                throws IOException {
             try {
-                // First check if file exists
-                HeadObjectRequest headRequest = HeadObjectRequest.builder()
-                        .bucket(bucketName)
-                        .key(fileKey)
-                        .build();
-
-                try {
-                    s3Client.headObject(headRequest);
-                } catch (S3Exception e) {
-                    if (e.statusCode() == 404) {
-                        throw new FileNotFoundException("File not found in S3: " + fileKey);
-                    }
-                    throw new IOException("Error checking file in S3: " + e.getMessage(), e);
-                }
-
-                // Get the object
-                GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                        .bucket(bucketName)
-                        .key(fileKey)
-                        .build();
-
-                try (ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(getObjectRequest)) {
-                    byte[] buffer = new byte[8192];
-                    int bytesRead;
-                    while ((bytesRead = s3Object.read(buffer)) != -1) {
-                        outputStream.write(buffer, 0, bytesRead);
-                    }
-                    outputStream.flush();
-                }
+                s3Client.headObject(headRequest);
             } catch (S3Exception e) {
-                throw new IOException("Error streaming file from S3: " + e.getMessage(), e);
+                if (e.statusCode() == 404) {
+                    throw new FileNotFoundException("File not found in S3: " + fileKey);
+                }
+                throw new IOException("Error checking file in S3: " + e.getMessage(), e);
             }
-        }
 
-        public static String generatePresignedUrl(String bucket, String key, Duration duration) {
-            try (S3Presigner presigner = S3Presigner.create()) {
-                GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                        .bucket(bucket)
-                        .key(key)
-                        .build();
+            // Get the object
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileKey)
+                    .build();
 
-                GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                        .signatureDuration(duration)
-                        .getObjectRequest(getObjectRequest)
-                        .build();
-
-                URL signedUrl = presigner.presignGetObject(presignRequest).url();
-                return signedUrl.toString();
+            try (ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(getObjectRequest)) {
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = s3Object.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+                outputStream.flush();
             }
+        } catch (S3Exception e) {
+            throw new IOException("Error streaming file from S3: " + e.getMessage(), e);
         }
     }
+
+    public static String generatePresignedUrl(String bucket, String key, Duration duration) {
+        try (S3Presigner presigner = S3Presigner.create()) {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build();
+
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(duration)
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            URL signedUrl = presigner.presignGetObject(presignRequest).url();
+            return signedUrl.toString();
+        }
+    }
+
+    /**
+     * Uploads an audio file to S3 with automatic user-specific prefixing
+     * @param filePath The local path of the audio file to upload
+     * @return The S3 URI of the uploaded file
+     */
+    public String uploadAudioFile(String filePath) {
+        return uploadFile(filePath, "audio.mp3");
+    }
+
+    /**
+     * Uploads a video file to S3 with automatic user-specific prefixing
+     * @param filePath The local path of the video file to upload
+     * @return The S3 URI of the uploaded file
+     */
+    public String uploadVideoFile(String filePath) {
+        return uploadFile(filePath, "video.mp4");
+    }
+
+    /**
+     * Uploads a text file to S3 with automatic user-specific prefixing
+     * @param filePath The local path of the text file to upload
+     * @return The S3 URI of the uploaded file
+     */
+    public String uploadTextFile(String filePath) {
+        return uploadFile(filePath, "text.txt");
+    }
+
+    /**
+     * Uploads a file to S3 with automatic user-specific prefixing and custom type
+     * @param filePath The local path of the file to upload
+     * @param fileType The type of file (e.g., "custom")
+     * @param fileExtension The file extension (e.g., "json")
+     * @return The S3 URI of the uploaded file
+     */
+    public String uploadCustomFile(String filePath, String fileType, String fileExtension) {
+        return uploadFile(filePath, fileType + "." + fileExtension);
+    }
+}
 

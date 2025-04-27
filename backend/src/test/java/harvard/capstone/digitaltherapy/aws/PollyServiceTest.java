@@ -1,29 +1,26 @@
 package harvard.capstone.digitaltherapy.aws;
 
-import harvard.capstone.digitaltherapy.aws.service.PollyService;
 import com.amazonaws.services.polly.AmazonPolly;
 import com.amazonaws.services.polly.model.SynthesizeSpeechRequest;
 import com.amazonaws.services.polly.model.SynthesizeSpeechResult;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectRequest;
+import harvard.capstone.digitaltherapy.aws.service.PollyService;
+import harvard.capstone.digitaltherapy.utility.S3Utils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 public class PollyServiceTest {
@@ -32,71 +29,73 @@ public class PollyServiceTest {
     private AmazonPolly amazonPolly;
 
     @Mock
-    private AmazonS3 amazonS3;
+    private S3Utils s3Utils;
 
-    @InjectMocks
     private PollyService pollyService;
 
-    @Test
-    public void testConvertTextToSpeech_Success() throws IOException {
-        // Load sample text from file
-        String filePath = "src/test/resources/transcript-text-sample-1.txt";
-        String textFromS3 = new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8);
-
-        // Mock the downloadTextFromS3 method to return the mock text
-        when(amazonS3.getObject(any(GetObjectRequest.class)))
-                .thenReturn(new com.amazonaws.services.s3.model.S3Object() {{
-                    setObjectContent(new ByteArrayInputStream(textFromS3.getBytes()));
-                }});
-
-        // Mock Polly's response
-        SynthesizeSpeechResult mockResult = new SynthesizeSpeechResult();
-        InputStream mockAudioStream = new ByteArrayInputStream("mock audio data".getBytes());
-        mockResult.setAudioStream(mockAudioStream);
-
-        when(amazonPolly.synthesizeSpeech(any(SynthesizeSpeechRequest.class))).thenReturn(mockResult);
-
-        // Call the method with a mock S3 URL
-        String resultUrl = pollyService.convertTextToSpeech("https://dta-root.s3.amazonaws.com/dta-speech-translation-storage/sample.txt", "test-file");
-
-        // Expected S3 file URL
-        String expectedUrl = "https://dta-root.s3.amazonaws.com/dta-speech-translation-storage/test-file.mp3";
-        assertEquals(expectedUrl, resultUrl, "S3 URL should match the expected format");
-
-        // Verify Polly was called with the correct request
-        ArgumentCaptor<SynthesizeSpeechRequest> requestCaptor = ArgumentCaptor.forClass(SynthesizeSpeechRequest.class);
-        verify(amazonPolly).synthesizeSpeech(requestCaptor.capture());
-        SynthesizeSpeechRequest capturedRequest = requestCaptor.getValue();
-
-        assertEquals("Hello, Polly!", capturedRequest.getText());
-        assertEquals("Joanna", capturedRequest.getVoiceId());
-        assertEquals("mp3", capturedRequest.getOutputFormat());
-
-        // Verify that the file was uploaded to S3
-        ArgumentCaptor<PutObjectRequest> putRequestCaptor = ArgumentCaptor.forClass(PutObjectRequest.class);
-        verify(amazonS3).putObject(putRequestCaptor.capture());
-
-        PutObjectRequest capturedPutRequest = putRequestCaptor.getValue();
-        assertEquals("dta-root", capturedPutRequest.getBucketName());
-        assertEquals("dta-speech-translation-storage/test-file.mp3", capturedPutRequest.getKey());
+    @BeforeEach
+    public void setUp() {
+        pollyService = new PollyService();
+        pollyService.amazonPolly = amazonPolly;
+        pollyService.s3Utils = s3Utils;
     }
 
     @Test
-    public void testConvertTextToSpeech_AmazonPollyFailure() {
-        // Use lenient() to avoid UnnecessaryStubbingException
-        lenient().when(amazonPolly.synthesizeSpeech(any(SynthesizeSpeechRequest.class)))
-                .thenThrow(new RuntimeException("Polly service failure"));
+    public void testSynthesizeSpeech_Success() throws IOException {
+        // Given
+        String s3Url = "s3://test-bucket/path/to/text.txt";
+        String fileName = "test-audio";
+        String expectedText = "Hello, world!";
+        String expectedS3Uri = "s3://dta-root/users/testuser/sessions/session123/audio_test-audio.mp3";
 
-        // Assert that the method throws an exception
-        Exception exception = assertThrows(Exception.class, () -> {
-            pollyService.convertTextToSpeech("Error case", "test-error");
-        });
+        // Create a temporary text file
+        Path tempTextFile = Files.createTempFile("test-text-", ".txt");
+        Files.write(tempTextFile, expectedText.getBytes());
 
-        // Verify the exception message exists
-        assertNotNull(exception.getMessage());
+        // Mock S3Utils behavior
+        when(s3Utils.downloadFileFromS3(anyString(), anyString()))
+                .thenReturn(tempTextFile.toFile());
 
-        // Verify that S3 was never called since Polly failed
-        verifyNoInteractions(amazonS3);
+        // Mock Polly behavior
+        SynthesizeSpeechResult mockResult = mock(SynthesizeSpeechResult.class);
+        when(mockResult.getAudioStream())
+                .thenReturn(new ByteArrayInputStream("audio data".getBytes()));
+        when(amazonPolly.synthesizeSpeech(any(SynthesizeSpeechRequest.class)))
+                .thenReturn(mockResult);
+
+        // Mock S3Utils upload
+        when(s3Utils.uploadFile(anyString(), anyString()))
+                .thenReturn(expectedS3Uri);
+
+        // When
+        String result = pollyService.synthesizeSpeech(s3Url, fileName);
+
+        // Then
+        assertEquals(expectedS3Uri, result);
+        verify(s3Utils).downloadFileFromS3("test-bucket", "path/to/text.txt");
+        verify(amazonPolly).synthesizeSpeech(any(SynthesizeSpeechRequest.class));
+        verify(s3Utils).uploadFile(anyString(), eq("test-audio.mp3"));
+
+        // Clean up
+        Files.deleteIfExists(tempTextFile);
     }
 
+    @Test
+    public void testSynthesizeSpeech_IOException() throws IOException {
+        // Given
+        String s3Url = "s3://test-bucket/path/to/text.txt";
+        String fileName = "test-audio";
+
+        // Mock S3Utils to throw IOException
+        when(s3Utils.downloadFileFromS3(anyString(), anyString()))
+                .thenThrow(new IOException("Test error"));
+
+        // When/Then
+        assertThrows(RuntimeException.class, () ->
+                pollyService.synthesizeSpeech(s3Url, fileName)
+        );
+
+        verify(s3Utils).downloadFileFromS3("test-bucket", "path/to/text.txt");
+        verifyNoInteractions(amazonPolly);
+    }
 }
