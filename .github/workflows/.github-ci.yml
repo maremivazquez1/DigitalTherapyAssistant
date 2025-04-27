@@ -27,6 +27,7 @@ jobs:
         with:
           name: backend-jar
           path: backend/target/*.jar
+          retention-days: 1
 
   test-backend:
     needs: build-backend
@@ -49,6 +50,7 @@ jobs:
         with:
           name: surefire-reports
           path: backend/target/surefire-reports/*.xml
+          retention-days: 1
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -71,6 +73,7 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist
+          retention-days: 1
 
   test-frontend:
     needs: build-frontend
@@ -96,3 +99,4 @@ jobs:
         with:
           name: jest-results
           path: frontend/jest-results.xml
+          retention-days: 1
