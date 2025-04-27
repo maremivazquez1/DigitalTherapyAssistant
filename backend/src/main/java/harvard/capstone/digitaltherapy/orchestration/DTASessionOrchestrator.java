@@ -12,7 +12,11 @@ import harvard.capstone.digitaltherapy.workers.AudioAnalysisWorker;
 
 import dev.langchain4j.data.segment.TextSegment;
 import org.springframework.stereotype.Service;
-
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -67,6 +71,16 @@ public class DTASessionOrchestrator implements TherapySessionService {
         ));
 
         sessionMessages.put(sessionId, messages);
+        
+        // Get the username from the current security context
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (username == null || username.isEmpty()) {
+            throw new IllegalStateException("No authenticated user found");
+        }
+        
+        // Set the session context for the message worker with the actual username
+        messageWorker.setSessionContext(sessionId, username);
+        
         return sessionId;
     }
 
@@ -81,6 +95,16 @@ public class DTASessionOrchestrator implements TherapySessionService {
         ));
 
         sessionMessages.put(sessionId, messages);
+        
+        // Get the username from the current security context
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (username == null || username.isEmpty()) {
+            throw new IllegalStateException("No authenticated user found");
+        }
+        
+        // Set the session context for the message worker with the actual username
+        messageWorker.setSessionContext(sessionId, username);
+        
         return sessionId;
     }
 
@@ -205,12 +229,19 @@ public class DTASessionOrchestrator implements TherapySessionService {
     }
 
     /**
-     * Example main method showing basic usage
-     */
-    /**
      * Example main method demonstrating various therapeutic scenarios
      */
     public static void main(String[] args) {
+        // Set up a mock security context with a test user
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+            "testuser",
+            "password",
+            List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        SecurityContext securityContext = new SecurityContextImpl();
+        securityContext.setAuthentication(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
         DTASessionOrchestrator orchestrator = new DTASessionOrchestrator();
 
         // Create a new session
