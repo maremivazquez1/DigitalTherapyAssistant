@@ -40,8 +40,6 @@ const Dashboard = () => {
               </div>
           </Link>
 
-          {/* Track Your Progress Card */}
-
           {/* Check on Your Mood Card */}
           <div className="group">
             <div className="flex flex-col justify-center p-8 bg-base-200 rounded-3xl shadow-lg opacity-50 cursor-not-allowed min-h-[200px] border border-gray-200">

@@ -7,40 +7,46 @@ interface VlogQuestionProps {
     id: number;
     content: string;
   };
+  sessionId: string;
   onChange: (questionId: number, answer: string) => void;
 }
 
-const VlogQuestion: React.FC<VlogQuestionProps> = ({ question, onChange }) => {
+const VlogQuestion: React.FC<VlogQuestionProps> = ({
+  question: { id: questionId, content },
+  sessionId,
+  onChange,
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [recording, setRecording] = useState(false);
-  const [chunks, setChunks] = useState<Blob[]>([]);
 
-  // Only connect WS when recording starts
+  // Only connect WS while recording
   const { isConnected, sendMessage } = useWebSocket(
-    "ws://localhost:8080/ws/burnout", 
+    "ws://localhost:8080/ws/burnout",
     recording
   );
 
-  // 1. getUserMedia + live preview
+  // 1. Acquire camera + mic and show live preview
   useEffect(() => {
+    let localStream: MediaStream;
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
-      .then((mediaStream) => {
-        setStream(mediaStream);
+      .then((ms) => {
+        localStream = ms;
+        setStream(ms);
         if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
+          videoRef.current.srcObject = ms;
         }
       })
       .catch((err) => console.error("Error accessing camera/mic:", err));
 
     return () => {
-      stream?.getTracks().forEach((t) => t.stop());
+      localStream?.getTracks().forEach((t) => t.stop());
     };
   }, []);
 
-  // 2. start recording
+  // 2. Start recording
   const handleStart = () => {
     if (!stream) return;
     const recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
@@ -54,26 +60,31 @@ const VlogQuestion: React.FC<VlogQuestionProps> = ({ question, onChange }) => {
       const blob = new Blob(localChunks, { type: "video/webm" });
       const videoUrl = URL.createObjectURL(blob);
 
-      // notify parent so Next button enables
-      onChange(question.id, videoUrl);
+      // Notify parent; parent’s handleAnswer will POST JSON
+      onChange(questionId, videoUrl);
 
-      // send raw blob via WebSocket
+      // Send a control message so backend knows what’s coming
       if (isConnected) {
+        sendMessage(
+          JSON.stringify({
+            type: "video_upload",
+            sessionId,
+            questionId,
+          })
+        );
+        // Then send the raw blob
         sendMessage(blob);
       } else {
         console.warn("WebSocket not connected; video not sent");
       }
-
-      setChunks([]);
     };
 
     mediaRecorderRef.current = recorder;
     recorder.start();
-    setChunks(localChunks);
     setRecording(true);
   };
 
-  // 3. stop recording
+  // 3. Stop recording
   const handleStop = () => {
     mediaRecorderRef.current?.stop();
     setRecording(false);
@@ -89,7 +100,7 @@ const VlogQuestion: React.FC<VlogQuestionProps> = ({ question, onChange }) => {
           playsInline
           className="object-cover w-full h-full"
         >
-          Your browser does not support video.
+          Your browser doesn’t support video.
         </video>
       </div>
 
@@ -102,7 +113,7 @@ const VlogQuestion: React.FC<VlogQuestionProps> = ({ question, onChange }) => {
 
       <p className="text-sm text-gray-500 mt-4">
         {recording
-          ? "Recording… click to stop."
+          ? "Recording… click again to stop."
           : "Click to start recording your response."}
       </p>
     </div>

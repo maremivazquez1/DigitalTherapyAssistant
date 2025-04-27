@@ -161,7 +161,11 @@ useEffect(() => {
         <div className="mb-10">
           {q.type === "likert" && <LikertQuestion question={q} onChange={handleAnswer} />}
           {q.type === "open_text" && <TextQuestion question={q} onChange={handleAnswer} />}
-          {q.type === "vlog" && <VlogQuestion question={q} onChange={handleAnswer} />}
+          {q.type === "vlog" && <VlogQuestion
+                                  question={q}
+                                  sessionId={sessionId!}    // pass down the session
+                                  onChange={handleAnswer}
+                                />}
         </div>
 
         <button
