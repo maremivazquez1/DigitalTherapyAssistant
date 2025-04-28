@@ -267,8 +267,7 @@ public class S3Utils {
                 return videoURL;
             }
             catch (Exception e) {
-                logger.error("Error processing binary message: {}", e.getMessage(), e);
-                return e.getMessage();
+                throw new RuntimeException("Error processing video binary message: " + e.getMessage(), e);
             }
         }
 
@@ -289,8 +288,7 @@ public class S3Utils {
                 return audioPath;
             }
             catch (Exception e) {
-                logger.error("Error processing binary message: {}", e.getMessage(), e);
-                return e.getMessage();
+                throw new RuntimeException("Error processing audio binary message: " + e.getMessage(), e);
             }
         }
     }
