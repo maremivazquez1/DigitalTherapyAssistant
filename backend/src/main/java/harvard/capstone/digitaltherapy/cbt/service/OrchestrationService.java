@@ -1,20 +1,22 @@
 package harvard.capstone.digitaltherapy.cbt.service;
 
-import dev.langchain4j.data.message.UserMessage;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.ChatMessage;
-import harvard.capstone.digitaltherapy.orchestration.MultimodalSynthesisService;
+import dev.langchain4j.data.message.UserMessage;
+import harvard.capstone.digitaltherapy.cbt.model.AnalysisResult;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
-import harvard.capstone.digitaltherapy.workers.MessageWorker;
-import harvard.capstone.digitaltherapy.workers.TextAnalysisWorker;
-import harvard.capstone.digitaltherapy.workers.VideoAnalysisWorker;
-import harvard.capstone.digitaltherapy.workers.AudioAnalysisWorker;
+import harvard.capstone.digitaltherapy.workers.*;
+import org.bsc.langgraph4j.state.AgentState;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+
 /**
  * Core orchestration component that manages the therapeutic conversation flow
  * and coordinates interactions between different system components.
@@ -24,7 +26,6 @@ public class OrchestrationService {
 
     private final TextAnalysisWorker textAnalysisWorker;
     private final MessageWorker messageWorker;
-    private final MultimodalSynthesisService synthesisService;
     private final VectorDatabaseService vectorDatabaseService;
     private final VideoAnalysisWorker videoAnalysisWorker;
     private final AudioAnalysisWorker audioAnalysisWorker;
@@ -35,7 +36,6 @@ public class OrchestrationService {
     public OrchestrationService(){
         this.textAnalysisWorker = new TextAnalysisWorker();
         this.messageWorker = new MessageWorker();
-        this.synthesisService = new MultimodalSynthesisService();
         this.vectorDatabaseService = new VectorDatabaseService();
         this.videoAnalysisWorker = new VideoAnalysisWorker();
         this.audioAnalysisWorker = new AudioAnalysisWorker();
@@ -43,14 +43,6 @@ public class OrchestrationService {
 
     public String associateSession(String sessionId) {
         List<ChatMessage> messages = new ArrayList<>();
-
-        // Add the initial system message for a CBT therapy context
-        messages.add(SystemMessage.from(
-                "You are a CBT therapist guiding a patient through a CBT session. " +
-                        "Use concise and empathetic language. Focus on helping the patient " +
-                        "identify and reframe negative thought patterns."
-        ));
-
         sessionMessages.put(sessionId, messages);
         return sessionId;
     }
@@ -90,37 +82,60 @@ public class OrchestrationService {
                 analysisFutures.add(analysisFuture);
                 modalityToFuture.put(modalityType, analysisFuture);
         });
-
 // Wait for all analysis to complete
         CompletableFuture.allOf(analysisFutures.toArray(new CompletableFuture[0])).join();
 
 // Add analysis results to conversation history
+        Map<String, Object> workerResponse = new HashMap<>();
         modalityToFuture.forEach((modalityType, future) -> {
             Object analysisResult = future.join();
             // Convert the analysis result to an appropriate message format
-            String analysisContent = switch (modalityType.toLowerCase()) {
+            switch (modalityType.toLowerCase()) {
                 case "text" -> {
-                    @SuppressWarnings("unchecked")
+                    Map<String, Object> textInsights= new HashMap<>();
                     Map<String, Object> textAnalysis = (Map<String, Object>) analysisResult;
-                    yield convertTextAnalysisToString(textAnalysis);  // You'll need to implement this
+                    textInsights.put("wordsAnalysis", textAnalysis.getOrDefault("emotion","no analysis"));
+                    workerResponse.put("textInsights", textInsights);
                 }
                 case "video" -> {
-                    // Convert video analysis result to string
-                    yield String.valueOf(analysisResult);
+                    Map<String, Object> videoInsights = new HashMap<>();
+                    try {
+                        ObjectMapper objectMapper = new ObjectMapper();
+                        Map<String, Object> analysisMap = (Map<String, Object>) analysisResult;
+                        JsonNode jsonNode = objectMapper.readTree(analysisMap.get("videoAnalysis").toString());
+                        videoInsights.put("facialAnalysis", jsonNode.toString());
+                    } catch (JsonProcessingException e) {
+                        videoInsights.put("facialAnalysis", "Error analyzing facial expressions");
+                    }
+                    workerResponse.put("videoInsights", videoInsights);
                 }
+
                 case "audio" -> {
-                    // Convert audio analysis result to string
-                    yield String.valueOf(analysisResult);
+                    Map<String, Object> voiceInsights = new HashMap<>();
+                    try {
+                        ObjectMapper objectMapper = new ObjectMapper();
+                        Map<String, Object> analysisMap = (Map<String, Object>) analysisResult;
+                        JsonNode jsonNode = objectMapper.readTree(analysisMap.get("audioAnalysis").toString());
+                        voiceInsights.put("toneAnalysis", jsonNode.toString());
+                    } catch (JsonProcessingException e) {
+                        voiceInsights.put("toneAnalysis", "Error analyzing audio");
+                    }
+                    workerResponse.put("voiceInsights", voiceInsights);
                 }
-                default -> "Unsupported modality type: " + modalityType;
             };
-            vectorDatabaseService.indexSessionMessage(sessionId, "user", analysisContent, false);
-            messages.add(UserMessage.from(analysisContent));
+            vectorDatabaseService.indexSessionMessage(sessionId, "user", convertTextAnalysisToString(workerResponse), false);
         });
-        // 5. Generate the response using the MessageWorker
+        // Create AgentState with this initial map
+        AgentState state = new AgentState(workerResponse);
+        // Instantiate the node
+        MultiModalSynthesizer node = new MultiModalSynthesizer();
+        // Apply the node
+        Map<String, Object> result = node.apply(state);
+        // Retrieve and print the final Analysis
+        AnalysisResult analysis = (AnalysisResult) result.get("multimodalAnalysis");
+        // 5. Generate the subsequent prompt using the MessageWorker
+        messages.add(UserMessage.from(analysis.toString()));
         String response = messageWorker.generateResponse(messages);
-        // 6. Add the assistant's response to the conversation history
-        messages.add(SystemMessage.from(response));
         vectorDatabaseService.indexSessionMessage(sessionId, "user", response, false);
         return response;
     }

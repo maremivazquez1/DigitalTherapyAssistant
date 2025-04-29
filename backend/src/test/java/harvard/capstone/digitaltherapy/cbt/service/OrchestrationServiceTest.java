@@ -1,12 +1,6 @@
 package harvard.capstone.digitaltherapy.cbt.service;
 
 import dev.langchain4j.data.message.ChatMessage;
-import harvard.capstone.digitaltherapy.orchestration.MultimodalSynthesisService;
-import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
-import harvard.capstone.digitaltherapy.workers.AudioAnalysisWorker;
-import harvard.capstone.digitaltherapy.workers.MessageWorker;
-import harvard.capstone.digitaltherapy.workers.TextAnalysisWorker;
-import harvard.capstone.digitaltherapy.workers.VideoAnalysisWorker;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
