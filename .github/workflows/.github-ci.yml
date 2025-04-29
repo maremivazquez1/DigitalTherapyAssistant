@@ -42,7 +42,6 @@ jobs:
           path: ~/.m2/repository
           key: m2-${{ hashFiles('**/pom.xml') }}
       - name: Run unit tests
-        id: run-tests
         run: |
           cd backend
           mvn $MAVEN_CLI_OPTS test -Dnet.bytebuddy.experimental=true
@@ -53,9 +52,6 @@ jobs:
           name: surefire-reports
           path: backend/target/surefire-reports/*.xml
           retention-days: 1
-      - name: Mark optional tests as neutral
-        if: ${{ steps.run-tests.outcome == 'failure' }}
-        run: exit 78
 
   build-frontend:
     runs-on: ubuntu-latest
