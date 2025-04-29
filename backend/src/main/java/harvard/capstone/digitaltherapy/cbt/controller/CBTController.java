@@ -11,7 +11,6 @@ import harvard.capstone.digitaltherapy.aws.service.PollyService;
 import harvard.capstone.digitaltherapy.aws.service.TranscribeService;
 import harvard.capstone.digitaltherapy.cbt.service.CBTHelper;
 import harvard.capstone.digitaltherapy.llm.service.S3StorageService;
-import harvard.capstone.digitaltherapy.orchestration.DTASessionOrchestrator;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -26,12 +25,9 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
-import ws.schild.jave.*;
 import ws.schild.jave.encode.AudioAttributes;
 import ws.schild.jave.encode.EncodingAttributes;
 import ws.schild.jave.encode.VideoAttributes;
-import ws.schild.jave.process.ffmpeg.DefaultFFMPEGLocator;
-
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -47,7 +43,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 @Controller
 public class CBTController {
     private static final Logger logger = LoggerFactory.getLogger(CBTController.class);
