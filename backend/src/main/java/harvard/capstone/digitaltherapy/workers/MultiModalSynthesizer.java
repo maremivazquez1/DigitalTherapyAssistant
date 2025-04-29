@@ -44,18 +44,14 @@ public class MultiModalSynthesizer implements NodeAction<AgentState> {
     public Map<String, Object> apply(AgentState state) {
         // Retrieve the underlying data map from AgentState (assumes AgentState provides data()).
         Map<String, Object> data = state.data();
-
-        // Extract modality outputs from data (assuming they are stored as maps).
-        @SuppressWarnings("unchecked")
         Map<String, Object> textInsights = (Map<String, Object>) data.get("textInsights");
-        @SuppressWarnings("unchecked")
+        String textAnalysis= (String) textInsights.get("wordsAnalysis");
         Map<String, Object> voiceInsights = (Map<String, Object>) data.get("voiceInsights");
-        @SuppressWarnings("unchecked")
+        String toneAnalysis= (String) voiceInsights.get("toneAnalysis");
         Map<String, Object> videoInsights = (Map<String, Object>) data.get("videoInsights");
-
+        String facialAnalysis= (String) videoInsights.get("facialAnalysis");
         // Build the final prompt string.
-        String finalPrompt = buildPrompt(textInsights, voiceInsights, videoInsights);
-
+        String finalPrompt = buildPrompt(textAnalysis, toneAnalysis, facialAnalysis);
         // Create a list of ChatMessage objects. We'll have a system message and a user message.
         List<ChatMessage> messages = List.of(
                 SystemMessage.from("You are an expert in psychological analysis and data interpretation. Follow the instructions below."),
@@ -77,22 +73,17 @@ public class MultiModalSynthesizer implements NodeAction<AgentState> {
     /**
      * Builds a textual prompt, referencing the modality scores.
      */
-    private String buildPrompt(
-            Map<String, Object> textInsights,
-            Map<String, Object> voiceInsights,
-            Map<String, Object> videoInsights
+    public String buildPrompt(
+            String textInsights,
+            String voiceInsights,
+            String videoInsights
     ) {
-        double textScore  = getScore(textInsights,  "wordScore");
-        double voiceScore = getScore(voiceInsights, "audioScore");
-        double videoScore = getScore(videoInsights, "videoScore");
-
         String prompt = ""
                 + "You are an expert in psychological analysis and data interpretation.\n"
-                + "We have three scores representing a person's emotional expression:\n\n"
-                + " - Words: " + String.format("%.2f", textScore) + "\n"
-                + " - Tone: " + String.format("%.2f", voiceScore) + "\n"
-                + " - Facial Expression: " + String.format("%.2f", videoScore) + "\n\n"
-                + "All scores range from 0 to 1.\n\n"
+                + "We have three analysis representing a person's emotional expression:\n\n"
+                + " - Speech Text Analysis: " + textInsights+ "\n"
+                + " - Tone Analysis: " + voiceInsights + "\n"
+                + " - Facial Expression Analysis: " + videoInsights + "\n\n"
                 + "Task:\n"
                 + "  1. Compute a Congruence Score (0-1) by evaluating the alignment of these three scores.\n"
                 + "  2. Determine the Dominant Emotion from these inputs, with justification.\n"
@@ -111,7 +102,7 @@ public class MultiModalSynthesizer implements NodeAction<AgentState> {
     /**
      * Utility method to extract a numeric score from a map by key.
      */
-    private double getScore(Map<String, Object> map, String key) {
+    public double getScore(Map<String, Object> map, String key) {
         if (map != null && map.get(key) instanceof Number) {
             return ((Number) map.get(key)).doubleValue();
         }
@@ -120,7 +111,7 @@ public class MultiModalSynthesizer implements NodeAction<AgentState> {
     /**
      * Parses the LLM's JSON response into an Analysis object.
      */
-    private AnalysisResult parseLLMResponse(String jsonResponse) {
+    public AnalysisResult parseLLMResponse(String jsonResponse) {
         AnalysisResult analysis = new AnalysisResult();
         try {
             // Trim whitespace

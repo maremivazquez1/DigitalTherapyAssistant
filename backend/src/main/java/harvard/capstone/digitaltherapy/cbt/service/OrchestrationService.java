@@ -43,14 +43,6 @@ public class OrchestrationService {
 
     public String associateSession(String sessionId) {
         List<ChatMessage> messages = new ArrayList<>();
-
-        // Add the initial system message for a CBT therapy context
-        messages.add(SystemMessage.from(
-                "You are a CBT therapist guiding a patient through a CBT session. " +
-                        "Use concise and empathetic language. Focus on helping the patient " +
-                        "identify and reframe negative thought patterns."
-        ));
-
         sessionMessages.put(sessionId, messages);
         return sessionId;
     }
@@ -102,10 +94,8 @@ public class OrchestrationService {
                 case "text" -> {
                     Map<String, Object> textInsights= new HashMap<>();
                     Map<String, Object> textAnalysis = (Map<String, Object>) analysisResult;
-                    textInsights.put("wordScore", textAnalysis.getOrDefault("emotionConfidence",0.80));
                     textInsights.put("wordsAnalysis", textAnalysis.getOrDefault("emotion","no analysis"));
                     workerResponse.put("textInsights", textInsights);
-                    //yield convertTextAnalysisToString(workerResponse);  // You'll need to implement this
                 }
                 case "video" -> {
                     Map<String, Object> videoInsights = new HashMap<>();
@@ -113,33 +103,11 @@ public class OrchestrationService {
                         ObjectMapper objectMapper = new ObjectMapper();
                         Map<String, Object> analysisMap = (Map<String, Object>) analysisResult;
                         JsonNode jsonNode = objectMapper.readTree(analysisMap.get("videoAnalysis").toString());
-                        // Calculate average confidence score
-                        double totalConfidence = 0.0;
-                        int count = 0;
-                        // Get the faces array
-                        JsonNode facesNode = jsonNode.get("faces");
-                        if (facesNode != null && facesNode.isArray()) {
-                            for (JsonNode faceFrame : facesNode) {
-                                JsonNode face = faceFrame.get("face");
-                                if (face != null) {
-                                    // Add confidence score
-                                    totalConfidence += face.get("confidence").asDouble();
-                                    count++;
-                                }
-                            }
-                        }
-                        // Calculate average score
-                        double averageScore = count > 0 ? totalConfidence / count : 0.0;
-                        // Set the video score (normalized to 0-1 range)
-                        videoInsights.put("videoScore", averageScore / 100.0);
-                        // Set the entire analysis as facial analysis
                         videoInsights.put("facialAnalysis", jsonNode.toString());
                     } catch (JsonProcessingException e) {
-                        videoInsights.put("videoScore", 0.0);
                         videoInsights.put("facialAnalysis", "Error analyzing facial expressions");
                     }
                     workerResponse.put("videoInsights", videoInsights);
-                    //yield convertTextAnalysisToString(videoInsights);
                 }
 
                 case "audio" -> {
@@ -148,49 +116,8 @@ public class OrchestrationService {
                         ObjectMapper objectMapper = new ObjectMapper();
                         Map<String, Object> analysisMap = (Map<String, Object>) analysisResult;
                         JsonNode jsonNode = objectMapper.readTree(analysisMap.get("audioAnalysis").toString());
-                        // Extract confidence scores
-                        double totalConfidence = 0.0;
-                        int count = 0;
-                        // Since the response is an array, get the first element
-                        if (jsonNode.isArray() && jsonNode.size() > 0) {
-                            JsonNode firstAnalysis = jsonNode.get(0);
-                            // Navigate to prosody confidence
-                            if (firstAnalysis.has("results") &&
-                                    firstAnalysis.get("results").has("predictions") &&
-                                    firstAnalysis.get("results").get("predictions").isArray()) {
-
-                                JsonNode prediction = firstAnalysis.get("results").get("predictions").get(0);
-                                if (prediction.has("models") && prediction.get("models").has("prosody")) {
-                                    JsonNode prosody = prediction.get("models").get("prosody");
-
-                                    // Get overall confidence from metadata
-                                    if (prosody.has("metadata") && prosody.get("metadata").has("confidence")) {
-                                        totalConfidence += prosody.get("metadata").get("confidence").asDouble();
-                                        count++;
-                                    }
-                                    // Get confidence from individual predictions
-                                    if (prosody.has("grouped_predictions") && prosody.get("grouped_predictions").isArray()) {
-                                        for (JsonNode group : prosody.get("grouped_predictions")) {
-                                            if (group.has("predictions") && group.get("predictions").isArray()) {
-                                                for (JsonNode pred : group.get("predictions")) {
-                                                    if (pred.has("confidence")) {
-                                                        totalConfidence += pred.get("confidence").asDouble();
-                                                        count++;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        // Calculate average confidence score
-                        double averageScore = count > 0 ? totalConfidence / count : 0.0;
-                        voiceInsights.put("audioScore", averageScore);
                         voiceInsights.put("toneAnalysis", jsonNode.toString());
-
                     } catch (JsonProcessingException e) {
-                        voiceInsights.put("audioScore", 0.0);
                         voiceInsights.put("toneAnalysis", "Error analyzing audio");
                     }
                     workerResponse.put("voiceInsights", voiceInsights);
@@ -206,9 +133,7 @@ public class OrchestrationService {
         Map<String, Object> result = node.apply(state);
         // Retrieve and print the final Analysis
         AnalysisResult analysis = (AnalysisResult) result.get("multimodalAnalysis");
-        System.out.println("Multimodal Analysis: " + analysis);
-        // 5. Generate the response using the MessageWorker
-        messages.add(UserMessage.from(convertTextAnalysisToString(workerResponse)));
+        // 5. Generate the subsequent prompt using the MessageWorker
         messages.add(UserMessage.from(analysis.toString()));
         String response = messageWorker.generateResponse(messages);
         vectorDatabaseService.indexSessionMessage(sessionId, "user", response, false);

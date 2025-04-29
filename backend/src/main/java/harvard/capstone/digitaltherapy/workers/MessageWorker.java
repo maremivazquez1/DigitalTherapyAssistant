@@ -29,13 +29,6 @@ public class MessageWorker {
                 .topP(0.95)
                 .maxOutputTokens(300)
                 .build();
-
-        /*OpenAiChatModel model = OpenAiChatModel.builder()
-                .baseUrl("http://langchain4j.dev/demo/openai/v1")
-                //.apiKey("demo") comment this line out
-                .modelName("gpt-4o-mini")
-                .build();
-*/
     }
 
     public void setSessionContext(String sessionId, String userId) {
@@ -72,8 +65,8 @@ public class MessageWorker {
                 }
             }
         }
-
-        ChatResponse response = chatModel.chat(messages);
+        String formatted_prompt= buildPrompt(lastUserMessage);
+        ChatResponse response = chatModel.chat(UserMessage.from(formatted_prompt));
 
         if (userId != null && sessionId != null) {
             vectorDatabaseService.indexSessionMessage(
@@ -82,6 +75,27 @@ public class MessageWorker {
 
         return response.aiMessage().text();
     }
+
+    public String buildPrompt(String synthesizerAnalysis) {
+        String prompt = ""
+                + "You are an empathetic AI therapeutic assistant trained in cognitive behavioral therapy techniques.\n"
+                + "Based on the multimodal analysis (text, audio, and video) of the patient's response: " + synthesizerAnalysis + "\n\n"
+                + "Task:\n"
+                + "1. Analyze the emotional state and provide a therapeutic response that:\n"
+                + "   - Demonstrates active listening and understanding\n"
+                + "   - Uses validation and normalization techniques\n"
+                + "   - Maintains a warm and supportive tone\n\n"
+                + "2. Structure the therapeutic intervention to:\n"
+                + "   - Address any identified cognitive distortions\n"
+                + "   - Encourage self-reflection\n"
+                + "   - Promote healthy coping strategies\n\n"
+                + "3. Ensure the response is:\n"
+                + "   - Person-centered and individualized\n"
+                + "   - Non-judgmental and supportive\n"
+                + "   - Clear and easy to understand\n\n";
+        return prompt;
+    }
+
 
     private List<String> extractDistortionsFromMessages(List<ChatMessage> messages) {
         for (ChatMessage message : messages) {
@@ -101,4 +115,5 @@ public class MessageWorker {
         }
         return Collections.emptyList();
     }
+
 }
