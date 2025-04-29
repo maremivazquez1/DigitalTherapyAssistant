@@ -110,16 +110,11 @@ class MultiModalSynthesizerTest {
 
     @Test
     void testBuildPromptWithValidData() {
-        Map<String, Object> textMap = new HashMap<>();
-        textMap.put("wordScore", 0.8);
+        String textAnalysis = "{\"wordScore\": 0.8}";
+        String voiceAnalysis = "{\"audioScore\": 0.9}";
+        String videoAnalysis = "{\"videoScore\": 0.7}";
 
-        Map<String, Object> voiceMap = new HashMap<>();
-        voiceMap.put("audioScore", 0.9);
-
-        Map<String, Object> videoMap = new HashMap<>();
-        videoMap.put("videoScore", 0.7);
-
-        String prompt = synthesizer.buildPrompt(textMap, voiceMap, videoMap);
+        String prompt = synthesizer.buildPrompt(textAnalysis, voiceAnalysis, videoAnalysis);
 
         assertNotNull(prompt);
         assertTrue(prompt.contains("Words: 0.80"));
