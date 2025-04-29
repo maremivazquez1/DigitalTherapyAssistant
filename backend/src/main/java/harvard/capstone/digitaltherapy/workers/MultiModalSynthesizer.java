@@ -73,31 +73,56 @@ public class MultiModalSynthesizer implements NodeAction<AgentState> {
     /**
      * Builds a textual prompt, referencing the modality scores.
      */
-    public String buildPrompt(
-            String textInsights,
-            String voiceInsights,
-            String videoInsights
-    ) {
+    public String buildPrompt(String textInsights, String voiceInsights, String videoInsights) {
         String prompt = ""
-                + "You are an expert in psychological analysis and data interpretation.\n"
-                + "We have three analysis representing a person's emotional expression:\n\n"
-                + " - Speech Text Analysis: " + textInsights+ "\n"
-                + " - Tone Analysis: " + voiceInsights + "\n"
-                + " - Facial Expression Analysis: " + videoInsights + "\n\n"
-                + "Task:\n"
-                + "  1. Compute a Congruence Score (0-1) by evaluating the alignment of these three scores.\n"
-                + "  2. Determine the Dominant Emotion from these inputs, with justification.\n"
-                + "  3. Identify any Cognitive Distortions (e.g., 'all-or-nothing thinking', 'catastrophizing').\n"
-                + "  4. Provide a detailed Interpretation of these results.\n"
-                + "  5. Generate a list of Follow-Up Prompts for further exploration.\n\n"
-                + "Return the result in JSON format with these keys:\n"
-                + "  - congruenceScore\n"
-                + "  - dominantEmotion\n"
-                + "  - cognitiveDistortions\n"
-                + "  - interpretation\n"
-                + "  - followUpPrompts\n";
+                + "You are an expert in multimodal psychological analysis, specializing in synthesizing insights from verbal, vocal, and visual emotional expressions.\n\n"
+                + "Analyze these three modalities of emotional expression:\n"
+                + "1. TEXT ANALYSIS (verbal content):\n" + textInsights + "\n"
+                + "2. VOICE ANALYSIS (prosodic features):\n" + voiceInsights + "\n"
+                + "3. FACIAL ANALYSIS (visual expressions):\n" + videoInsights + "\n\n"
+                + "Tasks for Holistic Analysis:\n\n"
+                + "1. Congruence Evaluation:\n"
+                + "   - Calculate a congruence score (0-1) measuring alignment across modalities\n"
+                + "   - 0: completely misaligned expressions\n"
+                + "   - 1: perfect alignment across all modalities\n"
+                + "   - Consider intensity, valence, and temporal patterns\n\n"
+                + "2. Emotional Assessment:\n"
+                + "   - Identify the dominant emotion with confidence level\n"
+                + "   - Support with evidence from each modality\n"
+                + "   - Note any significant emotional conflicts\n\n"
+                + "3. Cognitive Pattern Analysis:\n"
+                + "   - Identify cognitive distortions present in verbal content\n"
+                + "   - Cross-reference with emotional markers in voice and face\n"
+                + "   - List specific examples supporting each distortion\n\n"
+                + "4. Synthesized Interpretation:\n"
+                + "   - Provide comprehensive analysis of emotional state\n"
+                + "   - Highlight patterns of consistency or discrepancy\n"
+                + "   - Note any potential masked or suppressed emotions\n\n"
+                + "5. Clinical Implications:\n"
+                + "   - Generate relevant follow-up areas for exploration\n"
+                + "   - Focus on areas of emotional incongruence\n"
+                + "   - Consider therapeutic priorities\n\n"
+                + "Return a JSON response with:\n"
+                + "{\n"
+                + "  \"congruenceScore\": <float 0-1>,\n"
+                + "  \"dominantEmotion\": {\n"
+                + "    \"emotion\": <string>,\n"
+                + "    \"confidence\": <float 0-1>,\n"
+                + "    \"evidence\": <array of supporting points>\n"
+                + "  },\n"
+                + "  \"cognitiveDistortions\": [\n"
+                + "    {\n"
+                + "      \"type\": <string>,\n"
+                + "      \"evidence\": <string>,\n"
+                + "      \"modalitySource\": <array of modalities>\n"
+                + "    }\n"
+                + "  ],\n"
+                + "  \"interpretation\": <detailed analysis string>,\n"
+                + "  \"followUpPrompts\": <array of strings>\n"
+                + "}\n";
         return prompt;
     }
+
 
     /**
      * Utility method to extract a numeric score from a map by key.
