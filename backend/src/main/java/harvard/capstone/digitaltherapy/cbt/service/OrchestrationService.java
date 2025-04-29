@@ -41,16 +41,18 @@ public class OrchestrationService {
         this.audioAnalysisWorker = new AudioAnalysisWorker();
     }
 
+    public void setSessionContext(String sessionId, String userId) {
+        messageWorker.setSessionContext(sessionId, userId);
+    }
+
     public String associateSession(String sessionId) {
         List<ChatMessage> messages = new ArrayList<>();
-
         // Add the initial system message for a CBT therapy context
         messages.add(SystemMessage.from(
                 "You are a CBT therapist guiding a patient through a CBT session. " +
                         "Use concise and empathetic language. Focus on helping the patient " +
                         "identify and reframe negative thought patterns."
         ));
-
         sessionMessages.put(sessionId, messages);
         return sessionId;
     }
