@@ -11,8 +11,6 @@
  * - Logout users by clearing authentication data (`logout`).
  * - Retrieve authentication tokens (`getAuthToken`).
  * - Check if a user is authenticated (`isAuthenticated`).
- * - Refresh authentication tokens if supported (`refreshToken`).
- * - Handle authentication-related errors (`handleAuthError`).
  */
 
 import api from '../config/axiosConfig';
@@ -54,34 +52,4 @@ export const getAuthToken = (): string | null => {
 export const isAuthenticated = (): boolean => {
   const token = localStorage.getItem('token');
   return !!token && token !== 'undefined';
-};
-
-/**
- * Attempts to refresh the authentication token.
- * If the refresh fails, the user is logged out.
- */
-export const refreshToken = async (): Promise<AuthResponse | null> => {
-  try {
-    const response = await api.post<AuthResponse>('/auth/refresh');
-    localStorage.setItem('token', response.data.token);
-    return response.data;
-  } catch (error: unknown) {
-    logout(); // Logout if refresh fails
-    handleAuthError(error);
-    return null;
-  }
-};
-
-/**
- * Centralized error handling for authentication requests.
- */
-const handleAuthError = (error: unknown): string => {
-  if (error instanceof Error) {
-    return error.message;
-  } else if (typeof error === "object" && error !== null && "response" in error) {
-    const axiosError = error as { response?: { data?: { message?: string } } };
-    return axiosError.response?.data?.message || "Authentication error";
-  } else {
-    return "An unknown authentication error occurred";
-  }
 };

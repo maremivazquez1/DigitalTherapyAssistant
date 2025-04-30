@@ -54,6 +54,21 @@ if [ -d "$BACKEND_DIR" ]; then
         brew services start mysql
     fi
 
+
+    # Redis Setup
+    echo "🔍 Checking Redis..."
+    if command -v redis-server &> /dev/null; then
+        echo "🔄 Redis is already installed. Updating..."
+        brew upgrade redis || echo "✅ Redis is already up to date."
+    else
+        echo "📥 Installing Redis..."
+        brew install redis
+    fi
+
+    # Start Redis service
+    echo "🚀 Starting Redis service..."
+    brew services start redis || echo "✅ Redis service is already running."
+
     # Verify installations
     echo "✅ Verifying installations..."
     java -version
