@@ -25,20 +25,12 @@ import java.io.IOException;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.nio.ByteBuffer;
-import org.springframework.web.socket.BinaryMessage;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import org.mockito.MockitoAnnotations;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import harvard.capstone.digitaltherapy.llm.service.S3StorageService;
-import harvard.capstone.digitaltherapy.orchestration.DTASessionOrchestrator;
-
 @ExtendWith(MockitoExtension.class)
 class CBTControllerTest {
 
