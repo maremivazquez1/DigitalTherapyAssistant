@@ -3,7 +3,7 @@ package harvard.capstone.digitaltherapy.cbt.service;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
-import harvard.capstone.digitaltherapy.orchestration.MultimodalSynthesisService;
+import harvard.capstone.digitaltherapy.workers.MultiModalSynthesizer;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
 import harvard.capstone.digitaltherapy.workers.AudioAnalysisWorker;
 import harvard.capstone.digitaltherapy.workers.MessageWorker;
