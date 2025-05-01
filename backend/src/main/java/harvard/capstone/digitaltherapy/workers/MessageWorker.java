@@ -11,6 +11,8 @@ import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -23,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class MessageWorker {
 
+    private static final Logger logger = LoggerFactory.getLogger(MessageWorker.class);
     private final ChatLanguageModel chatModel;
     private final VectorDatabaseService vectorDatabaseService;
     private final Map<String, ChatMemory> sessionMemories;
@@ -60,7 +63,7 @@ public class MessageWorker {
 
         ChatMemory chatMemory = sessionMemories.get(sessionId);
         if (chatMemory == null) {
-            throw new IllegalStateException("No chat memory found for session: " + sessionId);
+            logger.warn("No chat memory found for session: {}", sessionId);
         }
 
         // Add messages to chat memory
