@@ -78,11 +78,11 @@ if [ -d "$BACKEND_DIR" ]; then
 
     # MySQL Setup
     echo "🛠️ Configuring MySQL..."
-    mysql -u root -p <<EOF
+    mysql -u root <<EOF
 CREATE DATABASE IF NOT EXISTS cbt;
 USE cbt;
-DROP TABLE users;
-CREATE TABLE IF NOT EXISTS users (
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
@@ -108,7 +108,7 @@ EOF
 
     # Build and run backend
     echo "🚀 Building the backend..."
-    mvn clean install
+    mvn clean install -Dnet.bytebuddy.experimental=true
     echo "✅ Backend setup complete."
 
     cd ..
