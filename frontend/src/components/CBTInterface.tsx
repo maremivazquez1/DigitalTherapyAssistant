@@ -159,6 +159,19 @@ const CBTInterface: React.FC = () => {
       const audioOnlyStream = new MediaStream([audioTrack]);
       const videoOnlyStream = new MediaStream([videoTrack]);
 
+      // === Front-end VAD setup (RMS) ===
+      const audioCtx = new AudioContext();
+      const sourceNode = audioCtx.createMediaStreamSource(audioOnlyStream);
+      const analyser = audioCtx.createAnalyser();
+      sourceNode.connect(analyser);
+      const dataArray = new Float32Array(analyser.fftSize);
+      function getRMS(): number {
+        analyser.getFloatTimeDomainData(dataArray);
+        let sum = 0;
+        for (let v of dataArray) sum += v * v;
+        return Math.sqrt(sum / dataArray.length);
+      }
+
       // Setup Audio Recorder
       const audioRecorder = new MediaRecorder(audioOnlyStream);
       audioChunksRef.current = [];
@@ -234,7 +247,12 @@ const CBTInterface: React.FC = () => {
           console.warn("Already awaiting response; ignoring new user speech.");
           return;
         }
-        console.log("[Hark] speaking");
+        const rms = getRMS();
+        if (rms < 0.02) {
+          console.log("[VAD] below RMS threshold, probably noise:", rms);
+          return;
+        }
+        console.log("[Hark] speaking, RMS:", rms);
         if (ttsAudioRef.current) {
           ttsAudioRef.current.pause();
         }
