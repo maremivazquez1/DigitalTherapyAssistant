@@ -51,40 +51,54 @@ If you prefer to install everything manually, follow the steps below.
 
 ### 1️⃣ Manual Backend Setup (if not using setup.sh)
 #### **Install Dependencies**
-```bash
-brew install openjdk maven mysql
-brew services start mysql
-```
-#### **Database Setup**
-```bash
-mysql -u root -p
-CREATE DATABASE cbt;
-USE cbt;
-```
-#### **Run Backend**
-```bash
-cd backend
-mvn clean install
-mvn spring-boot:run
-```
+# 1. Install via Homebrew
+brew update
+brew install openjdk maven mysql redis ffmpeg
 
+# 2. Start services
+brew services start mysql
+brew services start redis
+
+# 3. Configure MySQL schema
+mysql -u root <<EOF
+CREATE DATABASE IF NOT EXISTS cbt;
+USE cbt;
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (
+  user_id       INT AUTO_INCREMENT PRIMARY KEY,
+  email         VARCHAR(255) NOT NULL UNIQUE,
+  password      VARCHAR(255) NOT NULL,
+  first_name    VARCHAR(255),
+  last_name     VARCHAR(255),
+  phone         VARCHAR(20),
+  date_of_birth DATE,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+EOF
+
+# 4. Build and run
+cd backend
+mvn clean install -Dnet.bytebuddy.experimental=true
+mvn spring-boot:run
 ---
 
 ### 2️⃣ Manual Frontend Setup (if not using setup.sh)
 #### **Install Dependencies**
-```bash
 cd frontend
-npm install
-npm install tailwindcss @tailwindcss/vite daisyui
-```
-#### **Run Frontend**
-```bash
-npm run dev
-```
 
+# 1. Install Node.js if needed
+brew install node
+
+# 2. Install dependencies
+npm install
+npm install tailwindcss @tailwindcss/vite daisyui vite --save-dev
+
+# 3. Run dev server
+npm run dev
 ---
 
-## 🔥 Features
+## 🔥 Planned Features
 
 - 📊 **AI-powered CBT sessions**
 - 🗣️ **Voice-based interaction**
@@ -110,7 +124,13 @@ npm run dev
 
 ## 🚀 Deployment
 
-_Coming soon..._
+Using Terraform to deploy on AWS. Terraform deploys backend on EC2 instance and React on Amplify with a load balancer in between to redirect HTTPs traffic from the frontend to the backend. The terraform configuration is located in the 'pipeline' branch and updates to it will trigger a pipeline to deploy.
+Github contains the Terraform .yml that will need the following AWS and LLM keys:
+'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION', 'GEMINI_API_KEY' and 'HUME_API_KEY'.
+
+Deploying requires the use of Amazon Certificate Manager (ACM).
+
+There are no issues with initial deployment, but re-deploying requires removing the 'target' that the load balancer is targetting. This can be done by de-registering the target in the AWS load balancer page (in EC2 section) and removing the target.
 
 ---
 
