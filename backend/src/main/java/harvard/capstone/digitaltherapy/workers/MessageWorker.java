@@ -6,19 +6,30 @@ import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
-import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.memory.ChatMemory;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
+@Component
 public class MessageWorker {
 
+    private static final Logger logger = LoggerFactory.getLogger(MessageWorker.class);
     private final ChatLanguageModel chatModel;
-    private final VectorDatabaseService vectorDatabaseService = new VectorDatabaseService();
+    private final VectorDatabaseService vectorDatabaseService;
+    private final Map<String, ChatMemory> sessionMemories;
     private String sessionId;
     private String userId;
 
     public MessageWorker() {
+        this.vectorDatabaseService = new VectorDatabaseService();
+        this.sessionMemories = new ConcurrentHashMap<>();
         this.chatModel = GoogleAiGeminiChatModel.builder()
                 .apiKey(System.getenv("GEMINI_API_KEY"))
                 .modelName("gemini-1.5-flash")
@@ -31,9 +42,30 @@ public class MessageWorker {
     public void setSessionContext(String sessionId, String userId) {
         this.sessionId = sessionId;
         this.userId = userId;
+        
+        // Initialize or get existing chat memory for this session
+        sessionMemories.computeIfAbsent(sessionId, k -> 
+            MessageWindowChatMemory.builder()
+                .maxMessages(20) // Keep last 20 messages in memory
+                .build()
+        );
     }
 
     public String generateResponse(List<ChatMessage> messages) {
+        if (sessionId == null || userId == null) {
+            throw new IllegalStateException("Session context not set");
+        }
+
+        ChatMemory chatMemory = sessionMemories.get(sessionId);
+        if (chatMemory == null) {
+            logger.warn("No chat memory found for session: {}", sessionId);
+        }
+
+        // Add messages to chat memory
+        for (ChatMessage message : messages) {
+            chatMemory.add(message);
+        }
+
         String lastUserMessage = "";
         for (int i = messages.size() - 1; i >= 0; i--) {
             if (messages.get(i) instanceof UserMessage) {
@@ -41,12 +73,12 @@ public class MessageWorker {
                 break;
             }
         }
-        Map<String, Double> sessionHistory=  vectorDatabaseService.findSimilarSessions(userId,lastUserMessage, 10);
+        Map<String, Double> sessionHistory = vectorDatabaseService.findSimilarSessions(userId, lastUserMessage, 10);
         if (userId != null && sessionId != null && !lastUserMessage.isEmpty()) {
             String relevantContext = vectorDatabaseService.buildContextForPrompt(
                 sessionId, userId, lastUserMessage, 3);
             if (!relevantContext.isEmpty()) {
-                messages.add(SystemMessage.from(
+                chatMemory.add(SystemMessage.from(
                     "Consider this relevant information from previous sessions: " + relevantContext));
             }
             List<String> cognitiveDistortions = extractDistortionsFromMessages(messages);
@@ -55,18 +87,27 @@ public class MessageWorker {
                     vectorDatabaseService.findRelevantInterventions(cognitiveDistortions, 2);
 
                 if (!relevantInterventions.isEmpty()) {
-                    messages.add(SystemMessage.from(
+                    chatMemory.add(SystemMessage.from(
                         "Consider these therapeutic approaches: " + String.join("; ", relevantInterventions)));
                 }
             }
         }
-        String formatted_prompt= buildPrompt(lastUserMessage,sessionHistory);
-        ChatResponse response = chatModel.chat(UserMessage.from(formatted_prompt));
+        List<ChatMessage> context = new ArrayList<>();
 
-        if (userId != null && sessionId != null) {
-            vectorDatabaseService.indexSessionMessage(
-                sessionId, userId, response.aiMessage().text(), false);
-        }
+        // Add prompt first for most relevant context
+        context.add(SystemMessage.from(buildPrompt(lastUserMessage, sessionHistory)));
+
+        // Add history
+        context.addAll(chatMemory.messages());
+
+        ChatResponse response = chatModel.chat(context);
+        String responseText = response.aiMessage().text();
+
+        // Add the response to chat memory
+        chatMemory.add(response.aiMessage());
+
+        // Index the response in vector database
+        vectorDatabaseService.indexSessionMessage(sessionId, userId, responseText, false);
 
         return response.aiMessage().text();
     }

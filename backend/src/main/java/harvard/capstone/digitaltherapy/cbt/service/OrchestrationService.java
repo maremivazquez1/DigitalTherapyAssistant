@@ -32,6 +32,7 @@ public class OrchestrationService {
 
     // Simple in-memory session tracking (would use Redis in production)
     private final Map<String, List<ChatMessage>> sessionMessages = new HashMap<>();
+    private String userId;
 
     public OrchestrationService(){
         this.textAnalysisWorker = new TextAnalysisWorker();
@@ -39,6 +40,11 @@ public class OrchestrationService {
         this.vectorDatabaseService = new VectorDatabaseService();
         this.videoAnalysisWorker = new VideoAnalysisWorker();
         this.audioAnalysisWorker = new AudioAnalysisWorker();
+    }
+
+    public void setSessionContext(String sessionId, String userId) {
+        this.userId = userId;
+        messageWorker.setSessionContext(sessionId, userId);
     }
 
     public String associateSession(String sessionId) {
@@ -123,7 +129,7 @@ public class OrchestrationService {
                     workerResponse.put("voiceInsights", voiceInsights);
                 }
             };
-            vectorDatabaseService.indexSessionMessage(sessionId, "user", convertTextAnalysisToString(workerResponse), false);
+            vectorDatabaseService.indexSessionMessage(sessionId, userId, convertTextAnalysisToString(workerResponse), false);
         });
         // Create AgentState with this initial map
         AgentState state = new AgentState(workerResponse);
@@ -137,7 +143,7 @@ public class OrchestrationService {
         messages.add(UserMessage.from(analysis.toString()));
         messageWorker.setSessionContext(sessionId, "userId");
         String response = messageWorker.generateResponse(messages);
-        vectorDatabaseService.indexSessionMessage(sessionId, "user", response, false);
+        vectorDatabaseService.indexSessionMessage(sessionId, userId, response, false);
         return response;
     }
 

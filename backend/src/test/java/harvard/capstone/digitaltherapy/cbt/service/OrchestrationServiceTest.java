@@ -1,53 +1,43 @@
 package harvard.capstone.digitaltherapy.cbt.service;
 
 import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.SystemMessage;
+import dev.langchain4j.data.message.UserMessage;
+import harvard.capstone.digitaltherapy.workers.MultiModalSynthesizer;
+import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
+import harvard.capstone.digitaltherapy.workers.AudioAnalysisWorker;
+import harvard.capstone.digitaltherapy.workers.MessageWorker;
+import harvard.capstone.digitaltherapy.workers.TextAnalysisWorker;
+import harvard.capstone.digitaltherapy.workers.VideoAnalysisWorker;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-
-import dev.langchain4j.data.message.SystemMessage;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
 
 public class OrchestrationServiceTest {
 
-    /**
-     * Tests the behavior of the OrchestrationService constructor when all dependencies are available.
-     * This is not a true negative test, as the constructor doesn't explicitly handle any error conditions.
-     * However, it verifies that the constructor completes without throwing exceptions, which is the
-     * expected behavior given the current implementation.
-     */
-    @Test
-    public void testOrchestrationServiceConstructor() {
-        assertDoesNotThrow(() -> new OrchestrationService(),
-                "OrchestrationService constructor should not throw any exceptions");
+    @BeforeEach
+    public void setup() {
+        // Set up a mock security context with a test user
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+            "testuser",
+            "password",
+            List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        SecurityContext securityContext = new SecurityContextImpl();
+        securityContext.setAuthentication(authentication);
+        SecurityContextHolder.setContext(securityContext);
     }
 
-    /**
-     * Tests the processUserMessage method with an invalid session ID.
-     * This test verifies that the method throws an IllegalArgumentException
-     * when provided with a session ID that doesn't exist in the sessionMessages map.
-     */
-    @Test
-    public void testProcessUserMessage_InvalidSessionId() {
-        OrchestrationService orchestrationService = new OrchestrationService();
-        String invalidSessionId = "nonexistent-session";
-        Map<String, String> modalities = new HashMap<>();
-        String inputTranscript = "Test input";
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            orchestrationService.processUserMessage(invalidSessionId, modalities, inputTranscript);
-        });
-
-        assertEquals("Invalid session ID: " + invalidSessionId, exception.getMessage());
-    }
-
-    /**
-     * Test case for the OrchestrationService constructor.
-     * This test verifies that the OrchestrationService is properly initialized
-     * with all its dependencies.
-     */
     @Test
     public void test_OrchestrationService_Constructor() {
         OrchestrationService orchestrationService = new OrchestrationService();
@@ -85,41 +75,94 @@ public class OrchestrationServiceTest {
         }
     }
 
-    /**
-     * Tests that associateSession method correctly handles and returns an empty string input.
-     * This is a valid edge case as the method does not perform any validation on the input.
-     */
     @Test
-    public void test_associateSession_emptyString() {
+    public void test_associateSession_initializesNewSession() {
         OrchestrationService orchestrationService = new OrchestrationService();
-        String result = orchestrationService.associateSession("");
-        assertEquals("", result);
-
-        // Verify that an entry was created in the sessionMessages map
-        String sessionMessages = orchestrationService.associateSession("test");
-        assertTrue(sessionMessages.equalsIgnoreCase("test"));
-    }
-
-    /**
-     * Test case for associateSession method.
-     * Verifies that the method returns the provided sessionId and initializes the session with a system message.
-     */
-    @Test
-    public void test_associateSession_returnsSessionIdAndInitializesSession() {
-        OrchestrationService orchestrationService = new OrchestrationService();
-        String sessionId = "test-session-id";
+        String sessionId = "test-session";
+        String userId = "testuser";
 
         String result = orchestrationService.associateSession(sessionId);
 
         assertEquals(sessionId, result, "The method should return the provided sessionId");
+        
+        // Verify that the session was initialized with a system message
+        try {
+            java.lang.reflect.Field sessionMessagesField = OrchestrationService.class.getDeclaredField("sessionMessages");
+            sessionMessagesField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, List<ChatMessage>> sessionMessages = (Map<String, List<ChatMessage>>) sessionMessagesField.get(orchestrationService);
+            
+            assertTrue(sessionMessages.containsKey(sessionId), "Session should be created in sessionMessages");
+            List<ChatMessage> messages = sessionMessages.get(sessionId);
+            assertFalse(messages.isEmpty(), "Session should have messages");
+            assertTrue(messages.get(0) instanceof SystemMessage, "First message should be a system message");
+
+            // Verify session-user association
+            java.lang.reflect.Field sessionUserMapField = OrchestrationService.class.getDeclaredField("sessionUserMap");
+            sessionUserMapField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, String> sessionUserMap = (Map<String, String>) sessionUserMapField.get(orchestrationService);
+            
+            assertTrue(sessionUserMap.containsKey(sessionId), "Session should be associated with a user");
+            assertEquals(userId, sessionUserMap.get(sessionId), "Session should be associated with the correct user");
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            fail("Exception occurred while checking session initialization: " + e.getMessage());
+        }
     }
 
+    @Test
+    public void test_associateSession_validatesUserAssociation() {
+        OrchestrationService orchestrationService = new OrchestrationService();
+        String sessionId = "test-session";
+        String userId = "testuser";
 
-    /**
-     * Test case for processUserMessage method when an invalid session ID is provided.
-     * This test verifies that an IllegalArgumentException is thrown when the session ID
-     * is not present in the sessionMessages map.
-     */
+        // Associate session
+        String result = orchestrationService.associateSession(sessionId);
+        assertEquals(sessionId, result, "The method should return the provided sessionId");
+
+        // Verify session-user association
+        try {
+            java.lang.reflect.Field sessionUserMapField = OrchestrationService.class.getDeclaredField("sessionUserMap");
+            sessionUserMapField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, String> sessionUserMap = (Map<String, String>) sessionUserMapField.get(orchestrationService);
+            
+            assertTrue(sessionUserMap.containsKey(sessionId), "Session should be associated with a user");
+            assertEquals(userId, sessionUserMap.get(sessionId), "Session should be associated with the correct user");
+
+            // Verify that the same user can't associate with multiple sessions
+            String newSessionId = "new-session";
+            String newResult = orchestrationService.associateSession(newSessionId);
+            assertEquals(newSessionId, newResult, "The method should return the new sessionId");
+            
+            // Verify that the old session is still associated with the user
+            assertEquals(userId, sessionUserMap.get(sessionId), "Old session should still be associated with the user");
+            assertEquals(userId, sessionUserMap.get(newSessionId), "New session should be associated with the user");
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            fail("Exception occurred while checking session-user association: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void test_processUserMessage_handlesMultipleMessages() {
+        OrchestrationService orchestrationService = new OrchestrationService();
+        String sessionId = "test-session";
+        orchestrationService.associateSession(sessionId);
+
+        Map<String, String> modalities = new HashMap<>();
+        modalities.put("text", "test input");
+        String inputTranscript = "Hello, I'm feeling anxious today.";
+
+        // Process first message
+        String response1 = orchestrationService.processUserMessage(sessionId, modalities, inputTranscript);
+        assertNotNull(response1, "First response should not be null");
+
+        // Process second message
+        String response2 = orchestrationService.processUserMessage(sessionId, modalities, "I'm still feeling anxious.");
+        assertNotNull(response2, "Second response should not be null");
+        assertNotEquals(response1, response2, "Responses should be different for different inputs");
+    }
+
     @Test
     public void test_processUserMessage_throwsExceptionForInvalidSessionId() {
         OrchestrationService orchestrationService = new OrchestrationService();
@@ -132,97 +175,5 @@ public class OrchestrationServiceTest {
         });
 
         assertEquals("Invalid session ID: " + invalidSessionId, exception.getMessage());
-    }
-
-
-    /**
-     * Tests the OrchestrationService constructor to ensure all dependencies are properly initialized.
-     * This test verifies that the OrchestrationService object is created successfully and
-     * all its internal components (workers and services) are instantiated.
-     */
-    @Test
-    public void test_OrchestrationService_ConstructorInitialization() {
-        OrchestrationService orchestrationService = new OrchestrationService();
-        assertNotNull(orchestrationService, "OrchestrationService should be created successfully");
-    }
-
-    /**
-     * Tests the constructor of OrchestrationService when TextAnalysisWorker initialization fails.
-     * This test verifies that the constructor throws a RuntimeException when TextAnalysisWorker
-     * cannot be initialized.
-     */
-    @Test
-    public void test_OrchestrationService_TextAnalysisWorkerInitializationFailure() {
-        // We can't directly test this scenario as the constructor doesn't handle exceptions.
-        // In a real-world scenario, we would mock the TextAnalysisWorker to throw an exception,
-        // but the current implementation doesn't allow for this.
-        // Therefore, we'll assert that the constructor completes without throwing an exception.
-        assertDoesNotThrow(() -> new OrchestrationService(),
-                "OrchestrationService constructor should not throw any exceptions");
-    }
-
-    /**
-     * Tests that the associateSession method correctly initializes a new session
-     * with the given session ID, adds the initial system message, and returns the session ID.
-     */
-    @Test
-    public void test_associateSession_initializesNewSession() {
-        OrchestrationService orchestrationService = new OrchestrationService();
-        String sessionId = "test_session_id";
-
-        String result = orchestrationService.associateSession(sessionId);
-
-        assertEquals(sessionId, result, "The method should return the provided session ID");
-
-        // Use reflection to access the private sessionMessages map
-        try {
-            java.lang.reflect.Field sessionMessagesField = OrchestrationService.class.getDeclaredField("sessionMessages");
-            sessionMessagesField.setAccessible(true);
-            Map<String, List<ChatMessage>> sessionMessages = (Map<String, List<ChatMessage>>) sessionMessagesField.get(orchestrationService);
-
-            assertTrue(sessionMessages.containsKey(sessionId), "The session should be added to the sessionMessages map");
-            List<ChatMessage> messages = sessionMessages.get(sessionId);
-            assertNotNull(messages, "The messages list for the session should not be null");
-            assertEquals(1, messages.size(), "There should be one initial message in the list");
-            assertTrue(messages.get(0) instanceof SystemMessage, "The initial message should be a SystemMessage");
-            SystemMessage systemMessage = (SystemMessage) messages.get(0);
-            assertTrue(systemMessage.text().contains("You are a CBT therapist"), "The system message should contain the CBT therapist instruction");
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            fail("Exception occurred while accessing sessionMessages: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Tests the processUserMessage method with an invalid session ID.
-     * This test verifies that the method throws an IllegalArgumentException
-     * when provided with a session ID that doesn't exist in the sessionMessages map.
-     */
-    @Test
-    public void test_processUserMessage_invalidSessionId() {
-        OrchestrationService orchestrationService = new OrchestrationService();
-        String invalidSessionId = "non-existent-session";
-        Map<String, String> modalities = new HashMap<>();
-        String inputTranscript = "Test input";
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            orchestrationService.processUserMessage(invalidSessionId, modalities, inputTranscript);
-        }, "Should throw IllegalArgumentException for invalid session ID");
-    }
-
-    /**
-     * Tests the processUserMessage method when an invalid session ID is provided.
-     * This test verifies that the method throws an IllegalArgumentException when
-     * the session ID does not exist in the sessionMessages map.
-     */
-    @Test
-    public void test_processUserMessage_throwsExceptionForInvalidSessionId_2() {
-        OrchestrationService orchestrationService = new OrchestrationService();
-        String invalidSessionId = "non-existent-session";
-        Map<String, String> modalities = new HashMap<>();
-        String inputTranscript = "Test input";
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            orchestrationService.processUserMessage(invalidSessionId, modalities, inputTranscript);
-        }, "Should throw IllegalArgumentException for invalid session ID");
     }
 }

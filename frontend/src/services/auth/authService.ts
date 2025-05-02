@@ -28,7 +28,10 @@ export const register = async (userData: RegisterData): Promise<AuthResponse> =>
 export const login = async (credentials: LoginData): Promise<AuthResponse> => {
   try {
     const response = await api.post<AuthResponse>('/login', credentials);
+    // Store token, sessionId, and userId in localStorage
     localStorage.setItem('token', response.data.token);
+    localStorage.setItem('sessionId', response.data.sessionId);
+    localStorage.setItem('userId', response.data.userId);
     return response.data;
   } catch (error: unknown) {
     return Promise.reject(error); // Ensure a rejected Promise is returned
@@ -37,6 +40,8 @@ export const login = async (credentials: LoginData): Promise<AuthResponse> => {
 
 export const logout = (): void => {
   localStorage.removeItem('token');
+  localStorage.removeItem('sessionId');
+  localStorage.removeItem('userId');
 };
 
 /**
@@ -44,6 +49,14 @@ export const logout = (): void => {
  */
 export const getAuthToken = (): string | null => {
   return localStorage.getItem('token');
+};
+
+export const getSessionId = (): string | null => {
+  return localStorage.getItem('sessionId');
+};
+
+export const getUserId = (): string | null => {
+  return localStorage.getItem('userId');
 };
 
 /**
