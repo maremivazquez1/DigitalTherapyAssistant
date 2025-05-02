@@ -129,7 +129,8 @@ public class MessageWorkerTest {
     @Test
     public void test_buildPrompt() {
         String analysis = "User shows signs of anxiety and stress";
-        String prompt = messageWorker.buildPrompt(analysis);
+        Map<String, Double> previousSessions = null;
+        String prompt = messageWorker.buildPrompt(analysis, previousSessions);
         
         assertNotNull(prompt, "Prompt should not be null");
         assertTrue(prompt.contains(analysis), "Prompt should include the analysis");
