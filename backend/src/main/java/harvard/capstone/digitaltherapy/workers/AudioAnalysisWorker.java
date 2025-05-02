@@ -217,11 +217,16 @@ public class AudioAnalysisWorker {
                             throw new RuntimeException("Unexpected prediction format: root is not an array.");
                         }
 
-                        JsonNode groupedPredictions = root.get(0)
+                        JsonNode allPredictions = root.get(0)
                                 .path("results")
                                 .path("predictions")
-                                .get(0)
-                                .path("models")
+                                .get(0);
+
+                        if (allPredictions == null || !allPredictions.isArray()) {
+                            throw new RuntimeException("Missing or invalid predictions.");
+                        }
+
+                        JsonNode groupedPredictions = allPredictions.path("models")
                                 .path("prosody")
                                 .path("grouped_predictions");
 
