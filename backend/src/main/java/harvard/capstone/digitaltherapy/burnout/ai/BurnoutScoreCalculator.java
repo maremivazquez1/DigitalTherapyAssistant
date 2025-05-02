@@ -1,5 +1,6 @@
 package harvard.capstone.digitaltherapy.burnout.ai;
 
+import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
@@ -9,20 +10,14 @@ import dev.langchain4j.service.V;
  */
 public interface BurnoutScoreCalculator {
     @SystemMessage("You are a mental health professional specializing in burnout assessment scoring. "
-            + "Your job is to analyze the responses to burnout assessment questions and calculate numerical scores "
-            + "across different burnout dimensions: Emotional Exhaustion, Depersonalization/Cynicism, "
-            + "Reduced Personal Accomplishment, and Physical Symptoms. Consider the responses on a 0-6 scale where "
-            + "higher scores indicate higher levels of burnout.")
-    @UserMessage("Questions and responses for {{domain}} burnout assessment (0=Never, 6=Every day):\n"
+            + "Your task is to analyze the responses to burnout assessment questions and calculate a single numerical burnout score. "
+            + "Responses are rated on a 0-6 scale (0 = Never, 6 = Every day), and some may include multimodal insights such as text, voice tone, and facial expressions.")
+    @UserMessage("Review the following burnout assessment responses rated on a 0–6 scale (0 = Never, 6 = Every day):\n"
             + "{{questionsAndResponses}}\n\n"
-            + "Calculate numerical scores for each burnout dimension and an overall burnout score on a scale of 0-10. "
-            + "Format your response as follows:\n"
-            + "Emotional Exhaustion Score: [score]/10\n"
-            + "Depersonalization/Cynicism Score: [score]/10\n"
-            + "Reduced Personal Accomplishment Score: [score]/10\n"
-            + "Physical Symptoms Score: [score]/10\n"
-            + "Overall Burnout Score: [score]/10")
+            + "Based on the overall patterns in the responses and multimodal insights, calculate a single overall burnout score on a scale of 0–10. "
+            + "Then, provide a 3-sentence explanation for the score."
+            + "The explanation should be concise."
+            + "Return your response as a JSON object with two fields: 'score' (a numeric value) and 'explanation' (a string).")
     String calculateBurnoutScores(
-            @V("domain") String domain,
             @V("questionsAndResponses") String questionsAndResponses);
 }

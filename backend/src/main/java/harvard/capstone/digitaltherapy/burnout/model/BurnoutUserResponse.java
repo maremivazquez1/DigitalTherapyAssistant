@@ -1,20 +1,19 @@
 // BurnoutResponse.java
 package harvard.capstone.digitaltherapy.burnout.model;
 
-import java.time.LocalDateTime;
+
 import java.util.Map;
 
-public class BurnoutResponse {
+
+public class BurnoutUserResponse {
     private final String questionId;
     private final String textResponse;
     private final Map<String, Object> multimodalInsights;
-    private final LocalDateTime timestamp;
 
-    public BurnoutResponse(String questionId, String textResponse, Map<String, Object> multimodalInsights, LocalDateTime timestamp) {
+    public BurnoutUserResponse(String questionId, String textResponse, Map<String, Object> multimodalInsights) {
         this.questionId = questionId;
         this.textResponse = textResponse;
         this.multimodalInsights = multimodalInsights;
-        this.timestamp = timestamp;
     }
 
     public String getQuestionId() {
@@ -27,9 +26,5 @@ public class BurnoutResponse {
 
     public Map<String, Object> getMultimodalInsights() {
         return multimodalInsights;
-    }
-
-    public LocalDateTime getTimestamp() {
-        return timestamp;
     }
 }

@@ -28,13 +28,14 @@ public class BurnoutAssessmentOrchestrator {
         this.activeSessions = new HashMap<>();
     }
 
+
     /**
-     * Creates a new burnout assessment session
+     * Creates a new burnout assessment session and returns the session details including questions
      *
      * @param userId The ID of the user taking the assessment
-     * @return The session ID for the new assessment
+     * @return A response object containing the session ID and assessment questions
      */
-    public String createAssessmentSession(String userId) {
+    public BurnoutSessionCreationResponse createAssessmentSession(String userId) {
         // Generate a unique session ID
         String sessionId = UUID.randomUUID().toString();
 
@@ -51,9 +52,14 @@ public class BurnoutAssessmentOrchestrator {
 
         // Store the session
         activeSessions.put(sessionId, session);
-//        sessionManager.saveSession(sessionId, session);
 
-        return sessionId;
+        // If using session manager, also store there. We currently are not implementing this, so it's commented out.
+        // sessionManager.saveSession(sessionId, session);
+
+        return new BurnoutSessionCreationResponse(
+                sessionId,
+                assessment.getQuestions()
+        );
     }
 
     /**
@@ -91,11 +97,10 @@ public class BurnoutAssessmentOrchestrator {
         Map<String, Object> multimodalInsights = new HashMap<>();
 
         // Record the response
-        BurnoutResponse burnoutResponse = new BurnoutResponse(
+        BurnoutUserResponse burnoutResponse = new BurnoutUserResponse(
                 questionId,
                 response,
-                multimodalInsights,
-                LocalDateTime.now()
+                multimodalInsights
         );
 
         session.getResponses().put(questionId, burnoutResponse);
@@ -118,45 +123,42 @@ public class BurnoutAssessmentOrchestrator {
             throw new IllegalStateException("No session found or no responses recorded");
         }
 
-        // Collect all responses
         List<BurnoutQuestion> questions = session.getAssessment().getQuestions();
-        Map<String, BurnoutResponse> responses = session.getResponses();
+        Map<String, BurnoutUserResponse> responses = session.getResponses();
 
-        // Calculate scores for each domain
-        Map<AssessmentDomain, Double> domainScores = new HashMap<>();
+        StringBuilder formattedInput = new StringBuilder();
+        for (BurnoutQuestion question : questions) {
+            String questionId = question.getQuestionId();
+            BurnoutUserResponse response = responses.get(questionId);
 
-        for (AssessmentDomain domain : AssessmentDomain.values()) {
-            List<BurnoutResponse> domainResponses = questions.stream()
-                    .filter(q -> q.getDomain() == domain)
-                    .map(q -> responses.get(q.getQuestionId()))
-                    .filter(r -> r != null)
-                    .toList();
+            formattedInput.append("Q: ").append(question.getQuestion()).append("\n");
 
-            if (!domainResponses.isEmpty()) {
-                // Ask the BurnoutWorker to calculate domain score
-                double score = 5.0;
-//                double score = burnoutWorker.calculateDomainScore(domain, domainResponses);
-                domainScores.put(domain, score);
+            if (response != null) {
+                formattedInput.append("A: ").append(response.getTextResponse()).append("\n");
+
+                if (response.getMultimodalInsights() != null && !response.getMultimodalInsights().isEmpty()) {
+                    formattedInput.append("Multimodal: ").append(response.getMultimodalInsights().toString()).append("\n");
+                }
+            } else {
+                formattedInput.append("A: [No response]\n");
             }
+
+            formattedInput.append("---\n");
         }
 
-        // Calculate overall score
-        double overallScore = 0.0;
-//        double overallScore = burnoutWorker.calculateOverallScore(domainScores);
+        Map<String, Object> resultMap = burnoutWorker.generateBurnoutScore(formattedInput.toString());
 
-        // Create and return the score
+        double scoreValue = (double) resultMap.get("score");
+        String explanation = (String) resultMap.get("explanation");
+
         BurnoutScore score = new BurnoutScore(
                 sessionId,
                 session.getUserId(),
-                domainScores,
-                overallScore,
-                LocalDateTime.now()
+                scoreValue,
+                explanation
         );
 
-        // Save the score to the session
         session.setScore(score);
-//        sessionManager.saveSession(sessionId, session);
-
         return score;
     }
 
@@ -195,7 +197,7 @@ public class BurnoutAssessmentOrchestrator {
      * @param sessionId The ID of the assessment session
      * @return A BurnoutResult object with all assessment results
      */
-    public BurnoutResult completeAssessment(String sessionId) {
+    public BurnoutAssessmentResult completeAssessment(String sessionId) {
         BurnoutAssessmentSession session = getSession(sessionId);
 
         if (session == null) {
@@ -215,13 +217,13 @@ public class BurnoutAssessmentOrchestrator {
         }
 
         // Create result object
-        BurnoutResult result = new BurnoutResult(
+        BurnoutAssessmentResult result = new BurnoutAssessmentResult(
                 sessionId,
                 session.getUserId(),
                 session.getAssessment(),
                 session.getResponses(),
                 score,
-                summary,
+                summary.getOverallInsight(),
                 LocalDateTime.now()
         );
 
@@ -239,7 +241,7 @@ public class BurnoutAssessmentOrchestrator {
      * @param sessionId The ID of the session to retrieve
      * @return The BurnoutAssessmentSession object
      */
-    public BurnoutAssessmentSession getSession(String sessionId) {
+    private BurnoutAssessmentSession getSession(String sessionId) {
         // Try to get from active sessions cache first
 
         // If not in cache, try to get from session manager

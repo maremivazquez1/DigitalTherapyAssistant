@@ -8,8 +8,7 @@ public class BurnoutAssessmentSession {
     private final String sessionId;
     private final String userId;
     private final BurnoutAssessment assessment;
-    private final Map<String, BurnoutResponse> responses;
-    private final LocalDateTime createdAt;
+    private final Map<String, BurnoutUserResponse> responses;
     private LocalDateTime completedAt;
     private boolean completed;
     private BurnoutScore score;
@@ -19,7 +18,6 @@ public class BurnoutAssessmentSession {
         this.sessionId = sessionId;
         this.userId = userId;
         this.assessment = assessment;
-        this.createdAt = createdAt;
         this.responses = new HashMap<>();
         this.completed = false;
     }
@@ -36,12 +34,8 @@ public class BurnoutAssessmentSession {
         return assessment;
     }
 
-    public Map<String, BurnoutResponse> getResponses() {
+    public Map<String, BurnoutUserResponse> getResponses() {
         return responses;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
     }
 
     public LocalDateTime getCompletedAt() {

@@ -3,18 +3,21 @@ package harvard.capstone.digitaltherapy.burnout.model;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-public class BurnoutResult {
+/**
+ * Represents the response that is returned to the user after a burnout assessment has been completed.
+ */
+public class BurnoutAssessmentResult {
     private final String sessionId;
     private final String userId;
     private final BurnoutAssessment assessment;
-    private final Map<String, BurnoutResponse> responses;
+    private final Map<String, BurnoutUserResponse> responses;
     private final BurnoutScore score;
-    private final BurnoutSummary summary;
+    private final String summary;
     private final LocalDateTime completedAt;
 
-    public BurnoutResult(String sessionId, String userId, BurnoutAssessment assessment,
-                         Map<String, BurnoutResponse> responses, BurnoutScore score,
-                         BurnoutSummary summary, LocalDateTime completedAt) {
+    public BurnoutAssessmentResult(String sessionId, String userId, BurnoutAssessment assessment,
+                                   Map<String, BurnoutUserResponse> responses, BurnoutScore score,
+                                   String summary, LocalDateTime completedAt) {
         this.sessionId = sessionId;
         this.userId = userId;
         this.assessment = assessment;
@@ -36,7 +39,7 @@ public class BurnoutResult {
         return assessment;
     }
 
-    public Map<String, BurnoutResponse> getResponses() {
+    public Map<String, BurnoutUserResponse> getResponses() {
         return responses;
     }
 
@@ -44,7 +47,7 @@ public class BurnoutResult {
         return score;
     }
 
-    public BurnoutSummary getSummary() {
+    public String getSummary() {
         return summary;
     }
 

@@ -3,30 +3,21 @@ package harvard.capstone.digitaltherapy.burnout.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import harvard.capstone.digitaltherapy.burnout.model.BurnoutSessionCreationResponse;
 import harvard.capstone.digitaltherapy.burnout.orchestration.BurnoutAssessmentOrchestrator;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
-import harvard.capstone.digitaltherapy.burnout.model.BurnoutResult;
+import harvard.capstone.digitaltherapy.burnout.model.BurnoutAssessmentResult;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutQuestion;
 import harvard.capstone.digitaltherapy.websocket.BurnoutWebSocketHandler;
-import ws.schild.jave.encode.AudioAttributes;
-import ws.schild.jave.encode.EncodingAttributes;
-import ws.schild.jave.encode.VideoAttributes;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.time.Duration;
-import java.util.Arrays;
 import java.util.List;
 
 @Controller
@@ -63,9 +54,11 @@ public class BurnoutController {
 
     private void startBurnoutSession(WebSocketSession session, String requestId) throws IOException {
         String userId = "TODO"; // You can connect this to auth later
-        String burnoutSessionId = burnoutAssessmentOrchestrator.createAssessmentSession(userId);
+        BurnoutSessionCreationResponse responseData = burnoutAssessmentOrchestrator.createAssessmentSession(userId);
+        String burnoutSessionId = responseData.getSessionId();
 
-        List<BurnoutQuestion> questions = burnoutAssessmentOrchestrator.getSession(burnoutSessionId).getAssessment().getQuestions();
+        // you now  have all 12 questions.
+        List<BurnoutQuestion> questions = responseData.getQuestions();
 
         ObjectNode response = objectMapper.createObjectNode();
         response.put("type", "burnout-questions");
@@ -107,7 +100,7 @@ public class BurnoutController {
     // public void handleBinaryMessage(WebSocketSession session, BinaryMessage message)
 
     // Called by Orchestrator to send final results
-    public void forwardFinalBurnoutResult(String burnoutSessionId, BurnoutResult burnoutResult) {
+    public void forwardFinalBurnoutResult(String burnoutSessionId, BurnoutAssessmentResult burnoutResult) {
         try {
             WebSocketSession session = burnoutWebSocketHandler.getSession(burnoutSessionId);
             if (session == null || !session.isOpen()) {

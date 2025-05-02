@@ -4,18 +4,25 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import dev.langchain4j.service.AiServices;
 import harvard.capstone.digitaltherapy.burnout.ai.BurnoutScoreCalculator;
+import harvard.capstone.digitaltherapy.burnout.ai.BurnoutSummaryGenerator;
 import harvard.capstone.digitaltherapy.burnout.ai.MultimodalQuestionGenerator;
 import harvard.capstone.digitaltherapy.burnout.ai.StandardQuestionGenerator;
 import harvard.capstone.digitaltherapy.burnout.model.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class BurnoutWorker {
 
     private final StandardQuestionGenerator standardQuestionGenerator;
     private final MultimodalQuestionGenerator multimodalQuestionGenerator;
     private final BurnoutScoreCalculator scoreCalculator;
+    private final BurnoutSummaryGenerator summaryGenerator;
     private final ChatLanguageModel chatModel;
 
     /**
@@ -42,6 +49,11 @@ public class BurnoutWorker {
         this.scoreCalculator = AiServices.builder(BurnoutScoreCalculator.class)
                 .chatLanguageModel(chatModel)
                 .build();
+
+        this.summaryGenerator = AiServices.builder(BurnoutSummaryGenerator.class)
+                .chatLanguageModel(chatModel)
+                .build();
+
     }
 
     /**
@@ -90,16 +102,41 @@ public class BurnoutWorker {
     }
 
 
-
-
-
-
-    public BurnoutSummary generateBurnoutSummary() {
-        return null;
+    public String generateBurnoutSummary(String formattedInput) {
+        try {
+            return summaryGenerator.generateSummary(formattedInput);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate a summary", e);
+        }
     }
 
-    public BurnoutScore generateBurnoutScore() {
-        return null;
+
+    public Map<String, Object> generateBurnoutScore(String formattedInput) {
+        try {
+            String jsonResponse = scoreCalculator.calculateBurnoutScores(formattedInput);
+
+            // Remove Markdown formatting if present
+            String cleanedJson = jsonResponse;
+            if (jsonResponse.startsWith("```json")) {
+                cleanedJson = jsonResponse.replace("```json", "")
+                        .replace("```", "")
+                        .trim();
+            }
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode root = objectMapper.readTree(cleanedJson);
+
+            double scoreValue = root.get("score").asDouble();
+            String explanation = root.get("explanation").asText();
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("score", scoreValue);
+            result.put("explanation", explanation);
+
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate burnout score", e);
+        }
     }
 
 

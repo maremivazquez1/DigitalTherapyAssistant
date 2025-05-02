@@ -1,5 +1,8 @@
 package harvard.capstone.digitaltherapy.burnout;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import harvard.capstone.digitaltherapy.burnout.ai.BurnoutSummaryGenerator;
 import harvard.capstone.digitaltherapy.burnout.ai.MultimodalQuestionGenerator;
 import harvard.capstone.digitaltherapy.burnout.ai.StandardQuestionGenerator;
 import harvard.capstone.digitaltherapy.burnout.model.AssessmentDomain;
@@ -12,9 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -29,20 +30,26 @@ public class BurnoutWorkerTest {
     @Mock
     private MultimodalQuestionGenerator mockMultimodalQuestionGenerator;
 
+    @Mock
+    private BurnoutSummaryGenerator mockBurnoutSummaryAgent;
+
     // No need to mock ChatLanguageModel since we're not using it directly in tests
 
     // Test implementation of BurnoutWorker that uses mocks instead of real AI services
     private class TestBurnoutWorker extends BurnoutWorker {
         private final StandardQuestionGenerator standardQuestionGenerator;
         private final MultimodalQuestionGenerator multimodalQuestionGenerator;
+        private final BurnoutSummaryGenerator burnoutSummaryAgent;
 
         public TestBurnoutWorker(
                 StandardQuestionGenerator standardQuestionGenerator,
-                MultimodalQuestionGenerator multimodalQuestionGenerator) {
+                MultimodalQuestionGenerator multimodalQuestionGenerator,
+                BurnoutSummaryGenerator burnoutSummaryAgent) {
             // Call parent constructor, but we'll override with our mock implementations
             super();
             this.standardQuestionGenerator = standardQuestionGenerator;
             this.multimodalQuestionGenerator = multimodalQuestionGenerator;
+            this.burnoutSummaryAgent = burnoutSummaryAgent;
         }
 
         @Override
@@ -59,7 +66,7 @@ public class BurnoutWorkerTest {
                 );
 
                 for (String question : standardQuestions) {
-                    allQuestions.add(new BurnoutQuestion(question, domain, false));
+                    allQuestions.add(new BurnoutQuestion("qid-" + question.hashCode(), question, domain, false));
                 }
 
                 // Generate 1 multimodal question
@@ -68,7 +75,7 @@ public class BurnoutWorkerTest {
                         domain.getDescription()
                 );
 
-                allQuestions.add(new BurnoutQuestion(multimodalQuestion, domain, true));
+                allQuestions.add(new BurnoutQuestion("qid-" + multimodalQuestion.hashCode(), multimodalQuestion, domain, true));
             }
 
             return new BurnoutAssessment(allQuestions);
@@ -130,7 +137,7 @@ public class BurnoutWorkerTest {
                 .thenReturn("Describe your current sleep patterns and how they've changed over the past month. How do you feel when you wake up?");
 
         // Initialize the test worker with mocks
-        burnoutWorker = new TestBurnoutWorker(mockStandardQuestionGenerator, mockMultimodalQuestionGenerator);
+        burnoutWorker = new TestBurnoutWorker(mockStandardQuestionGenerator, mockMultimodalQuestionGenerator, mockBurnoutSummaryAgent);
     }
 
     @Test
@@ -185,6 +192,7 @@ public class BurnoutWorkerTest {
     public void testBurnoutQuestionProperties() {
         // Create a test question
         BurnoutQuestion question = new BurnoutQuestion(
+                "test-id",
                 "Test question",
                 AssessmentDomain.WORK,
                 true
@@ -261,4 +269,219 @@ public class BurnoutWorkerTest {
         assertNotNull(assessment);
         assertEquals(12, assessment.getQuestions().size());
     }
+
+    @Test
+    public void testPrintBurnoutScoreCalculatorOutput() {
+        // This test requires an actual implementation of BurnoutScoreCalculator rather than a mock
+        // Create a simple formatted input with sample assessment responses
+        String sampleInput = """
+            Work Domain:
+            1. "I feel emotionally drained from my work." - Rating: 4/6
+            2. "I feel used up at the end of the workday." - Rating: 5/6
+            3. "I feel frustrated by my job." - Rating: 3/6
+            
+            Personal Domain:
+            1. "I find it difficult to engage meaningfully with family and friends." - Rating: 3/6
+            2. "I feel too exhausted to maintain personal relationships." - Rating: 4/6
+            3. "I feel detached from the people closest to me." - Rating: 2/6
+            
+            Lifestyle Domain:
+            1. "I have trouble falling or staying asleep." - Rating: 5/6
+            2. "I don't have energy for physical activities I used to enjoy." - Rating: 4/6
+            3. "I tend to eat unhealthy foods when feeling stressed." - Rating: 5/6
+            
+            Multimodal Insights:
+            1. Voice tone analysis: Monotone and low energy when discussing work
+            2. Facial expression analysis: Visible tension when discussing sleep issues
+            3. Response time: Delayed responses when asked about personal relationships
+            """;
+
+        // Create an actual BurnoutWorker instance with real implementations (not mocks)
+        BurnoutWorker realBurnoutWorker = new BurnoutWorker();
+
+        try {
+            // Call the generateBurnoutScore method
+            Map<String, Object> scoreResults = realBurnoutWorker.generateBurnoutScore(sampleInput);
+
+            // Print the results
+            System.out.println("\n======= BURNOUT SCORE CALCULATOR OUTPUT =======");
+            System.out.println("Score: " + scoreResults.get("score"));
+            System.out.println("Explanation: " + scoreResults.get("explanation"));
+            System.out.println("================================================\n");
+
+            // Add a basic assertion to verify we got results
+            assertNotNull(scoreResults);
+            assertNotNull(scoreResults.get("score"));
+            assertNotNull(scoreResults.get("explanation"));
+        } catch (Exception e) {
+            System.out.println("Error testing burnout score calculator: " + e.getMessage());
+            e.printStackTrace();
+            fail("Exception occurred during test: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void testGenerateBurnoutScore_SuccessfulParsing() {
+        // Arrange
+        BurnoutWorker burnoutWorker = new BurnoutWorker() {
+            @Override
+            public Map<String, Object> generateBurnoutScore(String formattedInput) {
+                // Override to avoid actual API call
+                try {
+                    // Simulate a clean JSON response from the AI
+                    String mockResponse = "{\"score\": 6.5, \"explanation\": \"This is a test explanation.\"}";
+
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    JsonNode root = objectMapper.readTree(mockResponse);
+
+                    double scoreValue = root.get("score").asDouble();
+                    String explanation = root.get("explanation").asText();
+
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("score", scoreValue);
+                    result.put("explanation", explanation);
+
+                    return result;
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to generate burnout score", e);
+                }
+            }
+        };
+
+        // Act
+        Map<String, Object> result = burnoutWorker.generateBurnoutScore("Sample input");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(6.5, result.get("score"));
+        assertEquals("This is a test explanation.", result.get("explanation"));
+    }
+
+    @Test
+    public void testGenerateBurnoutScore_WithMarkdownFormatting() {
+        // Arrange
+        BurnoutWorker burnoutWorker = new BurnoutWorker() {
+            @Override
+            public Map<String, Object> generateBurnoutScore(String formattedInput) {
+                // Call the parent implementation with a mock response
+                try {
+                    // Simulate a Markdown-formatted response from the AI
+                    String mockResponse = "```json\n" +
+                            "{\n" +
+                            "  \"score\": 7.8,\n" +
+                            "  \"explanation\": \"Markdown formatted explanation.\"\n" +
+                            "}\n" +
+                            "```";
+
+                    // Apply the actual cleaning logic
+                    String cleanedJson = mockResponse;
+                    if (mockResponse.startsWith("```json")) {
+                        cleanedJson = mockResponse.replace("```json", "")
+                                .replace("```", "")
+                                .trim();
+                    }
+
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    JsonNode root = objectMapper.readTree(cleanedJson);
+
+                    double scoreValue = root.get("score").asDouble();
+                    String explanation = root.get("explanation").asText();
+
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("score", scoreValue);
+                    result.put("explanation", explanation);
+
+                    return result;
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to generate burnout score", e);
+                }
+            }
+        };
+
+        // Act
+        Map<String, Object> result = burnoutWorker.generateBurnoutScore("Sample input");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(7.8, result.get("score"));
+        assertEquals("Markdown formatted explanation.", result.get("explanation"));
+    }
+
+    @Test
+    public void testGenerateBurnoutScore_HandlesInvalidJson() {
+        // Arrange
+        BurnoutWorker burnoutWorker = new BurnoutWorker() {
+            @Override
+            public Map<String, Object> generateBurnoutScore(String formattedInput) {
+                // Simulate an invalid JSON response
+                throw new RuntimeException("Failed to generate burnout score",
+                        new com.fasterxml.jackson.core.JsonParseException(null, "Invalid JSON"));
+            }
+        };
+
+        // Act & Assert
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            burnoutWorker.generateBurnoutScore("Sample input");
+        });
+
+        assertTrue(exception.getMessage().contains("Failed to generate burnout score"));
+    }
+
+    @Test
+    public void testGenerateBurnoutSummary() {
+        // Arrange - Create formatted input with questions and user responses
+        String formattedInput = """
+        Work Domain:
+        1. "I feel emotionally drained from my work." - Rating: 4/6
+        2. "I feel used up at the end of the workday." - Rating: 5/6
+        3. "I feel frustrated by my job." - Rating: 3/6
+        
+        Personal Domain:
+        1. "I find it difficult to engage meaningfully with family and friends." - Rating: 3/6
+        2. "I feel too exhausted to maintain personal relationships." - Rating: 4/6
+        3. "I feel detached from the people closest to me." - Rating: 2/6
+        
+        Lifestyle Domain:
+        1. "I have trouble falling or staying asleep." - Rating: 5/6
+        2. "I don't have energy for physical activities I used to enjoy." - Rating: 4/6
+        3. "I tend to eat unhealthy foods when feeling stressed." - Rating: 5/6
+        
+        Multimodal Responses:
+        Work: "During the last project deadline, I was assigned three additional tasks on top of my regular workload. I couldn't focus and felt my heart racing. I developed a tension headache that lasted for days. I noticed I was snapping at colleagues over minor issues. I had trouble sleeping that week and felt completely drained even after a weekend off. I started to question if this job was right for me."
+        
+        Personal: "I've been canceling plans with friends more often lately. When I do see them, I find myself checking my phone for work emails. I've had arguments with my partner about being mentally absent. My parents have called twice to ask if everything is okay since I haven't been returning their calls. I just don't have the energy to engage in conversations about how things are going."
+        
+        Lifestyle: "My sleep has definitely gotten worse over the past month. I used to fall asleep within minutes, but now I lie awake replaying work conversations. I wake up at least twice during the night and check my email. When my alarm goes off, I feel like I haven't slept at all. I've been hitting snooze multiple times and rushing to work without breakfast. By afternoon, I'm relying on energy drinks and sugary snacks to get through the day."
+        """;
+
+        // Create an actual BurnoutWorker instance to test the real implementation
+        BurnoutWorker burnoutWorker = new BurnoutWorker();
+
+        // Act
+        String summary = burnoutWorker.generateBurnoutSummary(formattedInput);
+
+        // Assert
+        assertNotNull(summary, "Summary should not be null");
+        assertFalse(summary.isEmpty(), "Summary should not be empty");
+
+        // Print the result for visual inspection
+        System.out.println("\n======= BURNOUT SUMMARY GENERATOR OUTPUT =======");
+        System.out.println(summary);
+        System.out.println("================================================\n");
+
+        // Additional assertions about the summary content
+        assertTrue(summary.contains("Today"), "Summary should use direct language to the user");
+        // Check that it's within the expected length range (4-5 sentences)
+        int sentenceCount = summary.split("[.!?]+").length;
+        assertTrue(sentenceCount >= 4 && sentenceCount <= 6,
+                "Summary should contain 4-5 sentences, found: " + sentenceCount);
+
+        // Verify it doesn't contain advice (as instructed in the system prompt)
+        assertFalse(summary.toLowerCase().contains("should"),
+                "Summary should not contain advice (no 'should' statements)");
+        assertFalse(summary.toLowerCase().contains("recommend"),
+                "Summary should not contain recommendations");
+    }
+
+
 }

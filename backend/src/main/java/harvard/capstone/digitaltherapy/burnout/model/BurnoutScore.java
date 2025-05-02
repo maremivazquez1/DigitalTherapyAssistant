@@ -1,23 +1,27 @@
 package harvard.capstone.digitaltherapy.burnout.model;
 
-import java.time.LocalDateTime;
-import java.util.Map;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 public class BurnoutScore {
     private final String sessionId;
     private final String userId;
-    private final Map<AssessmentDomain, Double> domainScores;
     private final double overallScore;
-    private final LocalDateTime calculatedAt;
+    private final String explanation;
 
-    public BurnoutScore(String sessionId, String userId, Map<AssessmentDomain, Double> domainScores,
-                        double overallScore, LocalDateTime calculatedAt) {
+    public BurnoutScore(String sessionId, String userId,
+                        double overallScore) {
+        this(sessionId, userId, overallScore, null);
+    }
+
+    public BurnoutScore(String sessionId, String userId,
+                        double overallScore, String explanation) {
         this.sessionId = sessionId;
         this.userId = userId;
-        this.domainScores = domainScores;
         this.overallScore = overallScore;
-        this.calculatedAt = calculatedAt;
+        this.explanation = explanation;
     }
 
     public String getSessionId() {
@@ -28,15 +32,12 @@ public class BurnoutScore {
         return userId;
     }
 
-    public Map<AssessmentDomain, Double> getDomainScores() {
-        return domainScores;
-    }
 
     public double getOverallScore() {
         return overallScore;
     }
 
-    public LocalDateTime getCalculatedAt() {
-        return calculatedAt;
+    public String getExplanation() {
+        return explanation;
     }
 }
