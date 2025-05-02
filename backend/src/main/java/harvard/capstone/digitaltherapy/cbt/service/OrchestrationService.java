@@ -141,7 +141,6 @@ public class OrchestrationService {
         AnalysisResult analysis = (AnalysisResult) result.get("multimodalAnalysis");
         // 5. Generate the subsequent prompt using the MessageWorker
         messages.add(UserMessage.from(analysis.toString()));
-        messageWorker.setSessionContext(sessionId, "userId");
         String response = messageWorker.generateResponse(messages);
         vectorDatabaseService.indexSessionMessage(sessionId, userId, response, false);
         return response;
