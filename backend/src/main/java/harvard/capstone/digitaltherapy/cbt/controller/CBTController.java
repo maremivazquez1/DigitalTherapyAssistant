@@ -59,8 +59,8 @@ public class CBTController {
     private final OrchestrationService orchestrationService;
     Map<String, String> input = new HashMap<>();
     private String  audio_s3_path ="";
-    @Value("${ffmeg_path}")
-    private String ffmeg_path;
+    @Value("${ffmpeg_path}")
+    private String ffmpeg_path;
     @Autowired
     public CBTController(ObjectMapper objectMapper,
                          S3Utils s3Service,
@@ -190,7 +190,7 @@ public class CBTController {
 
                     // Use ProcessBuilder directly for more control
                     List<String> command = Arrays.asList(
-                            ffmeg_path,
+                            ffmpeg_path,
                             "-i", webmFile.getAbsolutePath(),
                             "-c:v", "h264",
                             "-c:a", "aac",
