@@ -23,16 +23,17 @@ jobs:
         run: |
           cd backend
           mvn $MAVEN_CLI_OPTS clean package -DskipTests
-      - uses: actions/upload-artifact@v4       # keep the jar for later jobs if needed
+      - uses: actions/upload-artifact@v4      # keep the jar for later jobs if needed
+        continue-on-error: true               # allowed to fail
         with:
           name: backend-jar
           path: backend/target/*.jar
+          retention-days: 1
 
   test-backend:
     needs: build-backend
     runs-on: ubuntu-latest
     container: maven:3.9.9-eclipse-temurin-23
-    continue-on-error: true                   # allowed to failure
     steps:
       - uses: actions/checkout@v4
       - name: Cache Maven
@@ -45,10 +46,12 @@ jobs:
           cd backend
           mvn $MAVEN_CLI_OPTS test -Dnet.bytebuddy.experimental=true
       - uses: actions/upload-artifact@v4
+        continue-on-error: true               # allowed to fail
         if: always()
         with:
           name: surefire-reports
           path: backend/target/surefire-reports/*.xml
+          retention-days: 1
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -68,9 +71,11 @@ jobs:
           npm ci
           npm run build
       - uses: actions/upload-artifact@v4
+        continue-on-error: true               # allowed to fail
         with:
           name: frontend-dist
           path: frontend/dist
+          retention-days: 1
 
   test-frontend:
     needs: build-frontend
@@ -92,7 +97,9 @@ jobs:
           npm ci
           npm test -- --coverage
       - uses: actions/upload-artifact@v4
+        continue-on-error: true               # allowed to fail
         if: always()
         with:
           name: jest-results
           path: frontend/jest-results.xml
+          retention-days: 1

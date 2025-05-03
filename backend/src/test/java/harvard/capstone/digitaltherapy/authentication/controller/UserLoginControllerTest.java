@@ -2,8 +2,9 @@ package harvard.capstone.digitaltherapy.authentication.controller;
 
 import harvard.capstone.digitaltherapy.authentication.model.ApiResponse;
 import harvard.capstone.digitaltherapy.authentication.model.LoginRequest;
-import harvard.capstone.digitaltherapy.authentication.service.UserLoginService;
 import harvard.capstone.digitaltherapy.authentication.service.JwtTokenProvider;
+import harvard.capstone.digitaltherapy.authentication.service.TokenService;
+import harvard.capstone.digitaltherapy.authentication.service.UserLoginService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +15,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -22,9 +26,11 @@ class UserLoginControllerTest {
     @Mock
     private UserLoginService loginService;
     
-    // Added mock for JwtTokenProvider
     @Mock
     private JwtTokenProvider jwtTokenProvider;
+    
+    @Mock
+    private TokenService tokenService;
 
     @InjectMocks
     private UserLoginController userLoginController;
@@ -52,6 +58,7 @@ class UserLoginControllerTest {
         // Stub token creation
         when(jwtTokenProvider.createToken(validLoginRequest.getUsername()))
             .thenReturn("dummyToken");
+        doNothing().when(tokenService).storeToken(anyString(), anyString(), anyLong());
 
         // Act
         ResponseEntity<ApiResponse> response = userLoginController.loginUser(validLoginRequest);
@@ -86,9 +93,6 @@ class UserLoginControllerTest {
 
     @Test
     void loginUser_WithNullRequest_ThrowsException() {
-        // Act & Assert
-        assertThrows(NullPointerException.class, () -> {
-            userLoginController.loginUser(null);
-        });
+        assertThrows(NullPointerException.class, () -> userLoginController.loginUser(null));
     }
 }

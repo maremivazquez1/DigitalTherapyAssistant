@@ -36,8 +36,8 @@ public class S3Utils {
     S3Client s3Client;
     private final String bucketName;
     public static final String rootBucket = "dta-root";
-    @Value("${ffmeg_path}")
-    private String ffmeg_path;
+    @Value("${ffmpeg_path}")
+    private String ffmpeg_path;
 
     public S3Utils(@Value("${aws.s3.bucketName}") String bucketName,
                    @Value("${aws.region}") String region) {
@@ -241,7 +241,7 @@ public class S3Utils {
 
                     // Use ProcessBuilder directly for more control
                     List<String> command = Arrays.asList(
-                            ffmeg_path,
+                            ffmpeg_path,
                             "-i", webmFile.getAbsolutePath(),
                             "-c:v", "h264",
                             "-c:a", "aac",
