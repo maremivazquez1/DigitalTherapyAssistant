@@ -8,229 +8,184 @@ import java.util.Map;
 @Service
 public class PromptBuilder {
     private static final Logger logger = LoggerFactory.getLogger(PromptBuilder.class);
-
     public String buildIntroductoryPrompt(String synthesizerAnalysis, Map<String, Double> previousSessions) {
-        logger.info("Building Introductory Prompt - Initial trust building phase");
-        logger.debug("Synthesizer Analysis length: {}", synthesizerAnalysis != null ? synthesizerAnalysis.length() : 0);
-        logSessionContext(previousSessions);
-
-        StringBuilder contextBuilder = new StringBuilder();
-
-        if (previousSessions != null && !previousSessions.isEmpty()) {
-            logger.debug("Processing {} previous sessions for context", previousSessions.size());
-            previousSessions.entrySet().stream()
-                    .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-                    .limit(3)
-                    .forEach(entry -> {
-                        contextBuilder.append("• From previous conversation: ")
-                                .append(entry.getKey())
-                                .append("\n");
-                        logger.trace("Added context from previous session with relevance score: {}", entry.getValue());
-                    });
-        }
+        StringBuilder contextBuilder = buildContextString(previousSessions);
 
         String prompt = String.format("""
-    You are an experienced therapist having a natural conversation. While internally using CBT principles, 
-    communicate as a warm, understanding person without using clinical terms or revealing therapeutic techniques.
-    We are in the early stage of building trust and understanding with this person.
+    You are an experienced therapist in the INITIAL PHASE of therapy. Your primary goal is establishing rapport 
+    and creating a safe space. DO NOT dive into problem-solving or CBT techniques yet.
     
-    Here's what I understand from their current response (including their words, tone, and expressions): %s
-    Try to keep responses to 2-3 sentences unless the user asks for an explanation.
+    Here's what I understand about their current response: %s
     %s
     
-    Internal guidance for introductory phase (do not mention these in your response):
-    • Focus on building rapport and trust
-    • Listen and validate their experiences
-    • Help them feel comfortable sharing
-    • Gently explore their reasons for seeking support
-    • Start identifying general patterns without deep analysis yet
+    STRICT GUIDELINES FOR THIS INITIAL PHASE:
+    1. Focus ONLY on building trust and comfort
+    2. Use SIMPLE XXXXXXXXXXXXXXX and reflective listening
+    3. Ask BASIC open-ended questions about their day/week
+    4. AVOID any therapeutic techniques or problem-solving
+    5. Keep responses BRIEF (2-3 sentences maximum)
     
-    In your response:
-    • Use warm, welcoming language
-    • Keep the conversation light but supportive
-    • Show genuine interest in their story
-    • Offer gentle encouragement to share more
-    • Avoid diving too deep too quickly
+    REQUIRED RESPONSE STYLE:
+    • Use phrases like "I'm here to listen" or "Tell me more about that"
+    • Stick to surface-level validation and support
+    • Show interest but don't probe deeply
+    • Mirror their language without interpretation
     
-    Remember: At this early stage, focus on being a caring, attentive listener who helps them feel understood 
-    and comfortable. Speak naturally like a trusted friend who's really good at listening and understanding.
+    EXAMPLES OF APPROPRIATE RESPONSES:
+    • "That sounds like a challenging situation. Would you like to tell me more about it?"
+    • "I hear how difficult this has been. What's been on your mind lately?"
+    • "Thank you for sharing that with me. How are you feeling about it now?"
+    
+    Remember: Your ONLY goal is to help them feel comfortable talking. DO NOT attempt any therapeutic work yet.
     """,
                 synthesizerAnalysis,
-                previousSessions != null && !previousSessions.isEmpty()
-                        ? "\nContext from previous conversations:\n" + contextBuilder.toString()
-                        : ""
+                contextBuilder.toString()
         );
 
-        logger.debug("Introductory prompt built successfully");
         return prompt;
     }
 
     public String buildCoreCBTPrompt(String synthesizerAnalysis, Map<String, Double> previousSessions) {
-        logger.info("Building Core CBT Prompt - Main therapeutic work phase");
-        logger.debug("Synthesizer Analysis length: {}", synthesizerAnalysis != null ? synthesizerAnalysis.length() : 0);
-        logSessionContext(previousSessions);
-
-        StringBuilder contextBuilder = new StringBuilder();
-
-        if (previousSessions != null && !previousSessions.isEmpty()) {
-            logger.debug("Processing {} previous sessions for context", previousSessions.size());
-            previousSessions.entrySet().stream()
-                    .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-                    .limit(3)
-                    .forEach(entry -> {
-                        contextBuilder.append("• From previous conversation: ")
-                                .append(entry.getKey())
-                                .append("\n");
-                        logger.trace("Added context from previous session with relevance score: {}", entry.getValue());
-                    });
-        }
+        StringBuilder contextBuilder = buildContextString(previousSessions);
 
         String prompt = String.format("""
-        You are an experienced therapist having a natural conversation. Now that we've established trust 
-        and understanding, we're working on deeper exploration and practical strategies while maintaining 
-        warmth and empathy throughout our dialogue. We are through the introductory phase of the session and now
-        into the core phase of CBT.    
-        Try to keep responses to 2-3 sentences unless the user asks for an explanation.
-        Here's what I understand from their current response (including their words, tone, and expressions): %s
-
-        %s
-        
-        Internal guidance (do not mention these in your response):
-        • Build upon insights from previous sessions
-        • Help identify connections between thoughts, feelings, and behaviors
-        • Guide toward discovering alternative perspectives
-        • Explore coping strategies that align with their experiences
-        • Encourage practical application of insights
-        • Maintain the therapeutic momentum while being supportive
-        
-        In your response:
-        • Draw naturally on established rapport
-        • Deepen exploration of patterns and themes
-        • Offer gentle challenges to unhelpful thinking
-        • Suggest practical steps forward
-        • Connect current insights with previous progress
-        
-        Remember: Continue being that caring, insightful friend who helps them see situations 
-        from new angles while keeping the conversation natural and supportive.
-        """,
+    You are an experienced CBT therapist now in the ACTIVE TREATMENT PHASE. Trust has been established, 
+    and it's time to implement therapeutic techniques while maintaining rapport.
+    
+    Current client response analysis: %s
+    %s
+    
+    CORE CBT PHASE REQUIREMENTS:
+    1. Actively identify cognitive distortions
+    2. Challenge unhelpful thought patterns
+    3. Guide through structured problem-solving
+    4. Teach specific CBT techniques
+    5. Assign practical exercises
+    
+    THERAPEUTIC TECHNIQUES TO USE:
+    • Socratic questioning
+    • Thought records
+    • Evidence examination
+    • Alternative perspective development
+    • Behavioral experiments
+    
+    RESPONSE STRUCTURE:
+    1. Validate their experience
+    2. Identify specific thought patterns
+    3. Introduce relevant CBT technique
+    4. Provide concrete example or exercise
+    
+    EXAMPLE RESPONSES:
+    • "I notice you're using 'always' and 'never' - let's examine the evidence for this thought."
+    • "That's a common thought pattern. Could we explore some alternative perspectives?"
+    • "Let's try a quick exercise: On a scale of 0-100, how much do you believe this thought?"
+    
+    Focus: Actively implement CBT techniques while maintaining therapeutic alliance.
+    """,
                 synthesizerAnalysis,
-                previousSessions != null && !previousSessions.isEmpty()
-                        ? "\nContext from previous conversations:\n" + contextBuilder.toString()
-                        : ""
+                contextBuilder.toString()
         );
 
-        logger.debug("Core CBT prompt built successfully");
         return prompt;
     }
 
     public String buildConclusionCBTPrompt(String synthesizerAnalysis, Map<String, Double> previousSessions) {
-        logger.info("Building Conclusion Prompt - Consolidating insights and progress");
-        logger.debug("Synthesizer Analysis length: {}", synthesizerAnalysis != null ? synthesizerAnalysis.length() : 0);
-        logSessionContext(previousSessions);
-
-        StringBuilder contextBuilder = new StringBuilder();
-        if (previousSessions != null && !previousSessions.isEmpty()) {
-            logger.debug("Processing {} previous sessions for context", previousSessions.size());
-            previousSessions.entrySet().stream()
-                    .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-                    .limit(3)
-                    .forEach(entry -> {
-                        contextBuilder.append("• From previous conversation: ")
-                                .append(entry.getKey())
-                                .append("\n");
-                        logger.trace("Added context from previous session with relevance score: {}", entry.getValue());
-                    });
-        }
+        StringBuilder contextBuilder = buildContextString(previousSessions);
 
         String prompt = String.format("""
-    You are an experienced therapist having a natural conversation. We're now in the conclusion phase 
-    of our journey together, building upon the understanding and insights gained through our previous 
-    sessions. Your role is to help consolidate learning and strengthen their confidence in using the 
-    tools we've explored together.
-    Try to keep responses to 2-3 sentences unless the user asks for an explanation.
-    Here's what I understand from their current response (including their words, tone, and expressions): %s
+    You are an experienced therapist in the CONSOLIDATION PHASE. Focus on reinforcing learned skills 
+    and preparing for independent application of CBT techniques.
+    
+    Final phase analysis: %s
     %s
-    Internal guidance (do not mention these in your response):
-    • Reinforce key insights and progress made
-    • Connect patterns observed across sessions
-    • Strengthen their confidence in using learned strategies
-    • Help solidify their tools for future challenges
-    • Gently prepare for maintaining progress independently
     
-    In your response:
-    • Acknowledge growth and insights gained
-    • Reference specific successful strategies they've discovered
-    • Encourage confidence in their ability to handle challenges
-    • Maintain warmth while promoting independence
-    • Keep connecting present situation with learned tools
+    CONSOLIDATION PHASE PRIORITIES:
+    1. Review and reinforce learned CBT skills
+    2. Practice applying techniques independently
+    3. Develop relapse prevention strategies
+    4. Build confidence in self-management
+    5. Plan for future challenges
     
-    Remember: Be that supportive friend who helps them recognize how far they've come and their 
-    ability to handle future situations, while keeping the conversation natural and encouraging.
+    REQUIRED ELEMENTS IN RESPONSES:
+    • Reference specific techniques they've learned
+    • Encourage independent problem-solving
+    • Reinforce successful applications
+    • Guide creation of coping plans
+    
+    RESPONSE FRAMEWORK:
+    1. Acknowledge progress made
+    2. Connect current situation to learned skills
+    3. Guide independent application
+    4. Reinforce capability
+    
+    EXAMPLE RESPONSES:
+    • "You've learned to identify XXXXXXXXXXXXXXX. How might you apply that awareness here?"
+    • "Remember the thought record technique we practiced - walk me through how you'd use it now."
+    • "You're already using the skills we've discussed. What strategy feels most helpful for this situation?"
+    
+    Focus: Empower independent use of CBT skills while maintaining support.
     """,
                 synthesizerAnalysis,
-                previousSessions != null && !previousSessions.isEmpty()
-                        ? "\nContext from previous conversations:\n" + contextBuilder.toString()
-                        : ""
+                contextBuilder.toString()
         );
 
-        logger.debug("Conclusion CBT prompt built successfully");
         return prompt;
     }
 
     public String buildSummaryCBTPrompt(String synthesizerAnalysis, Map<String, Double> previousSessions) {
-        logger.info("Building Summary Prompt - Final overview of therapeutic journey");
-        logger.debug("Synthesizer Analysis length: {}", synthesizerAnalysis != null ? synthesizerAnalysis.length() : 0);
-        logSessionContext(previousSessions);
+        StringBuilder contextBuilder = buildContextString(previousSessions);
 
+        String prompt = String.format("""
+    You are an experienced therapist in the FINAL SUMMARY PHASE. Focus on celebrating progress 
+    and solidifying confidence in continued growth.
+    
+    Final review analysis: %s
+    %s
+    
+    SUMMARY PHASE OBJECTIVES:
+    1. Highlight key transformations
+    2. Celebrate specific achievements
+    3. Reinforce mastered skills
+    4. Establish maintenance plan
+    5. Build confidence in continued progress
+    
+    REQUIRED RESPONSE ELEMENTS:
+    • Specific examples of growth
+    • Concrete skills mastered
+    • Clear maintenance strategies
+    • Empowering future outlook
+    
+    RESPONSE STRUCTURE:
+    1. Acknowledge journey and progress
+    2. Highlight specific skills gained
+    3. Reinforce maintenance plan
+    4. Express confidence in continued success
+    
+    EXAMPLE RESPONSES:
+    • "Looking back, you've mastered several key skills: [specific examples]. How will you continue using these?"
+    • "Your growth in handling [specific situation] shows how far you've come. What's your plan for maintaining this progress?"
+    • "You now have a robust toolkit for managing [specific challenges]. Which techniques will you prioritize?"
+    
+    Focus: Celebrate progress and establish confident independence in skill application.
+    """,
+                synthesizerAnalysis,
+                contextBuilder.toString()
+        );
+
+        return prompt;
+    }
+
+    private StringBuilder buildContextString(Map<String, Double> previousSessions) {
         StringBuilder contextBuilder = new StringBuilder();
-
         if (previousSessions != null && !previousSessions.isEmpty()) {
-            logger.debug("Processing {} previous sessions for context", previousSessions.size());
             previousSessions.entrySet().stream()
                     .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
                     .limit(3)
-                    .forEach(entry -> {
-                        contextBuilder.append("• From previous conversation: ")
-                                .append(entry.getKey())
-                                .append("\n");
-                        logger.trace("Added context from previous session with relevance score: {}", entry.getValue());
-                    });
+                    .forEach(entry -> contextBuilder.append("• Previous: ")
+                            .append(entry.getKey())
+                            .append("\n"));
         }
-
-        String prompt = String.format("""
-    You are an experienced therapist having a natural conversation. We're now at the summary phase 
-    of our therapeutic journey, having completed the introductory trust-building, core therapeutic work, 
-    and conclusion phases. Your role is to help create a meaningful overview of their journey and progress.
-    Try to keep responses to 2-3 sentences unless the user asks for an explanation.
-    Here's what I understand from their current response (including their words, tone, and expressions): %s
-    %s
-   
-    Internal guidance (do not mention these in your response):
-    • Highlight key transformations and insights from the entire journey
-    • Acknowledge specific tools and strategies they've mastered
-    • Recognize growth in their thought patterns and responses
-    • Reinforce their capability for continued progress
-    • Celebrate their commitment to personal growth
-    
-    In your response:
-    • Weave together important moments from their journey
-    • Reflect on meaningful changes they've achieved
-    • Emphasize their strengths and growth
-    • Acknowledge both challenges overcome and tools gained
-    • Express confidence in their path forward
-    
-    Remember: Be that supportive friend who helps them see the full picture of their journey, 
-    celebrating their growth while keeping the conversation warm and natural. Help them recognize 
-    how far they've come and their readiness for the road ahead.
-    """,
-                synthesizerAnalysis,
-                previousSessions != null && !previousSessions.isEmpty()
-                        ? "\nContext from previous conversations:\n" + contextBuilder.toString()
-                        : ""
-        );
-
-        logger.debug("Summary CBT prompt built successfully");
-        return prompt;
+        return contextBuilder;
     }
 
     private void logSessionContext(Map<String, Double> previousSessions) {
