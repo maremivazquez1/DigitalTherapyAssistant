@@ -1,5 +1,6 @@
 // src/components/BurnoutAssessment.tsx
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { FaArrowRight } from "react-icons/fa";
 import LikertQuestion from "./LikertQuestion";
 import TextQuestion from "./TextQuestion";
@@ -48,6 +49,7 @@ export const mockQuestions: BurnoutQuestion[] = [
 
 
 const BurnoutAssessment: React.FC = () => {
+  const navigate = useNavigate();
   const [sessionId, setSessionId] = useState<SessionPayload["sessionId"] | null>(null);
   //const [questions, setQuestions] = useState<BurnoutQuestion[]>([]);
   const [questions, setQuestions] = useState<BurnoutQuestion[]>(mockQuestions);
@@ -56,7 +58,7 @@ const BurnoutAssessment: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. On mount: fetch session + questions
+  // On mount: fetch session + questions
  /*  useEffect(() => {
     fetch("/api/assessment") // your endpoint that returns SessionPayload
       .then((res) => {
@@ -80,7 +82,7 @@ useEffect(() => {
   setLoading(false);
 }, []);
 
-  // 2. Handle each answer immediately
+  // Handle each answer immediately
   const handleAnswer = (questionId: number, answer: string) => {
     // locally mark as answered (to enable Next button)
     setResponses((prev) => ({ ...prev, [questionId]: answer }));
@@ -92,12 +94,14 @@ useEffect(() => {
 
     // find the questionType
     const questionType = questions.find((q) => q.id === questionId)!.type;
+    const questionContent = questions.find(q => q.id === questionId)!.content;
 
     const payload: AnswerPayload = {
       sessionId,
       questionId,
       questionType,
       answer,
+      questionContent,
     };
 
     fetch(`/api/assessment/${sessionId}/responses`, {
@@ -110,16 +114,17 @@ useEffect(() => {
     });
   };
 
-  // 3. Move to next question or finish
+  // Advance or finish
   const handleNext = () => {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex((i) => i + 1);
     } else {
-      alert("All done—thanks for completing the assessment!");
+      // Redirect to summary page, passing state
+      navigate("/burnout-summary", { state: { questions, responses } });
     }
   };
 
-  // 4. Render loading / error / empty states
+  // Render loading / error / empty states
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

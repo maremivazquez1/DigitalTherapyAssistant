@@ -7,6 +7,7 @@ import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import CBTPage from "./pages/CBTPage";
 import BurnoutAssessmentPage from "./pages/BurnoutAssessmentPage";
+import BurnoutSummaryPage from "./pages/BurnoutSummaryPage";
 import { ProtectedRoute } from './components/ProtectedRoute';
 import NavBar from "./components/NavBar";
 
@@ -25,6 +26,10 @@ const App: React.FC = () => {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/cbt" element={<CBTPage />} />
           <Route path="/burnout" element={<BurnoutAssessmentPage />} />
+          <Route 
+            path="/burnout-summary" 
+            element={<BurnoutSummaryPage initialQuestions={[]} initialResponses={[]} />} 
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
