@@ -27,8 +27,6 @@ public class BurnoutAssessmentOrchestrator {
     private final BurnoutWorker burnoutWorker;
     private final VideoAnalysisWorker videoAnalysisWorker;
     private final AudioAnalysisWorker audioAnalysisWorker;
-
-//    private final SessionManager sessionManager;
     private final Map<String, BurnoutAssessmentSession> activeSessions;
 
     public BurnoutAssessmentOrchestrator() {
@@ -62,9 +60,6 @@ public class BurnoutAssessmentOrchestrator {
 
         // Store the session
         activeSessions.put(sessionId, session);
-
-        // If using session manager, also store there. We currently are not implementing this, so it's commented out.
-        // sessionManager.saveSession(sessionId, session);
 
         return new BurnoutSessionCreationResponse(
                 sessionId,
@@ -174,6 +169,8 @@ public class BurnoutAssessmentOrchestrator {
         }
     }
 
+
+
     private String formatUserResponsesForWorker(BurnoutAssessmentSession session) {
         List<BurnoutQuestion> questions = session.getAssessment().getQuestions();
         Map<String, BurnoutUserResponse> responses = session.getResponses();
@@ -252,7 +249,6 @@ public class BurnoutAssessmentOrchestrator {
 
         // Save the summary to the session
         session.setSummary(summary);
-//        sessionManager.saveSession(sessionId, session);
 
         return summary;
     }
@@ -296,7 +292,6 @@ public class BurnoutAssessmentOrchestrator {
         // Mark session as complete
         session.setCompleted(true);
         session.setCompletedAt(LocalDateTime.now());
-//        sessionManager.saveSession(sessionId, session);
 
         return result;
     }
@@ -308,18 +303,6 @@ public class BurnoutAssessmentOrchestrator {
      * @return The BurnoutAssessmentSession object
      */
     private BurnoutAssessmentSession getSession(String sessionId) {
-        // Try to get from active sessions cache first
-
-        // If not in cache, try to get from session manager
-//        if (session == null) {
-//            session = sessionManager.getSession(sessionId, BurnoutAssessmentSession.class);
-//
-//            // If found, add to active sessions cache
-//            if (session != null) {
-//                activeSessions.put(sessionId, session);
-//            }
-//        }
-
         return activeSessions.get(sessionId);
     }
 }
