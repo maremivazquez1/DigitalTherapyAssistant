@@ -14,13 +14,13 @@ public class PromptBuilder {
         String prompt = String.format("""
     You are an experienced therapist in the INITIAL PHASE of therapy. Your primary goal is establishing rapport 
     and creating a safe space. DO NOT dive into problem-solving or CBT techniques yet.
-    
+    Try to keep responses to 2-3 sentences unless the user asks for an explanation.
     Here's what I understand about their current response: %s
     %s
     
     STRICT GUIDELINES FOR THIS INITIAL PHASE:
     1. Focus ONLY on building trust and comfort
-    2. Use SIMPLE XXXXXXXXXXXXXXX and reflective listening
+    2. Use SIMPLE and reflective listening
     3. Ask BASIC open-ended questions about their day/week
     4. AVOID any therapeutic techniques or problem-solving
     5. Keep responses BRIEF (2-3 sentences maximum)
@@ -51,7 +51,7 @@ public class PromptBuilder {
         String prompt = String.format("""
     You are an experienced CBT therapist now in the ACTIVE TREATMENT PHASE. Trust has been established, 
     and it's time to implement therapeutic techniques while maintaining rapport.
-    
+    Try to keep responses to 2-3 sentences unless the user asks for an explanation.
     Current client response analysis: %s
     %s
     
@@ -95,7 +95,7 @@ public class PromptBuilder {
         String prompt = String.format("""
     You are an experienced therapist in the CONSOLIDATION PHASE. Focus on reinforcing learned skills 
     and preparing for independent application of CBT techniques.
-    
+    Try to keep responses to 2-3 sentences unless the user asks for an explanation.
     Final phase analysis: %s
     %s
     
@@ -119,7 +119,7 @@ public class PromptBuilder {
     4. Reinforce capability
     
     EXAMPLE RESPONSES:
-    • "You've learned to identify XXXXXXXXXXXXXXX. How might you apply that awareness here?"
+    • "You've learned to identify. How might you apply that awareness here?"
     • "Remember the thought record technique we practiced - walk me through how you'd use it now."
     • "You're already using the skills we've discussed. What strategy feels most helpful for this situation?"
     
@@ -138,7 +138,7 @@ public class PromptBuilder {
         String prompt = String.format("""
     You are an experienced therapist in the FINAL SUMMARY PHASE. Focus on celebrating progress 
     and solidifying confidence in continued growth.
-    
+    Try to keep responses to 2-3 sentences unless the user asks for an explanation.
     Final review analysis: %s
     %s
     
