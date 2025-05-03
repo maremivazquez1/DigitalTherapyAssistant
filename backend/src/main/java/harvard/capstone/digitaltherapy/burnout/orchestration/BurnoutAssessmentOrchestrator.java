@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.stereotype.Service;
+
 /**
  * Orchestrates the burnout assessment process including:
  * - Creating and managing assessment sessions
@@ -17,6 +19,7 @@ import java.util.UUID;
  * - Calculating burnout scores
  * - Generating assessment summaries
  */
+@Service
 public class BurnoutAssessmentOrchestrator {
 
     private final BurnoutWorker burnoutWorker;

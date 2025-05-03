@@ -8,7 +8,7 @@ import harvard.capstone.digitaltherapy.burnout.orchestration.BurnoutAssessmentOr
 import harvard.capstone.digitaltherapy.utility.S3Utils;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutAssessmentResult;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutQuestion;
-import harvard.capstone.digitaltherapy.websocket.BurnoutWebSocketHandler;
+import harvard.capstone.digitaltherapy.websocket.WebSocketSessionManager;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -28,17 +28,17 @@ public class BurnoutController {
 
     private final ObjectMapper objectMapper;
     private final BurnoutAssessmentOrchestrator burnoutAssessmentOrchestrator;
-    private final BurnoutWebSocketHandler burnoutWebSocketHandler;
     private final S3Utils s3Service;
+
+    @Autowired
+    private WebSocketSessionManager sessionManager;
 
     @Autowired
     public BurnoutController(ObjectMapper objectMapper,
                               BurnoutAssessmentOrchestrator burnoutAssessmentOrchestrator,
-                              BurnoutWebSocketHandler burnoutWebSocketHandler,
                               S3Utils s3Service) {
         this.objectMapper = objectMapper;
         this.burnoutAssessmentOrchestrator = burnoutAssessmentOrchestrator;
-        this.burnoutWebSocketHandler = burnoutWebSocketHandler;
         this.s3Service = s3Service;
     }
 
@@ -111,7 +111,7 @@ public class BurnoutController {
     // Called by Orchestrator to send final results
     public void forwardFinalBurnoutResult(String burnoutSessionId, BurnoutAssessmentResult burnoutResult) {
         try {
-            WebSocketSession session = burnoutWebSocketHandler.getSession(burnoutSessionId);
+            WebSocketSession session = sessionManager.getSession(burnoutSessionId);
             if (session == null || !session.isOpen()) {
                 logger.error("No active WebSocket session for sessionId: {}", burnoutSessionId);
                 return;

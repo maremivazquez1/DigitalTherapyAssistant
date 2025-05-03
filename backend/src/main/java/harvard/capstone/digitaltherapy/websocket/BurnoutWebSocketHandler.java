@@ -19,9 +19,11 @@ public class BurnoutWebSocketHandler extends TextWebSocketHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(BurnoutWebSocketHandler.class);
 
-    private final Map<String, WebSocketSession> activeSessions = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper;
     private final BurnoutController burnoutController;
+
+    @Autowired
+    private WebSocketSessionManager sessionManager;
 
     private static class PendingUploadContext {
         public String type;
@@ -39,14 +41,18 @@ public class BurnoutWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        activeSessions.put(session.getId(), session);
+        sessionManager.registerSession(session.getId(), session);
         logger.info("WebSocket connected: {}", session.getId());
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        activeSessions.remove(session.getId());
+        sessionManager.unregisterSession(session.getId());
         logger.info("WebSocket disconnected: {}", session.getId());
+    }
+
+    public WebSocketSession getSession(String sessionId) {
+        return sessionManager.getSession(sessionId);
     }
 
     @Override
@@ -88,9 +94,5 @@ public class BurnoutWebSocketHandler extends TextWebSocketHandler {
         } catch (Exception e) {
             logger.error("Error handling binary message for session {}: {}", sessionKey, e.getMessage(), e);
         }
-    }
-
-    public WebSocketSession getSession(String sessionId) {
-        return activeSessions.get(sessionId);
     }
 }

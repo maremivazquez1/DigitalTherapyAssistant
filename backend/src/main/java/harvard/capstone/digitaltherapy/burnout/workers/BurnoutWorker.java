@@ -14,9 +14,12 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.stereotype.Component;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+@Component
 public class BurnoutWorker {
 
     private final StandardQuestionGenerator standardQuestionGenerator;
