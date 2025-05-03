@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import harvard.capstone.digitaltherapy.workers.AudioAnalysisWorker;
+import harvard.capstone.digitaltherapy.workers.VideoAnalysisWorker;
 import org.springframework.stereotype.Service;
 
 /**
@@ -23,11 +25,14 @@ import org.springframework.stereotype.Service;
 public class BurnoutAssessmentOrchestrator {
 
     private final BurnoutWorker burnoutWorker;
-//    private final SessionManager sessionManager;
+    private final VideoAnalysisWorker videoAnalysisWorker;
+    private final AudioAnalysisWorker audioAnalysisWorker;
     private final Map<String, BurnoutAssessmentSession> activeSessions;
 
-    public BurnoutAssessmentOrchestrator(BurnoutWorker burnoutWorker) {
-        this.burnoutWorker = burnoutWorker;
+    public BurnoutAssessmentOrchestrator() {
+        this.burnoutWorker = new BurnoutWorker();
+        this.videoAnalysisWorker = new VideoAnalysisWorker();
+        this.audioAnalysisWorker = new AudioAnalysisWorker();
         this.activeSessions = new HashMap<>();
     }
 
@@ -56,9 +61,6 @@ public class BurnoutAssessmentOrchestrator {
         // Store the session
         activeSessions.put(sessionId, session);
 
-        // If using session manager, also store there. We currently are not implementing this, so it's commented out.
-        // sessionManager.saveSession(sessionId, session);
-
         return new BurnoutSessionCreationResponse(
                 sessionId,
                 assessment.getQuestions()
@@ -71,8 +73,8 @@ public class BurnoutAssessmentOrchestrator {
      * @param sessionId The ID of the assessment session
      * @param questionId The ID of the question being answered
      * @param response The user's response
-     * @param videoUrl URL to  S3 video response for multimodal questions
-     * @param audioUrl Url to S3 audio response multimodal questions.
+     * @param videoUrl URL to S3 video response for multimodal questions
+     * @param audioUrl URL to S3 audio response multimodal questions
      * @return True if the response was successfully recorded
      */
     public boolean recordResponse(String sessionId, String questionId, String response, String videoUrl, String audioUrl) {
@@ -91,15 +93,46 @@ public class BurnoutAssessmentOrchestrator {
             return false;
         }
 
-        /*  this is where we process the response for insights
-         *  we need to call the other workers to process audio / facial
-         *
-         *
-         */
-
         Map<String, Object> multimodalInsights = new HashMap<>();
 
-        // Record the response
+        // Process multimodal content only if URLs are provided
+        if (videoUrl != null || audioUrl != null) {
+            // Process video insights if video URL is provided
+            if (videoUrl != null) {
+                System.out.println("Starting video analysis for: " + videoUrl);
+
+                // Start async video analysis
+                videoAnalysisWorker.detectFacesFromVideoAsync(videoUrl)
+                        .thenAccept(jsonResult -> {
+                            System.out.println("Video analysis completed for question " + questionId);
+                            updateResponseWithVideoAnalysis(sessionId, questionId, jsonResult);
+                        })
+                        .exceptionally(ex -> {
+                            System.err.println("Video analysis failed: " + ex.getMessage());
+                            return null;
+                        });
+            }
+
+            // Process audio insights if audio URL is provided
+            if (audioUrl != null) {
+                System.out.println("Starting audio analysis for: " + audioUrl);
+
+                // Start async audio analysis
+                audioAnalysisWorker.analyzeAudioAsync(audioUrl)
+                        .thenAccept(jsonResult -> {
+                            System.out.println("Audio analysis completed for question " + questionId);
+                            updateResponseWithAudioAnalysis(sessionId, questionId, jsonResult);
+                        })
+                        .exceptionally(ex -> {
+                            System.err.println("Audio analysis failed: " + ex.getMessage());
+                            return null;
+                        });
+            }
+        } else {
+            System.out.println("No multimodal content provided for question " + questionId);
+        }
+
+        // Record the response immediately with empty multimodal insights
         BurnoutUserResponse burnoutResponse = new BurnoutUserResponse(
                 questionId,
                 response,
@@ -107,25 +140,38 @@ public class BurnoutAssessmentOrchestrator {
         );
 
         session.getResponses().put(questionId, burnoutResponse);
-
-        // Update the session in storage
-//        sessionManager.saveSession(sessionId, session);
+        System.out.println("Response recorded for question " + questionId + " in session " + sessionId);
 
         return true;
     }
 
     /**
-     * Calculates the burnout score based on the responses provided
-     *
-     * @param sessionId The ID of the assessment session
-     * @return A BurnoutScore object with domain scores and overall score
+     * Updates a recorded response with video analysis results
      */
-    public BurnoutScore calculateScore(String sessionId) {
+    private void updateResponseWithVideoAnalysis(String sessionId, String questionId, String analysisJson) {
         BurnoutAssessmentSession session = getSession(sessionId);
-        if (session == null || session.getResponses().isEmpty()) {
-            throw new IllegalStateException("No session found or no responses recorded");
+        if (session != null && session.getResponses().containsKey(questionId)) {
+            BurnoutUserResponse response = session.getResponses().get(questionId);
+            response.getMultimodalInsights().put("video", analysisJson);
+            System.out.println("Updated response with video analysis for question " + questionId);
         }
+    }
 
+    /**
+     * Updates a recorded response with audio analysis results
+     */
+    private void updateResponseWithAudioAnalysis(String sessionId, String questionId, String analysisJson) {
+        BurnoutAssessmentSession session = getSession(sessionId);
+        if (session != null && session.getResponses().containsKey(questionId)) {
+            BurnoutUserResponse response = session.getResponses().get(questionId);
+            response.getMultimodalInsights().put("audio", analysisJson);
+            System.out.println("Updated response with audio analysis for question " + questionId);
+        }
+    }
+
+
+
+    private String formatUserResponsesForWorker(BurnoutAssessmentSession session) {
         List<BurnoutQuestion> questions = session.getAssessment().getQuestions();
         Map<String, BurnoutUserResponse> responses = session.getResponses();
 
@@ -149,7 +195,24 @@ public class BurnoutAssessmentOrchestrator {
             formattedInput.append("---\n");
         }
 
-        Map<String, Object> resultMap = burnoutWorker.generateBurnoutScore(formattedInput.toString());
+        return formattedInput.toString();
+    }
+
+    /**
+     * Calculates the burnout score based on the responses provided
+     *
+     * @param sessionId The ID of the assessment session
+     * @return A BurnoutScore object with domain scores and overall score
+     */
+    private BurnoutScore calculateScore(String sessionId) {
+        BurnoutAssessmentSession session = getSession(sessionId);
+        if (session == null || session.getResponses().isEmpty()) {
+            throw new IllegalStateException("No session found or no responses recorded");
+        }
+
+        String formattedInput = formatUserResponsesForWorker(session);
+
+        Map<String, Object> resultMap = burnoutWorker.generateBurnoutScore(formattedInput);
 
         double scoreValue = (double) resultMap.get("score");
         String explanation = (String) resultMap.get("explanation");
@@ -171,25 +234,21 @@ public class BurnoutAssessmentOrchestrator {
      * @param sessionId The ID of the assessment session
      * @return A BurnoutSummary object with insights and recommendations
      */
-    public BurnoutSummary generateSummary(String sessionId) {
+    private BurnoutSummary generateSummary(String sessionId) {
         BurnoutAssessmentSession session = getSession(sessionId);
 
         if (session == null || session.getScore() == null) {
             throw new IllegalStateException("No session found or score not calculated");
         }
 
-        // Generate insights and recommendations based on the score
-//        BurnoutSummary summary = burnoutWorker.generateSummary(
-//                session.getScore(),
-//                session.getAssessment().getQuestions(),
-//                session.getResponses()
-//        );
+        String formattedInput = formatUserResponsesForWorker(session);
 
-        BurnoutSummary summary = new BurnoutSummary(sessionId, "");
+        String overallInsight = burnoutWorker.generateBurnoutSummary(formattedInput);
+
+        BurnoutSummary summary = new BurnoutSummary(sessionId, overallInsight);
 
         // Save the summary to the session
         session.setSummary(summary);
-//        sessionManager.saveSession(sessionId, session);
 
         return summary;
     }
@@ -233,7 +292,6 @@ public class BurnoutAssessmentOrchestrator {
         // Mark session as complete
         session.setCompleted(true);
         session.setCompletedAt(LocalDateTime.now());
-//        sessionManager.saveSession(sessionId, session);
 
         return result;
     }
@@ -245,18 +303,6 @@ public class BurnoutAssessmentOrchestrator {
      * @return The BurnoutAssessmentSession object
      */
     private BurnoutAssessmentSession getSession(String sessionId) {
-        // Try to get from active sessions cache first
-
-        // If not in cache, try to get from session manager
-//        if (session == null) {
-//            session = sessionManager.getSession(sessionId, BurnoutAssessmentSession.class);
-//
-//            // If found, add to active sessions cache
-//            if (session != null) {
-//                activeSessions.put(sessionId, session);
-//            }
-//        }
-
         return activeSessions.get(sessionId);
     }
 }

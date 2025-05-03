@@ -24,6 +24,7 @@ public class MessageWorker {
     private final VectorDatabaseService vectorDatabaseService;
     private final Map<String, ChatMemory> sessionMemories;
     private final PromptBuilder promptBuilder;
+
     private String sessionId;
     private String userId;
     private static final Map<String, Integer> sessionMessageCounter = new HashMap<>();
