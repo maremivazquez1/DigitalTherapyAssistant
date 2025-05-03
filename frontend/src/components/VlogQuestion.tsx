@@ -1,33 +1,24 @@
 // src/components/VlogQuestion.tsx
 import React, { useRef, useState, useEffect } from "react";
-import { useWebSocket } from "../hooks/useWebSocket";
+import type { BurnoutQuestion } from "../types/burnout/assessment";
 
 interface VlogQuestionProps {
-  question: {
-    id: number;
-    content: string;
-  };
-  sessionId: string;
+  question: BurnoutQuestion;
   onChange: (questionId: number, answer: string) => void;
 }
 
 const VlogQuestion: React.FC<VlogQuestionProps> = ({
   question: { id: questionId },
-  sessionId,
   onChange,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [recording, setRecording] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
 
-  // Only connect WS while recording
-  const { isConnected, sendMessage } = useWebSocket(
-    "ws://localhost:8080/ws/burnout",
-    recording
-  );
-
-  // 1. Acquire camera + mic and show live preview
+  // 1. Acquire camera + mic for live preview once
   useEffect(() => {
     let localStream: MediaStream;
     navigator.mediaDevices
@@ -35,86 +26,136 @@ const VlogQuestion: React.FC<VlogQuestionProps> = ({
       .then((ms) => {
         localStream = ms;
         setStream(ms);
-        if (videoRef.current) {
-          videoRef.current.srcObject = ms;
-        }
       })
-      .catch((err) => console.error("Error accessing camera/mic:", err));
-
-    return () => {
-      localStream?.getTracks().forEach((t) => t.stop());
-    };
+      .catch((err) => console.error("getUserMedia error:", err));
+    return () => localStream?.getTracks().forEach((t) => t.stop());
   }, []);
 
-  // 2. Start recording
+  // 2. Update <video> element for preview or playback
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+    if (videoUrl) {
+      videoEl.srcObject = null;
+      videoEl.src = videoUrl;
+      videoEl.muted = false;
+      videoEl.controls = true;
+      videoEl.play().catch(() => {});
+    } else if (stream) {
+      videoEl.src = "";
+      videoEl.srcObject = stream;
+      videoEl.muted = true;
+      videoEl.controls = false;
+      videoEl.play().catch(() => {});
+    }
+  }, [stream, videoUrl]);
+
+  // 3. Reset when question changes
+  useEffect(() => {
+    setVideoUrl(null);
+    setVideoBlob(null);
+    setRecording(false);
+  }, [questionId]);
+
+  // 4. Start recording
   const handleStart = () => {
-    if (!stream) return;
-    const recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
-    const localChunks: Blob[] = [];
+    setVideoUrl(null);
+    setVideoBlob(null);
+    setRecording(true);
+    const chunks: Blob[] = [];
+    const candidateTypes = [
+      "video/webm; codecs=vp8,opus",
+      "video/webm; codecs=vp9,opus",
+      "video/webm",
+      "video/mp4",
+    ];
+    const mimeType = candidateTypes.find((t) =>
+      MediaRecorder.isTypeSupported(t)
+    );
+
+    let recorder: MediaRecorder;
+    try {
+      recorder = mimeType
+        ? new MediaRecorder(stream!, { mimeType })
+        : new MediaRecorder(stream!);
+    } catch (err) {
+      console.error("MediaRecorder init failed:", err);
+      setRecording(false);
+      return;
+    }
 
     recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) localChunks.push(e.data);
+      if (e.data.size) chunks.push(e.data);
     };
-
     recorder.onstop = () => {
-      const blob = new Blob(localChunks, { type: "video/webm" });
-      const videoUrl = URL.createObjectURL(blob);
-
-      // Notify parent; parent’s handleAnswer will POST JSON
-      onChange(questionId, videoUrl);
-
-      // Send a control message so backend knows what’s coming
-      if (isConnected) {
-        sendMessage(
-          JSON.stringify({
-            type: "video_upload",
-            sessionId,
-            questionId,
-          })
-        );
-        // Then send the raw blob
-        sendMessage(blob);
-      } else {
-        console.warn("WebSocket not connected; video not sent");
-      }
+      const blob = new Blob(chunks, { type: recorder.mimeType });
+      const url = URL.createObjectURL(blob);
+      setVideoBlob(blob);
+      setVideoUrl(url);
+      setRecording(false);
     };
 
     mediaRecorderRef.current = recorder;
     recorder.start();
-    setRecording(true);
   };
 
-  // 3. Stop recording
+  // 5. Stop recording
   const handleStop = () => {
     mediaRecorderRef.current?.stop();
-    setRecording(false);
   };
 
+  // 6. Re-record or submit
+  const handleReRecord = () => handleStart();
+  const handleSubmit = () => {
+    if (!videoBlob) return;
+    onChange(questionId, videoUrl!);
+  };
+
+  // 7. Render UI
   return (
     <div className="flex flex-col items-center">
       <div className="w-full max-w-sm h-64 bg-gray-200 rounded-md overflow-hidden mb-4 shadow-md">
         <video
           ref={videoRef}
           autoPlay
-          muted
           playsInline
           className="object-cover w-full h-full"
-        >
-          Your browser doesn’t support video.
-        </video>
+        />
       </div>
 
-      <button
-        onClick={recording ? handleStop : handleStart}
-        className={`btn btn-accent btn-lg ${recording ? "btn-error" : ""}`}
-      >
-        {recording ? "Stop Recording" : "Record Video"}
-      </button>
+      {/* Before/while recording: Record or Stop */}
+      {!videoUrl && (
+        <button
+          onClick={recording ? handleStop : handleStart}
+          disabled={!stream}
+          className={`btn btn-accent btn-lg ${
+            recording ? "btn-error" : ""
+          }`}
+        >
+          {recording ? "Stop Recording" : "Record Video"}
+        </button>
+      )}
+
+      {/* After recording: Re-record or Submit */}
+      {videoUrl && (
+        <div className="flex gap-4">
+          <button onClick={handleReRecord} className="btn btn-outline">
+            Re-record
+          </button>
+          <button onClick={handleSubmit} className="btn btn-primary">
+            Submit Recording
+          </button>
+        </div>
+      )}
 
       <p className="text-sm text-gray-500 mt-4">
         {recording
-          ? "Recording… click again to stop."
-          : "Click to start recording your response."}
+          ? "Recording…"
+          : videoUrl
+          ? "Review your video or re-record."
+          : stream
+          ? "Click to start recording your response."
+          : "Preparing camera…"}
       </p>
     </div>
   );

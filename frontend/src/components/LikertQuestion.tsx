@@ -1,11 +1,8 @@
 import React from "react";
+import type { BurnoutQuestion } from "../types/burnout/assessment";
 
 interface LikertQuestionProps {
-  // Adjust your question interface as needed. Here we use id and content.
-  question: {
-    id: number;
-    content: string;
-  };
+  question: BurnoutQuestion;                // use the shared type
   onChange: (questionId: number, answer: string) => void;
 }
 

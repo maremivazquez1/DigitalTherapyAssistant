@@ -1,10 +1,9 @@
+// src/components/TextQuestion.tsx
 import React, { ChangeEvent } from "react";
+import type { BurnoutQuestion } from "../types/burnout/assessment";
 
 interface TextQuestionProps {
-  question: {
-    id: number;
-    content: string;
-  };
+  question: BurnoutQuestion;
   onChange: (questionId: number, answer: string) => void;
 }
 
@@ -14,13 +13,13 @@ const TextQuestion: React.FC<TextQuestionProps> = ({ question, onChange }) => {
   };
 
   return (
-<div>
+    <div>
       <textarea
         placeholder="Type your answer here..."
         onChange={handleChange}
         className="textarea textarea-bordered w-full max-w-md mx-auto resize-none p-4"
         rows={6}
-      ></textarea>
+      />
     </div>
   );
 };

@@ -1,18 +1,16 @@
 // src/components/BurnoutAssessment.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowRight } from "react-icons/fa";
+import { v4 as uuidv4 } from "uuid";
 import LikertQuestion from "./LikertQuestion";
 import TextQuestion from "./TextQuestion";
 import VlogQuestion from "./VlogQuestion";
-
-// --- import shared types ---
+// import { useWebSocket } from "../hooks/useWebSocket";
 import type {
   BurnoutQuestion,
-  SessionPayload,
   AnswerPayload,
 } from "../types/burnout/assessment";
-
 
 export const mockQuestions: BurnoutQuestion[] = [
   // Likert questions
@@ -35,122 +33,96 @@ export const mockQuestions: BurnoutQuestion[] = [
 
   // Vlog questions
   {
-    id: 4,
+    id: 5,
     type: "vlog",
     content: "Record a 30-second video describing your current energy levels.",
   },
   {
-    id: 5,
+    id: 6,
     type: "vlog",
     content: "Record a short clip telling us what you do to unwind after a stressful day.",
   },
 ];
 
-
-
 const BurnoutAssessment: React.FC = () => {
   const navigate = useNavigate();
-  const [sessionId, setSessionId] = useState<SessionPayload["sessionId"] | null>(null);
-  //const [questions, setQuestions] = useState<BurnoutQuestion[]>([]);
-  const [questions, setQuestions] = useState<BurnoutQuestion[]>(mockQuestions);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<BurnoutQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [responses, setResponses] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // On mount: fetch session + questions
- /*  useEffect(() => {
-    fetch("/api/assessment") // your endpoint that returns SessionPayload
-      .then((res) => {
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        return res.json() as Promise<SessionPayload>;
-      })
-      .then(({ sessionId, questions }) => {
-        setSessionId(sessionId);
-        setQuestions(questions);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Could not load assessment. Please try again.");
-        setLoading(false);
-      });
-  }, []); */
+  // generate a requestId for session kickoff
+  const requestId = useRef(uuidv4());
 
-// skip the fetch in useEffect until your backend is up
-useEffect(() => {
-  setLoading(false);
-}, []);
+  // open burnout WebSocket immediately
+  // const { messages, sendMessage } = useWebSocket(
+  //   "ws://localhost:8080/ws/burnout",
+  //   true
+  // );
 
-  // Handle each answer immediately
+  // 1) Kick off the session via WebSocket
+  // useEffect(() => {
+  //   sendMessage(
+  //     JSON.stringify({
+  //       type: "start-burnout",
+  //       requestId: requestId.current,
+  //     })
+  //   );
+  // }, [sendMessage]);
+
+  // 2) Load mock questions once
+  useEffect(() => {
+    setSessionId("mock-session-123");
+    setQuestions(mockQuestions);
+    setLoading(false);
+  }, []);
+
+  // 3) Gather answer for the current question
   const handleAnswer = (questionId: number, answer: string) => {
-    // locally mark as answered (to enable Next button)
     setResponses((prev) => ({ ...prev, [questionId]: answer }));
-
-    if (!sessionId) {
-      console.warn("No session yet; skipping send");
-      return;
-    }
-
-    // find the questionType
-    const questionType = questions.find((q) => q.id === questionId)!.type;
-    const questionContent = questions.find(q => q.id === questionId)!.content;
-
-    const payload: AnswerPayload = {
-      sessionId,
-      questionId,
-      questionType,
-      answer,
-      questionContent,
-    };
-
-    fetch(`/api/assessment/${sessionId}/responses`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).catch((err) => {
-      console.error("Failed to submit answer:", err);
-      // optionally queue retry logic here
-    });
   };
 
-  // Advance or finish
+  // 4) Move to next question or finish
   const handleNext = () => {
+    const q = questions[currentIndex];
+    const answer = responses[q.id];
+    if (sessionId && answer != null) {
+      const payload: AnswerPayload = {
+        sessionId,
+        questionId: q.id,
+        questionType: q.type,
+        answer,
+        questionContent: q.content,
+      };
+      console.log("Sending on Next:", payload);
+      // sendMessage(JSON.stringify(payload)); // or REST
+    }
+
     if (currentIndex < questions.length - 1) {
       setCurrentIndex((i) => i + 1);
     } else {
-      // Redirect to summary page, passing state
       navigate("/burnout-summary", { state: { questions, responses } });
     }
   };
 
-  // Render loading / error / empty states
+  // 5) Render loading / no-questions states
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <span className="loading loading-spinner text-primary"></span>
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <p className="text-red-500 mb-4">{error}</p>
-        <button className="btn btn-secondary" onClick={() => window.location.reload()}>
-          Retry
-        </button>
+        Loading assessment…
       </div>
     );
   }
   if (!questions.length) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>No questions available.</p>
+        No questions available.
       </div>
     );
   }
 
-  // 5. Main render: Typeform-like layout
+  // 6) Main question render
   const q = questions[currentIndex];
   return (
     <div
@@ -159,18 +131,17 @@ useEffect(() => {
     >
       <div className="max-w-3xl w-full text-center py-10">
         <h1 className="text-3xl font-bold mb-2">{q.content}</h1>
-        {q.subtitle && (
-          <p className="text-sm text-gray-600 mb-8">{q.subtitle}</p>
-        )}
+        {q.subtitle && <p className="text-sm text-gray-600 mb-8">{q.subtitle}</p>}
 
         <div className="mb-10">
           {q.type === "likert" && <LikertQuestion question={q} onChange={handleAnswer} />}
           {q.type === "open_text" && <TextQuestion question={q} onChange={handleAnswer} />}
-          {q.type === "vlog" && <VlogQuestion
-                                  question={q}
-                                  sessionId={sessionId!}    // pass down the session
-                                  onChange={handleAnswer}
-                                />}
+          {q.type === "vlog" && (
+            <VlogQuestion
+              question={q}
+              onChange={handleAnswer}
+            />
+          )}
         </div>
 
         <button
