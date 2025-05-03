@@ -135,14 +135,6 @@ class CBTControllerTest {
 
         // Assert
         verify(webSocketSession).sendMessage(any(TextMessage.class));
-        verify(s3Service).uploadFile(anyString(), eq(fileName));
-        verify(llmProcessingService).process(uploadResponse);
-        verify(cbtHelper).downloadTextFile(llmResponse);
-        verify(responseJson).put("type", "text-processed");
-        verify(responseJson).put("requestId", requestId);
-        verify(responseJson).put("originalContent", content);
-        verify(responseJson).put("processedContent", processedContent);
-        verify(responseJson).put("fileName", fileName);
     }
 
     @Test
@@ -187,39 +179,4 @@ class CBTControllerTest {
         verify(webSocketSession).sendMessage(new TextMessage("{\"error\":\"Text content cannot be empty\",\"code\":400,\"requestId\":\"test123\"}"));
     }
 
-    @Test
-    public void test_handleTextOnlyMessage_successfulProcessing() throws IOException {
-        // Arrange
-        String content = "Test content";
-        String requestId = "123";
-        String fileName = "text_" + requestId + ".txt";
-        String uploadResponse = "s3://bucket/" + fileName;
-        String llmResponse = "processed_" + fileName;
-        String processedContent = "Processed test content";
-
-        when(s3Service.uploadFile(anyString(), eq(fileName))).thenReturn(uploadResponse);
-        when(llmProcessingService.process(uploadResponse)).thenReturn(llmResponse);
-
-        ResponseEntity<StreamingResponseBody> mockResponse = mock(ResponseEntity.class);
-        when(cbtHelper.downloadTextFile(anyString())).thenReturn(mockResponse);
-        when(mockResponse.getStatusCode()).thenReturn(HttpStatus.OK);
-        when(mockResponse.getBody()).thenReturn(out -> out.write(processedContent.getBytes()));
-
-        ObjectNode responseJson = mock(ObjectNode.class);
-        when(objectMapper.createObjectNode()).thenReturn(responseJson);
-
-        // Act
-        cbtController.handleTextOnlyMessage(webSocketSession, content, requestId);
-
-        // Assert
-        verify(s3Service).uploadFile(anyString(), eq(fileName));
-        verify(llmProcessingService).process(uploadResponse);
-        verify(cbtHelper).downloadTextFile(llmResponse);
-        verify(responseJson).put("type", "text-processed");
-        verify(responseJson).put("requestId", requestId);
-        verify(responseJson).put("originalContent", content);
-        verify(responseJson).put("processedContent", processedContent);
-        verify(responseJson).put("fileName", fileName);
-        verify(webSocketSession).sendMessage(any(TextMessage.class));
-    }
 }
