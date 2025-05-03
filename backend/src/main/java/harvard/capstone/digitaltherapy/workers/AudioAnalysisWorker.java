@@ -219,14 +219,14 @@ public class AudioAnalysisWorker {
 
                         JsonNode allPredictions = root.get(0)
                                 .path("results")
-                                .path("predictions")
-                                .get(0);
+                                .path("predictions");
 
-                        if (allPredictions == null || !allPredictions.isArray()) {
+                        if (!allPredictions.isArray() || allPredictions.size() == 0){
                             throw new RuntimeException("Missing or invalid predictions.");
                         }
 
-                        JsonNode groupedPredictions = allPredictions.path("models")
+                        JsonNode groupedPredictions = allPredictions.get(0)
+                                .path("models")
                                 .path("prosody")
                                 .path("grouped_predictions");
 
