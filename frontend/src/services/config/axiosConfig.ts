@@ -28,7 +28,7 @@
  * - Support for additional custom headers if needed.
  */
 
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ? `https://${import.meta.env.VITE_API_BASE_URL}/api` : '/api';
 
@@ -37,26 +37,33 @@ const api = axios.create({
   baseURL,
 });
 
-// Optional: Add a request interceptor to attach an auth token if available
+// Request interceptor to attach auth token
 api.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error: AxiosError) => Promise.reject(error)
 );
 
-// Optional: Global error handling in a response interceptor
+// Response interceptor to handle token refresh
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  (response: AxiosResponse) => {
+    // Check for new token in response header
+    const newToken = response.headers['x-new-token'];
+    if (newToken) {
+      localStorage.setItem('token', newToken);
+    }
+    return response;
+  },
+  (error: AxiosError) => {
     if (error.response && error.response.status === 401) {
-      // For instance, clear token or redirect to login
-      // localStorage.removeItem('token');
-      // window.location.href = '/login';
+      // Clear token and redirect to login on authentication error
+      localStorage.removeItem('token');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

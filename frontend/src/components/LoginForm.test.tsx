@@ -16,7 +16,7 @@ describe('LoginForm - Render Tests', () => {
   it('renders email and password inputs and login button', () => {
     render(
       <MemoryRouter>
-        <LoginForm />
+        <LoginForm onSuccess={() => {}}/>
       </MemoryRouter>
     );
 
@@ -41,7 +41,7 @@ describe('LoginForm - Required Fields Enforcement', () => {
   it('does not call login if the email is missing', () => {
     render(
       <MemoryRouter>
-        <LoginForm />
+        <LoginForm onSuccess={() => {}}/>
       </MemoryRouter>
     );
 
@@ -58,7 +58,7 @@ describe('LoginForm - Required Fields Enforcement', () => {
   it('does not call login if the password is missing', () => {
     render(
       <MemoryRouter>
-        <LoginForm />
+        <LoginForm onSuccess={() => {}}/>
       </MemoryRouter>
     );
 
@@ -84,7 +84,7 @@ describe('LoginForm - Successful Submission', () => {
 
     render(
       <MemoryRouter>
-        <LoginForm />
+        <LoginForm onSuccess={() => {}}/>
       </MemoryRouter>
     );
 
@@ -113,7 +113,7 @@ describe('LoginForm - Server Error Response', () => {
 
     render(
       <MemoryRouter>
-        <LoginForm />
+        <LoginForm onSuccess={() => {}}/>
       </MemoryRouter>
     );
 

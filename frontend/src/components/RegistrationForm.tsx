@@ -3,7 +3,11 @@ import { Link } from 'react-router-dom';
 import { register as registerService } from '../services/auth/authService';
 import { RegisterData } from '../types/auth/auth';
 
-const RegistrationForm: React.FC = () => {
+interface RegistrationFormProps {
+  onSuccess: (token: string) => void;
+}
+
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess }) => {
   // Local state for registration data (excluding confirmPassword)
   const [formData, setFormData] = useState<RegisterData>({
     firstName: '',
@@ -45,10 +49,10 @@ const RegistrationForm: React.FC = () => {
     }
 
     try {
-      // Only send formData (without confirmPassword)
       const response = await registerService(formData);
       if (response.status === 'success') {
         setSuccess(response.message);
+        onSuccess("dummy-token");
       } else {
         setError(response.message);
       }
