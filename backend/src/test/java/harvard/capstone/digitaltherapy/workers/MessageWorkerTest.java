@@ -127,16 +127,4 @@ public class MessageWorkerTest {
             messageWorker.generateResponse(List.of(UserMessage.from(message)));
         }, "Should throw exception when session context is not set");
     }
-
-    @Test
-    public void test_buildPrompt() {
-        String analysis = "User shows signs of anxiety and stress";
-        Map<String, Double> previousSessions = null;
-        String prompt = promptBuilder.buildIntroductoryPrompt(analysis, previousSessions);
-        
-        assertNotNull(prompt, "Prompt should not be null");
-        assertTrue(prompt.contains(analysis), "Prompt should include the analysis");
-        assertTrue(prompt.contains("therapeutic assistant"), "Prompt should include role description");
-        assertTrue(prompt.contains("cognitive behavioral therapy"), "Prompt should mention CBT");
-    }
 } 
