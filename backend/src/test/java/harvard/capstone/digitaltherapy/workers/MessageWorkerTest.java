@@ -8,6 +8,7 @@ import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
+import harvard.capstone.digitaltherapy.cbt.service.PromptBuilder;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +28,7 @@ public class MessageWorkerTest {
     private MessageWorker messageWorker;
     private ChatLanguageModel model;
     private ChatMemory chatMemory;
+    private PromptBuilder promptBuilder;
 
     @BeforeEach
     public void setup() {
@@ -130,7 +132,7 @@ public class MessageWorkerTest {
     public void test_buildPrompt() {
         String analysis = "User shows signs of anxiety and stress";
         Map<String, Double> previousSessions = null;
-        String prompt = messageWorker.buildPrompt(analysis, previousSessions);
+        String prompt = promptBuilder.buildIntroductoryPrompt(analysis, previousSessions);
         
         assertNotNull(prompt, "Prompt should not be null");
         assertTrue(prompt.contains(analysis), "Prompt should include the analysis");
