@@ -49,6 +49,8 @@ public class BurnoutController {
         switch (messageType) {
             case "start-burnout" -> startBurnoutSession(session, requestId);
             case "answer" -> handleUserAnswer(session, requestJson);
+            case "audio-upload" -> handleAudioUpload(session, requestJson);
+            case "video-upload" -> handleVideoUpload(session, requestJson);
             default -> logger.warn("Unhandled message type: {}", messageType);
         }
     }
