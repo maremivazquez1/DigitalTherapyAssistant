@@ -8,7 +8,11 @@ interface LocationState {
   };
 }
 
-const LoginForm: React.FC = () => {
+interface LoginFormProps {
+  onSuccess: (token: string) => void;
+}
+
+const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +35,8 @@ const LoginForm: React.FC = () => {
     };
 
     try {
-      await loginService(payload);
-      // Handle successful login (e.g., redirect)
+      const authResponse = await loginService(payload);
+      onSuccess(authResponse.token);
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(err.message || 'Login failed');

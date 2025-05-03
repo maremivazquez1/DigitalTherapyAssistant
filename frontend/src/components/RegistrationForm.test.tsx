@@ -16,7 +16,7 @@ describe('RegistrationForm - Render Tests', () => {
   it('renders all expected inputs', () => {
     render(
       <MemoryRouter>
-        <RegistrationForm />
+        <RegistrationForm onSuccess={() => {}} />
       </MemoryRouter>
     );
 
@@ -60,7 +60,7 @@ describe('RegistrationForm - Required Fields Enforcement', () => {
   it('does not submit if a required field is missing', () => {
     render(
       <MemoryRouter>
-        <RegistrationForm />
+        <RegistrationForm onSuccess={() => {}} />
       </MemoryRouter>
     );
     // Fill out everything EXCEPT "Last Name"
@@ -84,7 +84,7 @@ describe('RegistrationForm - Email Field (HTML5 validation)', () => {
   it('does not call registerService if the email is invalid', () => {
     render(
       <MemoryRouter>
-        <RegistrationForm />
+        <RegistrationForm onSuccess={() => {}} />
       </MemoryRouter>
     );
 
@@ -109,7 +109,7 @@ describe('RegistrationForm - Password Mismatch', () => {
   it('shows an error and does not call registerService if passwords do not match', async () => {
     render(
       <MemoryRouter>
-        <RegistrationForm />
+        <RegistrationForm onSuccess={() => {}} />
       </MemoryRouter>
     );
 
@@ -148,7 +148,7 @@ describe('RegistrationForm - Successful Submission', () => {
 
     render(
       <MemoryRouter>
-        <RegistrationForm />
+        <RegistrationForm onSuccess={() => {}} />
       </MemoryRouter>
     );
 
@@ -194,7 +194,7 @@ describe('RegistrationForm - Server Error Response', () => {
 
     render(
       <MemoryRouter>
-        <RegistrationForm />
+        <RegistrationForm onSuccess={() => {}} />
       </MemoryRouter>
     );
 

@@ -11,7 +11,6 @@ import harvard.capstone.digitaltherapy.aws.service.PollyService;
 import harvard.capstone.digitaltherapy.aws.service.TranscribeService;
 import harvard.capstone.digitaltherapy.cbt.service.CBTHelper;
 import harvard.capstone.digitaltherapy.llm.service.S3StorageService;
-import harvard.capstone.digitaltherapy.orchestration.DTASessionOrchestrator;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -20,18 +19,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
-import ws.schild.jave.*;
 import ws.schild.jave.encode.AudioAttributes;
 import ws.schild.jave.encode.EncodingAttributes;
 import ws.schild.jave.encode.VideoAttributes;
-import ws.schild.jave.process.ffmpeg.DefaultFFMPEGLocator;
-
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -47,7 +46,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+
 @Controller
 public class CBTController {
     private static final Logger logger = LoggerFactory.getLogger(CBTController.class);
@@ -64,8 +63,8 @@ public class CBTController {
     private final OrchestrationService orchestrationService;
     Map<String, String> input = new HashMap<>();
     private String  audio_s3_path ="";
-    @Value("${ffmeg_path}")
-    private String ffmeg_path;
+    @Value("${ffmpeg_path}")
+    private String ffmpeg_path;
     @Autowired
     public CBTController(ObjectMapper objectMapper,
                          S3Utils s3Service,
@@ -87,20 +86,31 @@ public class CBTController {
         this.s3StorageService = s3StorageService;
     }
 
+    /**
+     * Builds a key of the form "userId/sessionId/originalKey"
+     */
+    private String getUserId(WebSocketSession session) {
+        Object raw = session.getAttributes().get("username");
+        return (raw instanceof String) ? (String) raw : "anonymous";
+    }
+
+    private String prefixKey(WebSocketSession session, String originalKey) {
+        String userId    = getUserId(session);
+        String sessionId = session.getId();
+        return userId + "_" + sessionId + "_" + originalKey;
+    }
 
     public void handleMessage(WebSocketSession session, JsonNode requestJson, String messageType, String requestId) throws IOException {
         if ("audio".equals(messageType)) {
             handleAudioMessage(session, requestJson, requestId);
         } else {
             String content = requestJson.has("text") ? requestJson.get("text").asText() : "";
-            // Check if modality field exists
+             // Check if modality field exists
             if (requestJson.has("modality")) {
-                // Assuming you have a class variable like 'currentModality'
                 this.currentModality = requestJson.get("modality").asText();
             } else {
-                // If no modality field exists, call handleTextMessage
                 handleTextMessage(session, requestJson);
-                return; // Exit the method after handling text message
+                return;
             }
         }
     }
@@ -118,8 +128,9 @@ public class CBTController {
             }
             // Generate unique filename
             String fileName = "text_" + requestId + ".txt";
-            // Upload to S3
-            String uploadResponse = s3Service.uploadFile(tempFile.getAbsolutePath(), fileName);
+            // Upload to S3 with prefix
+            String keyName = prefixKey(session, fileName);
+            String uploadResponse = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
             // Get processed content
             String llmResponse = llmProcessingService.process(uploadResponse);
             llmResponse=llmResponse.replace("s3://dta-root/", "");
@@ -166,6 +177,7 @@ public class CBTController {
                 File webmFile = null;
                 File mp4File = null;
                 keyName = "video_" + sessionId + ".mp4";
+                String keyWithPrefix = prefixKey(session, keyName);
                 try {
                     // Step 1: Save incoming WebM data to a temp file
                     webmFile = File.createTempFile("video_temp_", ".webm");
@@ -195,7 +207,7 @@ public class CBTController {
 
                     // Use ProcessBuilder directly for more control
                     List<String> command = Arrays.asList(
-                            ffmeg_path,
+                            ffmpeg_path,
                             "-i", webmFile.getAbsolutePath(),
                             "-c:v", "h264",
                             "-c:a", "aac",
@@ -217,7 +229,7 @@ public class CBTController {
                     throw new RuntimeException("Video conversion failed: " + e.getMessage(), e);
                 }
                 long s3AudioFileUploadTime  = System.currentTimeMillis();
-                String response = s3Service.uploadFile(mp4File.getAbsolutePath(), keyName);
+                String response = s3Service.uploadFile(mp4File.getAbsolutePath(), keyWithPrefix);
                 input.put("video", response);
                 logger.info("S3 Video File Upload took {} ms", System.currentTimeMillis() - s3AudioFileUploadTime);
                 if(input.size()==2){
@@ -230,9 +242,10 @@ public class CBTController {
                     fos.write(audioData);
                 }
                  keyName = "audio_" + sessionId + ".mp3";
-                 audio_s3_path = s3Service.uploadFile(tempFile.getAbsolutePath(), keyName);
+                 String keyWithPrefix = prefixKey(session, keyName);
+                 audio_s3_path = s3Service.uploadFile(tempFile.getAbsolutePath(), keyWithPrefix);
                  String bucketName = "dta-root";
-                 String presignedUrl = S3Utils.generatePresignedUrl(bucketName, keyName, Duration.ofMinutes(15));
+                 String presignedUrl = S3Utils.generatePresignedUrl(bucketName, keyWithPrefix, Duration.ofMinutes(15));
                  input.put("audio", presignedUrl);
                  tempFile.delete(); // Cleanup temp file
                 if(input.size()==2){
@@ -261,14 +274,15 @@ public class CBTController {
             // Process the audio using existing functionality
             File convertedFile = cbtHelper.convertMultiPartToBinaryFile(multipartFile);
             String keyName = requestId + multipartFile.getOriginalFilename();
+            String keyWithPrefix = prefixKey(session, keyName);
 
             // Upload to S3
-            String response = s3Service.uploadFile(convertedFile.getAbsolutePath(), keyName);
+            String response = s3Service.uploadFile(convertedFile.getAbsolutePath(), keyWithPrefix);
 
             convertedFile.delete(); // Cleanup temp file
 
             // Download processed file
-            File responseFile = s3Service.downloadFileFromS3("dta-root", keyName);
+            File responseFile = s3Service.downloadFileFromS3("dta-root", keyWithPrefix);
 
             // Convert processed file to base64 for WebSocket response
             String processedAudioBase64 = cbtHelper.convertFileToBase64(responseFile);
@@ -338,6 +352,9 @@ public class CBTController {
 
     private void processFinalMessage(WebSocketSession session, String s3Path) throws IOException {
         String sessionId = session.getId();
+        String userId = getUserId(session);
+        
+        orchestrationService.setSessionContext(sessionId, userId);
         orchestrationService.associateSession(sessionId);
         String transcribedText = "";
 

@@ -9,7 +9,7 @@ const LoginPage: React.FC = () => {
 
   const handleLoginSuccess = (token: string) => {
     login(token);
-    navigate("/cbt");
+    navigate("/");
   };
 
   return (
