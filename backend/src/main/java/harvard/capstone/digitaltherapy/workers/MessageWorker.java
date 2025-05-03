@@ -18,6 +18,9 @@ public class MessageWorker {
 
     private final ChatLanguageModel chatModel;
     private final VectorDatabaseService vectorDatabaseService = new VectorDatabaseService();
+    // intro agent
+    // middle agent
+    // conclusion agent
     private String sessionId;
     private String userId;
 
@@ -29,6 +32,7 @@ public class MessageWorker {
                 .topP(0.95)
                 .maxOutputTokens(300)
                 .build();
+
 
         /*OpenAiChatModel model = OpenAiChatModel.builder()
                 .baseUrl("http://langchain4j.dev/demo/openai/v1")
