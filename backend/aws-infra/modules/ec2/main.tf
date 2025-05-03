@@ -13,6 +13,11 @@ resource "aws_instance" "springboot_backend" {
     sudo dnf install java-17-amazon-corretto git maven -y
     sudo dnf install nc -y
     sudo dnf install nodejs npm -y
+    sudo dnf install redis6 -y
+
+    # Start redis server
+    sudo systemctl enable redis6
+    sudo systemctl start redis6
 
     # Install ffmpeg (statically bc it's not available on dnf)
     wget https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz
