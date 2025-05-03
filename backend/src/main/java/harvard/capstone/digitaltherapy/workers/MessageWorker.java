@@ -39,7 +39,7 @@ public class MessageWorker {
                 .modelName("gemini-1.5-flash")
                 .temperature(0.2)
                 .topP(0.95)
-                .maxOutputTokens(200)
+                .maxOutputTokens(400)
                 .build();
         logger.debug("MessageWorker initialized successfully");
     }
