@@ -92,12 +92,14 @@ useEffect(() => {
 
     // find the questionType
     const questionType = questions.find((q) => q.id === questionId)!.type;
+    const questionContent = questions.find(q => q.id === questionId)!.content;
 
     const payload: AnswerPayload = {
       sessionId,
       questionId,
       questionType,
       answer,
+      questionContent,
     };
 
     fetch(`/api/assessment/${sessionId}/responses`, {

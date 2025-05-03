@@ -20,4 +20,5 @@ export interface AnswerPayload {
   questionId: number;
   questionType: QuestionType;
   answer: string;
+  questionContent?: string;
 }
