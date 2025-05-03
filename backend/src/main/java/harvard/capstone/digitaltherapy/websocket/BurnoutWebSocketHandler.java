@@ -23,6 +23,14 @@ public class BurnoutWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
     private final BurnoutController burnoutController;
 
+    private static class PendingUploadContext {
+        public String type;
+        public String sessionId;
+        public String questionId;
+    }
+    
+    private final Map<String, PendingUploadContext> pendingUploads = new ConcurrentHashMap<>();
+    
     @Autowired
     public BurnoutWebSocketHandler(ObjectMapper objectMapper, BurnoutController burnoutController) {
         this.objectMapper = objectMapper;
@@ -44,14 +52,42 @@ public class BurnoutWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
         JsonNode requestJson = objectMapper.readTree(message.getPayload());
+        String type = requestJson.has("type") ? requestJson.get("type").asText() : "";
+
+        if ("video_upload".equalsIgnoreCase(type) || "audio_upload".equalsIgnoreCase(type)) {
+            PendingUploadContext context = new PendingUploadContext();
+            context.type = type;
+            context.sessionId = requestJson.get("sessionId").asText();
+            context.questionId = requestJson.get("questionId").asText();
+            pendingUploads.put(session.getId(), context);
+
+            logger.info("Preparing to receive {} for session {} question {}", type, context.sessionId, context.questionId);
+            return;
+        }
+
+        // fallback to standard message handling
         burnoutController.handleMessage(session, requestJson);
     }
 
     @Override
     public void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
-        String sessionId = session.getId();
-        logger.info("Received binary message from session {}", sessionId);
-        // burnoutController.handleBinaryMessage(session, message);
+        String sessionKey = session.getId();
+        PendingUploadContext context = pendingUploads.remove(sessionKey);
+
+        if (context == null) {
+            logger.warn("No pending upload context for session {}", sessionKey);
+            return;
+        }
+
+        try {
+            if ("video_upload".equalsIgnoreCase(context.type)) {
+                burnoutController.handleVideoMessage(session, context.sessionId, context.questionId, message);
+            } else if ("audio_upload".equalsIgnoreCase(context.type)) {
+                burnoutController.handleAudioMessage(session, context.sessionId, context.questionId, message);
+            }
+        } catch (Exception e) {
+            logger.error("Error handling binary message for session {}: {}", sessionKey, e.getMessage(), e);
+        }
     }
 
     public WebSocketSession getSession(String sessionId) {

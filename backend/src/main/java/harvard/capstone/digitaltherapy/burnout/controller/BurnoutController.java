@@ -12,6 +12,7 @@ import harvard.capstone.digitaltherapy.websocket.BurnoutWebSocketHandler;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.slf4j.Logger;
@@ -57,7 +58,7 @@ public class BurnoutController {
         BurnoutSessionCreationResponse responseData = burnoutAssessmentOrchestrator.createAssessmentSession(userId);
         String burnoutSessionId = responseData.getSessionId();
 
-        // you now  have all 12 questions.
+        // you now have all questions.
         List<BurnoutQuestion> questions = responseData.getQuestions();
 
         ObjectNode response = objectMapper.createObjectNode();
@@ -74,21 +75,8 @@ public class BurnoutController {
         String burnoutSessionId = requestJson.get("sessionId").asText();
         String questionId = requestJson.get("questionId").asText();
         String response = requestJson.get("response").asText();
-        String responseType = requestJson.get("responseType").asText();
 
-        String audioUrl = null;
-        String videoUrl = null;
-
-        if ("audio".equalsIgnoreCase(responseType)) {
-            String audioFileName = "video_" + session.getId() + ".mp4";
-            // audioUrl = s3Service.uploadVideoBinaryFile(response, audioFileName);
-        } else if ("vlog".equalsIgnoreCase(responseType)) {
-            // TODO: Upload and get Video URL
-            String videoFileName = "video_" + session.getId() + ".mp4";
-            // videoUrl = s3Service.uploadVideoBinaryFile(response, videoFileName);
-        }
-
-        boolean recorded = burnoutAssessmentOrchestrator.recordResponse(burnoutSessionId, questionId, response, videoUrl, audioUrl);
+        boolean recorded = burnoutAssessmentOrchestrator.recordResponse(burnoutSessionId, questionId, response, null, null);
 
         if (recorded) {
             logger.info("Response recorded for session {}, question {}", burnoutSessionId, questionId);
@@ -97,7 +85,28 @@ public class BurnoutController {
         }
     }
 
-    // public void handleBinaryMessage(WebSocketSession session, BinaryMessage message)
+    public void handleAudioMessage(WebSocketSession session, String sessionId, String questionId, BinaryMessage message) {
+        try {
+            String s3Key = "audio_" + sessionId + "_" + questionId + ".mp3";
+            String audioUrl = s3Service.uploadAudioBinaryFile(message, s3Key);
+            burnoutAssessmentOrchestrator.recordResponse(sessionId, questionId, "", null, audioUrl);
+            logger.info("Audio uploaded and recorded for session {}, question {}", sessionId, questionId);
+        } catch (Exception e) {
+            logger.error("Failed to handle audio upload: {}", e.getMessage(), e);
+        }
+    }
+
+    public void handleVideoMessage(WebSocketSession session, String sessionId, String questionId, BinaryMessage message) {
+        try {
+            String s3Key = "video_" + sessionId + "_" + questionId + ".mp4";
+            String videoUrl = s3Service.uploadVideoBinaryFile(message, s3Key);
+            burnoutAssessmentOrchestrator.recordResponse(sessionId, questionId, "", videoUrl, null);
+            logger.info("Video uploaded and recorded for session {}, question {}", sessionId, questionId);
+        } catch (Exception e) {
+            logger.error("Failed to handle video upload: {}", e.getMessage(), e);
+        }
+    }
+
 
     // Called by Orchestrator to send final results
     public void forwardFinalBurnoutResult(String burnoutSessionId, BurnoutAssessmentResult burnoutResult) {
