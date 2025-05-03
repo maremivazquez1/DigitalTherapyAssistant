@@ -392,7 +392,7 @@ const CBTInterface: React.FC = () => {
       <div className="hero-overlay bg-neutral opacity-75"></div>
       <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
         <div className="w-4/5">
-          <div ref={chatContainerRef} className="chat-container max-h-[60vh] overflow-y-auto px-4">
+          <div ref={chatContainerRef} className="chat-container max-h-[60vh] overflow-y-auto px-4 pr-10">
             {chatMessages.map((msg) => (
               <div
                 key={msg.id}
@@ -403,7 +403,7 @@ const CBTInterface: React.FC = () => {
                   <time className="text-xs opacity-50">{msg.timestamp.toLocaleTimeString()}</time>
                 </div>
                 <div
-                  className={`chat-bubble p-4 shadow-md rounded-full ${
+                  className={`chat-bubble p-4 shadow-md rounded-lg ${
                     msg.sender === "User"
                       ? "bg-base-300 bg-opacity-80 text-primary-content"
                       : "bg-base-300 bg-opacity-80 text-secondary-content"
