@@ -387,6 +387,7 @@ const CBTInterface: React.FC = () => {
   // --------------------- RENDER ---------------------
   return (
     <div
+      data-theme="calming"
       className="hero h-screen relative bg-base-100"
       style={{ backgroundImage: `url(${therapyRoom})`, backgroundSize: "cover" }}
     >
