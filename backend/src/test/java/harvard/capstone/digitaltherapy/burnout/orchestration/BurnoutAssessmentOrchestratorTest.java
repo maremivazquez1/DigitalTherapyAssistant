@@ -58,6 +58,60 @@ class BurnoutAssessmentOrchestratorTest {
         assertThat(response.getSessionId()).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"); // UUID format
     }
 
+    @Test
+    void createAssessmentSession_shouldReturnResponseWithSessionIdAndQuestions() {
+        // Arrange
+        String userId = "user123";
+
+        // Act
+        BurnoutSessionCreationResponse response = orchestrator.createAssessmentSession(userId);
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getSessionId()).isNotBlank();
+        assertThat(response.getQuestions()).isNotNull();
+        assertThat(response.getQuestions()).isNotEmpty();
+    }
+
+    @Test
+    void createAssessmentSession_shouldStoreSessionForSubsequentUse() {
+        // Arrange
+        String userId = "user123";
+
+        // Act - Create a session
+        BurnoutSessionCreationResponse response = orchestrator.createAssessmentSession(userId);
+        String sessionId = response.getSessionId();
+
+        // Get the first question ID from the response to use for recording a response
+        String questionId = response.getQuestions().get(0).getQuestionId();
+
+        // Assert - Try to record a response for this session, which should work if the session was stored
+        boolean recordResult = orchestrator.recordResponse(sessionId, questionId, "Test response", null, null);
+
+        assertThat(recordResult).isTrue();
+    }
+
+    @Test
+    void createAssessmentSession_shouldInitializeSessionWithCorrectUserId() {
+        // Arrange
+        String userId = "user123";
+
+        // Act - Create a session
+        BurnoutSessionCreationResponse response = orchestrator.createAssessmentSession(userId);
+        String sessionId = response.getSessionId();
+
+        // Record a response for all questions to allow completing the assessment
+        for (BurnoutQuestion question : response.getQuestions()) {
+            orchestrator.recordResponse(sessionId, question.getQuestionId(), "Test response", null, null);
+        }
+
+        // Complete the assessment to get the result
+        BurnoutAssessmentResult result = orchestrator.completeAssessment(sessionId);
+
+        // Assert - Verify the userId is correct
+        assertThat(result.getUserId()).isEqualTo(userId);
+    }
+
 
 
 
