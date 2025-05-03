@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import therapyRoom from "../assets/therapy-room-1.svg";
 import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash } from "react-icons/fa";
 import hark from "hark";
+import ReactMarkdown from 'react-markdown';
 import { useWebSocket } from "../hooks/useWebSocket";
 import { WebSocketHeaderMessage } from "../types/CBTSession/webSocketMessage";
 
@@ -409,7 +410,7 @@ const CBTInterface: React.FC = () => {
                       : "bg-base-300 bg-opacity-80 text-secondary-content"
                   }`}
                 >
-                  {msg.message}
+                  <ReactMarkdown>{msg.message}</ReactMarkdown>
                   {msg.audioUrl && <audio src={msg.audioUrl} controls={false} />}
                 </div>
               </div>
