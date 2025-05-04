@@ -14,7 +14,7 @@ import java.util.Map;
 public class PromptBuilder {
     private static final Logger logger = LoggerFactory.getLogger(PromptBuilder.class);
 
-    public List<ChatMessage> buildIntroductoryPrompt(String synthesizerAnalysis, Map<String, Double> previousSessions, List<ChatMessage> context) {
+    public List<ChatMessage> buildIntroductoryPrompt(String synthesizerAnalysis, Map<String, String> previousSessions, List<ChatMessage> context) {
         StringBuilder contextBuilder = buildContextString(previousSessions);
 
         String systemPrompt = String.format("""
@@ -53,7 +53,7 @@ public class PromptBuilder {
         return context;
     }
 
-    public List<ChatMessage> buildCoreCBTPrompt(String synthesizerAnalysis, Map<String, Double> previousSessions, List<ChatMessage> context) {
+    public List<ChatMessage> buildCoreCBTPrompt(String synthesizerAnalysis, Map<String, String> previousSessions, List<ChatMessage> context) {
         StringBuilder contextBuilder = buildContextString(previousSessions);
 
         String systemPrompt = String.format("""
@@ -92,7 +92,7 @@ public class PromptBuilder {
         return context;
     }
 
-    public List<ChatMessage> buildConclusionCBTPrompt(String synthesizerAnalysis, Map<String, Double> previousSessions, List<ChatMessage> context) {
+    public List<ChatMessage> buildConclusionCBTPrompt(String synthesizerAnalysis, Map<String, String> previousSessions, List<ChatMessage> context) {
         StringBuilder contextBuilder = buildContextString(previousSessions);
 
         String systemPrompt = String.format("""
@@ -134,7 +134,7 @@ public class PromptBuilder {
         return context;
     }
 
-    public List<ChatMessage> buildSummaryCBTPrompt(String synthesizerAnalysis, Map<String, Double> previousSessions, List<ChatMessage> context) {
+    public List<ChatMessage> buildSummaryCBTPrompt(String synthesizerAnalysis, Map<String, String> previousSessions, List<ChatMessage> context) {
         StringBuilder contextBuilder = buildContextString(previousSessions);
         String systemPrompt = String.format("""
     You are an experienced therapist in the FINAL SUMMARY PHASE. 
@@ -177,17 +177,20 @@ public class PromptBuilder {
         return context;
     }
 
-    private StringBuilder buildContextString(Map<String, Double> previousSessions) {
+    private StringBuilder buildContextString(Map<String, String> previousSessions) {
         StringBuilder contextBuilder = new StringBuilder();
         if (previousSessions != null && !previousSessions.isEmpty()) {
             previousSessions.entrySet().stream()
-                    .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                    .sorted(Map.Entry.<String, String>comparingByValue())  // Remove .reversed() if you want ascending order
                     .limit(25)
                     .forEach(entry -> contextBuilder.append("• Previous: ")
                             .append(entry.getKey())
+                            .append(": ")        // Optional: add a separator between key and value
+                            .append(entry.getValue())  // Add this line to include the text content
                             .append("\n"));
         }
         return contextBuilder;
     }
+
 
 }
