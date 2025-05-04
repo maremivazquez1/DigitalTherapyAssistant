@@ -73,16 +73,6 @@ public class MessageWorker {
             throw new IllegalStateException("Session context not set");
         }
 
-        ChatMemory chatMemory = sessionMemories.get(sessionId);
-        if (chatMemory == null) {
-            logger.warn("No chat memory found for session: {}", sessionId);
-        }
-
-        logger.debug("Adding {} messages to chat memory", messages.size());
-        for (ChatMessage message : messages) {
-            chatMemory.add(message);
-        }
-
         String lastUserMessage = "";
         for (int i = messages.size() - 1; i >= 0; i--) {
             if (messages.get(i) instanceof UserMessage) {
@@ -102,8 +92,6 @@ public class MessageWorker {
                     sessionId, userId, lastUserMessage, 3);
             if (!relevantContext.isEmpty()) {
                 logger.debug("Adding relevant context to chat memory");
-                chatMemory.add(SystemMessage.from(
-                        "Consider this relevant information from previous sessions: " + relevantContext));
             }
 
             List<String> cognitiveDistortions = extractDistortionsFromMessages(messages);
@@ -114,8 +102,6 @@ public class MessageWorker {
 
                 if (!relevantInterventions.isEmpty()) {
                     logger.debug("Adding {} therapeutic approaches", relevantInterventions.size());
-                    chatMemory.add(SystemMessage.from(
-                            "Consider these therapeutic approaches: " + String.join("; ", relevantInterventions)));
                 }
             }
         }
@@ -137,13 +123,10 @@ public class MessageWorker {
             context = promptBuilder.buildSummaryCBTPrompt(lastUserMessage, sessionHistory,context);
         }
 
-        context.addAll(chatMemory.messages());
-
         logger.debug("Generating chat response");
         ChatResponse response = chatModel.chat(context);
         String responseText = response.aiMessage().text();
         logger.debug("Adding response to chat memory");
-        chatMemory.add(response.aiMessage());
         logger.debug("Indexing response in vector database");
         vectorDatabaseService.indexSessionMessage(sessionId, userId, responseText, false);
         logger.info("Response generated successfully for session: {}", sessionId);
