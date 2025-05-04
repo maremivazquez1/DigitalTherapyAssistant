@@ -192,12 +192,12 @@ const CBTInterface: React.FC = () => {
         // Optionally send a header.
         const headerMessageAudio: WebSocketHeaderMessage = {
           type: "header",
-          session_id: sessionIdRef.current,
+          session_id: localStorage.getItem('sessionId') || sessionIdRef.current,
           file_id: utteranceFileIdRef.current || `audio_${Date.now()}`,
           modality: "audio",
           timestamp_start: utteranceStartTimeRef.current || new Date().toISOString(),
           timestamp_end: new Date().toISOString(),
-          user_id: "user_12345",
+          user_id: localStorage.getItem('userId') || "user_12345"
         };
         sendMessage(JSON.stringify(headerMessageAudio));
         console.log("[Audio Recorder] Sent header:", headerMessageAudio);
@@ -265,12 +265,12 @@ const CBTInterface: React.FC = () => {
             console.log("[Video Recorder] Stopped. Finalizing video...");
             const headerMessageVideo: WebSocketHeaderMessage = {
               type: "header",
-              session_id: sessionIdRef.current,
+              session_id: localStorage.getItem('sessionId') || sessionIdRef.current,
               file_id: utteranceFileIdRef.current || `video_${Date.now()}`,
               modality: "video",
               timestamp_start: utteranceStartTimeRef.current || new Date().toISOString(),
               timestamp_end: new Date().toISOString(),
-              user_id: "user_12345",
+              user_id: localStorage.getItem('userId') || "user_12345"
             };
             sendMessage(JSON.stringify(headerMessageVideo));
             console.log("[Video Recorder] Sent header:", headerMessageVideo);
