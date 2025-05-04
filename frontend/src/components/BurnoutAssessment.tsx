@@ -59,19 +59,43 @@ useEffect(() => {
     const q = questions[currentIndex];
     const answer = responses[q.questionId];
     if (!sessionId || answer == null) return;
-
-    if (q.multimodal === true) {
-      // inform server of incoming blob
-      sendMessage(
-        JSON.stringify({ type: "video-upload", sessionId, questionId: q.questionId })
-      );
-      // fetch blob and send via WS
+  
+    if (q.multimodal) {
+      // 1) parse back the two URLs from the stringified payload
+      let media: { videoUrl: string; audioUrl: string };
       try {
-        const blob = await fetch(answer).then((r) => r.blob());
-        sendMessage(blob);
+        media = JSON.parse(answer);
+      } catch (err) {
+        console.error("Invalid media payload", err);
+        return;
+      }
+  
+      // 2a) audio
+      sendMessage(JSON.stringify({
+        type: "audio-upload",
+        sessionId,
+        questionId: q.questionId,
+      }));
+      try {
+        const audioBlob = await fetch(media.audioUrl).then(r => r.blob());
+        sendMessage(audioBlob);
+      } catch (err) {
+        console.error("Failed to fetch/send audio blob", err);
+      }
+  
+      // 2b) video
+      sendMessage(JSON.stringify({
+        type: "video-upload",
+        sessionId,
+        questionId: q.questionId,
+      }));
+      try {
+        const videoBlob = await fetch(media.videoUrl).then(r => r.blob());
+        sendMessage(videoBlob);
       } catch (err) {
         console.error("Failed to fetch/send video blob", err);
       }
+  
     } else {
       // likert & open text
       sendMessage(
