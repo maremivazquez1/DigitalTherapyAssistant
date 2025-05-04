@@ -83,7 +83,7 @@ public class MessageWorker {
         }
 
         logger.debug("Finding similar sessions for userId: {}", userId);
-        Map<String, Double> sessionHistory = vectorDatabaseService.findSimilarSessions(userId, lastUserMessage, 10);
+        Map<String, String> sessionHistory = vectorDatabaseService.findSimilarSessions(userId, lastUserMessage, 25);
         logger.debug("Found {} similar sessions", sessionHistory.size());
 
         if (userId != null && sessionId != null && !lastUserMessage.isEmpty()) {
