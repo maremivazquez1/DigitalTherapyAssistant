@@ -8,7 +8,7 @@ interface VlogQuestionProps {
 }
 
 const VlogQuestion: React.FC<VlogQuestionProps> = ({
-  question: { id: questionId },
+  question: { questionId: questionId },
   onChange,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);

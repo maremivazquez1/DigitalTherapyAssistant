@@ -4,45 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { FaArrowRight } from "react-icons/fa";
 import { v4 as uuidv4 } from "uuid";
 import LikertQuestion from "./LikertQuestion";
-import TextQuestion from "./TextQuestion";
+
 import VlogQuestion from "./VlogQuestion";
 import { useWebSocket } from "../hooks/useWebSocket";
-import type {
-  BurnoutQuestion,
-  AnswerPayload,
-} from "../types/burnout/assessment";
+import type { BurnoutQuestion } from "../types/burnout/assessment";
 
-export const mockQuestions: BurnoutQuestion[] = [
-  // Likert questions
-  {
-    id: 1,
-    type: "likert",
-    content: "How often in the past 2 weeks have you felt overwhelmed at work?",
-    subtitle: "Consider your busiest days",
-  },
-  {
-    id: 2,
-    type: "likert",
-    content: "How often in the past 2 weeks have you found it hard to concentrate?",
-  },
-  {
-    id: 3,
-    type: "likert",
-    content: "How often in the past 2 weeks have you felt emotionally drained?",
-  },
-
-  // Vlog questions
-  {
-    id: 5,
-    type: "vlog",
-    content: "Record a 30-second video describing your current energy levels.",
-  },
-  {
-    id: 6,
-    type: "vlog",
-    content: "Record a short clip telling us what you do to unwind after a stressful day.",
-  },
-];
 
 const BurnoutAssessment: React.FC = () => {
   const navigate = useNavigate();
@@ -51,48 +17,53 @@ const BurnoutAssessment: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [responses, setResponses] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
+  const [error] = useState<string | null>(null);
 
-  // generate a requestId for session kickoff
   const requestId = useRef(uuidv4());
-
-  // open burnout WebSocket immediately
   const { isConnected, messages, sendMessage } = useWebSocket(
     "ws://localhost:8080/ws/burnout",
     true
   );
 
-  // 1) Kick off the session via WebSocket
-  useEffect(() => {
-    sendMessage(
-      JSON.stringify({
-        type: "start-burnout",
-        requestId: requestId.current,
-      })
-    );
-  }, [sendMessage]);
+  // 1) Start session once WebSocket is open
+useEffect(() => {
+  if (!isConnected) return;
+  console.log("[BurnoutAssessment] WebSocket open, sending start-burnout");
+  sendMessage(
+    JSON.stringify({ type: "start-burnout", requestId: requestId.current })
+  );
+}, [isConnected]);
 
-  // 2) Load mock questions once
+  // 2) Receive questions
   useEffect(() => {
-    setSessionId("mock-session-123");
-    setQuestions(mockQuestions);
-    setLoading(false);
-  }, []);
+    for (const msg of messages) {
+      if (msg.type === "burnout-questions") {
+        const data = msg as any;
+        setSessionId(data.sessionId);
+        setQuestions(data.questions as BurnoutQuestion[]);
+        setCurrentIndex(0);          // start at first question
+        setLoading(false);
+        break;
+      }
+      // NOTE: we no longer treat 'system' messages as fatal errors here
+    }
+  }, [messages]);
 
-  // 3) Gather answer for the current question
+  // 3) Local answer store
   const handleAnswer = (questionId: number, answer: string) => {
     setResponses((prev) => ({ ...prev, [questionId]: answer }));
   };
 
-  // 4) Move to next question or finish
+  // 4) Next: send current answer then advance or finish
   const handleNext = async () => {
     const q = questions[currentIndex];
-    const answer = responses[q.id];
+    const answer = responses[q.questionId];
     if (!sessionId || answer == null) return;
 
-    if (q.type === "vlog") {
+    if (q.multimodal === true) {
       // inform server of incoming blob
       sendMessage(
-        JSON.stringify({ type: "vlog", sessionId, questionId: q.id })
+        JSON.stringify({ type: "video-upload", sessionId, questionId: q.questionId })
       );
       // fetch blob and send via WS
       try {
@@ -107,7 +78,7 @@ const BurnoutAssessment: React.FC = () => {
         JSON.stringify({
           type: "answer",
           sessionId,
-          questionId: q.id,
+          questionId: q.questionId,
           response: answer,
         })
       );
@@ -121,48 +92,31 @@ const BurnoutAssessment: React.FC = () => {
     }
   };
 
-
-  // 5) Render loading / no-questions states
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Loading assessment…
+        <span className="loading loading-spinner text-primary mr-2"></span>
+        <span>Loading assessment…</span>
       </div>
     );
   }
-  if (!questions.length) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        No questions available.
-      </div>
-    );
-  }
+  if (error) return <div className="text-red-500">{error}</div>;
+  if (!questions.length) return <div>No questions available.</div>;
 
-  // 6) Main question render
   const q = questions[currentIndex];
   return (
-    <div
-      className="min-h-screen w-full bg-base-200 flex flex-col justify-center items-center px-4"
-      data-theme="calming"
-    >
+    <div className="min-h-screen bg-base-200 flex flex-col items-center px-4" data-theme="calming">
       <div className="max-w-3xl w-full text-center py-10">
-        <h1 className="text-3xl font-bold mb-2">{q.content}</h1>
-        {q.subtitle && <p className="text-sm text-gray-600 mb-8">{q.subtitle}</p>}
+        <h1 className="text-3xl font-bold mb-2">{q.question}</h1>
 
         <div className="mb-10">
-          {q.type === "likert" && <LikertQuestion question={q} onChange={handleAnswer} />}
-          {q.type === "open_text" && <TextQuestion question={q} onChange={handleAnswer} />}
-          {q.type === "vlog" && (
-            <VlogQuestion
-              question={q}
-              onChange={handleAnswer}
-            />
-          )}
+          {q.multimodal === false && <LikertQuestion question={q} onChange={handleAnswer} />}
+          {q.multimodal == true && <VlogQuestion question={q} onChange={handleAnswer} />}
         </div>
 
         <button
           onClick={handleNext}
-          disabled={responses[q.id] == null}
+          disabled={responses[q.questionId] == null}
           className="btn btn-primary btn-circle btn-lg"
         >
           <FaArrowRight className="text-xl" />

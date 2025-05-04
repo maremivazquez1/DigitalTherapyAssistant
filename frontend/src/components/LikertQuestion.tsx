@@ -14,7 +14,7 @@ const LikertQuestion: React.FC<LikertQuestionProps> = ({ question, onChange }) =
       {LIKERT_OPTIONS.map((option) => (
         <button
           key={option}
-          onClick={() => onChange(question.id, option)}
+          onClick={() => onChange(question.questionId, option)}
           className="btn btn-outline btn-lg"
         >
           {option}
