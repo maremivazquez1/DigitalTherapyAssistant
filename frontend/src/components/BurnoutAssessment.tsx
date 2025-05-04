@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import LikertQuestion from "./LikertQuestion";
 import TextQuestion from "./TextQuestion";
 import VlogQuestion from "./VlogQuestion";
-// import { useWebSocket } from "../hooks/useWebSocket";
+import { useWebSocket } from "../hooks/useWebSocket";
 import type {
   BurnoutQuestion,
   AnswerPayload,
@@ -56,20 +56,20 @@ const BurnoutAssessment: React.FC = () => {
   const requestId = useRef(uuidv4());
 
   // open burnout WebSocket immediately
-  // const { messages, sendMessage } = useWebSocket(
-  //   "ws://localhost:8080/ws/burnout",
-  //   true
-  // );
+  const { isConnected, messages, sendMessage } = useWebSocket(
+    "ws://localhost:8080/ws/burnout",
+    true
+  );
 
   // 1) Kick off the session via WebSocket
-  // useEffect(() => {
-  //   sendMessage(
-  //     JSON.stringify({
-  //       type: "start-burnout",
-  //       requestId: requestId.current,
-  //     })
-  //   );
-  // }, [sendMessage]);
+  useEffect(() => {
+    sendMessage(
+      JSON.stringify({
+        type: "start-burnout",
+        requestId: requestId.current,
+      })
+    );
+  }, [sendMessage]);
 
   // 2) Load mock questions once
   useEffect(() => {
@@ -84,27 +84,43 @@ const BurnoutAssessment: React.FC = () => {
   };
 
   // 4) Move to next question or finish
-  const handleNext = () => {
+  const handleNext = async () => {
     const q = questions[currentIndex];
     const answer = responses[q.id];
-    if (sessionId && answer != null) {
-      const payload: AnswerPayload = {
-        sessionId,
-        questionId: q.id,
-        questionType: q.type,
-        answer,
-        questionContent: q.content,
-      };
-      console.log("Sending on Next:", payload);
-      // sendMessage(JSON.stringify(payload)); // or REST
+    if (!sessionId || answer == null) return;
+
+    if (q.type === "vlog") {
+      // inform server of incoming blob
+      sendMessage(
+        JSON.stringify({ type: "vlog", sessionId, questionId: q.id })
+      );
+      // fetch blob and send via WS
+      try {
+        const blob = await fetch(answer).then((r) => r.blob());
+        sendMessage(blob);
+      } catch (err) {
+        console.error("Failed to fetch/send video blob", err);
+      }
+    } else {
+      // likert & open text
+      sendMessage(
+        JSON.stringify({
+          type: "answer",
+          sessionId,
+          questionId: q.id,
+          response: answer,
+        })
+      );
     }
 
+    // advance or done
     if (currentIndex < questions.length - 1) {
       setCurrentIndex((i) => i + 1);
     } else {
       navigate("/burnout-summary", { state: { questions, responses } });
     }
   };
+
 
   // 5) Render loading / no-questions states
   if (loading) {
