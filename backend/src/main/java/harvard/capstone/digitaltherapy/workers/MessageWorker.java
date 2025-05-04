@@ -123,35 +123,29 @@ public class MessageWorker {
         List<ChatMessage> context = new ArrayList<>();
         int messageCount = sessionMessageCounter.getOrDefault(sessionId, 0);
         logger.debug("Building prompt for message count: {}", messageCount);
-
-        String prompt;
         if (messageCount < 5) {
             logger.debug("Using introductory prompt");
-            prompt = promptBuilder.buildIntroductoryPrompt(lastUserMessage, sessionHistory);
+            context = promptBuilder.buildIntroductoryPrompt(lastUserMessage, sessionHistory, context);
         } else if (messageCount >= 5 && messageCount < 15) {
             logger.debug("Using core CBT prompt");
-            prompt = promptBuilder.buildCoreCBTPrompt(lastUserMessage, sessionHistory);
+            context = promptBuilder.buildCoreCBTPrompt(lastUserMessage, sessionHistory,context);
         } else if (messageCount >= 15 && messageCount < 20) {
             logger.debug("Using conclusion CBT prompt");
-            prompt = promptBuilder.buildConclusionCBTPrompt(lastUserMessage, sessionHistory);
+            context = promptBuilder.buildConclusionCBTPrompt(lastUserMessage, sessionHistory,context);
         } else {
             logger.debug("Using summary CBT prompt");
-            prompt = promptBuilder.buildSummaryCBTPrompt(lastUserMessage, sessionHistory);
+            context = promptBuilder.buildSummaryCBTPrompt(lastUserMessage, sessionHistory,context);
         }
 
-        context.add(SystemMessage.from(prompt));
         context.addAll(chatMemory.messages());
 
         logger.debug("Generating chat response");
         ChatResponse response = chatModel.chat(context);
         String responseText = response.aiMessage().text();
-
         logger.debug("Adding response to chat memory");
         chatMemory.add(response.aiMessage());
-
         logger.debug("Indexing response in vector database");
         vectorDatabaseService.indexSessionMessage(sessionId, userId, responseText, false);
-
         logger.info("Response generated successfully for session: {}", sessionId);
         return responseText;
     }
