@@ -18,7 +18,6 @@ export interface SessionPayload {
   questions: BurnoutQuestion[];
 }
 
-/** Now includes the sessionId */
 export interface AnswerPayload {
   sessionId: string;
   questionId: number;

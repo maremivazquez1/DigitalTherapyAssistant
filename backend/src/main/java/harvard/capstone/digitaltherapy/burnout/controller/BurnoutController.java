@@ -56,6 +56,8 @@ public class BurnoutController {
     private void startBurnoutSession(WebSocketSession session, String requestId) throws IOException {
         String userId = "TODO"; // You can connect this to auth later
         BurnoutSessionCreationResponse responseData = burnoutAssessmentOrchestrator.createAssessmentSession(userId);
+
+        // This will be used to track the session.
         String burnoutSessionId = responseData.getSessionId();
 
         // you now have all questions.
@@ -76,6 +78,7 @@ public class BurnoutController {
         String questionId = requestJson.get("questionId").asText();
         String response = requestJson.get("response").asText();
 
+        // TODO: Change to the sessionID
         boolean recorded = burnoutAssessmentOrchestrator.recordResponse(burnoutSessionId, questionId, response, null, null);
 
         if (recorded) {
@@ -108,6 +111,7 @@ public class BurnoutController {
     }
 
 
+    // TODO: Change to call the Orch method.
     // Called by Orchestrator to send final results
     public void forwardFinalBurnoutResult(String burnoutSessionId, BurnoutAssessmentResult burnoutResult) {
         try {

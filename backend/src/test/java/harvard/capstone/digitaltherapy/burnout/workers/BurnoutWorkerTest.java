@@ -1,4 +1,4 @@
-package harvard.capstone.digitaltherapy.burnout;
+package harvard.capstone.digitaltherapy.burnout.workers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,7 +8,6 @@ import harvard.capstone.digitaltherapy.burnout.ai.StandardQuestionGenerator;
 import harvard.capstone.digitaltherapy.burnout.model.AssessmentDomain;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutAssessment;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutQuestion;
-import harvard.capstone.digitaltherapy.burnout.workers.BurnoutWorker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

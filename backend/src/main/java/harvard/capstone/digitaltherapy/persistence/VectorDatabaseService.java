@@ -233,7 +233,7 @@ public class VectorDatabaseService {
      * @param maxResults Maximum number of results to return
      * @return List of similar session IDs with relevance scores
      */
-    public Map<String, Double> findSimilarSessions(
+    public Map<String, String> findSimilarSessions(
             String userId,
             String currentSessionContent,
             int maxResults) {
@@ -246,20 +246,21 @@ public class VectorDatabaseService {
                 metadataFilters,
                 maxResults);
 
-        // Group by session ID and take the highest score for each
-        Map<String, Double> sessionScores = new HashMap<>();
-
+        // Group by session ID and store the text content
+        Map<String, String> sessionTexts = new HashMap<>();
         for (EmbeddingMatch<TextSegment> match : matches) {
             String sessionId = match.embedded().metadata().getString("sessionId");
-
-            if (sessionId != null && !sessionScores.containsKey(sessionId) ||
-                    sessionScores.get(sessionId) < match.score()) {
-                sessionScores.put(sessionId, match.score());
+            String text = match.embedded().text();
+            if (sessionId != null &&
+                    (!sessionTexts.containsKey(sessionId) ||
+                            // If you still want to keep the text of the highest scoring match
+                            sessionTexts.get(sessionId).length() < text.length())) {
+                sessionTexts.put(sessionId, text);
             }
         }
-
-        return sessionScores;
+        return sessionTexts;
     }
+
 
     /**
      * Finds relevant therapeutic interventions for cognitive distortions

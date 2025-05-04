@@ -8,22 +8,24 @@ export interface RegisterData {
     password: string;
     phone: string;
     dateOfBirth: string;
-  }
+}
   
-  export interface LoginData {
+export interface LoginData {
     username: string;
     password: string;
-  }
+}
   
-  // Response payloads (adjust based on your API contract)
-  export interface AuthResponse {
-    token: string;
-    status: 'success' | 'error';
+// Response payloads (adjust based on your API contract)
+export interface AuthResponse {
+    status: string;
     message: string;
-  }
+    token: string;
+    sessionId: string;
+    userId: string;
+}
   
-  // In case errors are structured:
-  export interface ApiError {
+// In case errors are structured:
+export interface ApiError {
     message: string;
     // Add more fields if your API returns more info
-  }
+}

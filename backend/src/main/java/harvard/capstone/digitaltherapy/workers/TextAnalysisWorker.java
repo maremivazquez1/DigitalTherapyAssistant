@@ -145,7 +145,7 @@ public class TextAnalysisWorker {
     }
 
     private List<String> extractRecurringPatterns(List<EmbeddingMatch<TextSegment>> similarAnalyses,
-                                                List<String> currentDistortions) {
+                                                  List<String> currentDistortions) {
         Map<String, Integer> distortionCounts = new HashMap<>();
         for (String distortion : currentDistortions) {
             distortionCounts.put(distortion, 1);
