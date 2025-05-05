@@ -4,11 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { FaArrowRight } from "react-icons/fa";
 import { v4 as uuidv4 } from "uuid";
 import LikertQuestion from "./LikertQuestion";
-
 import VlogQuestion from "./VlogQuestion";
 import { useWebSocket } from "../hooks/useWebSocket";
 import type { BurnoutQuestion } from "../types/burnout/assessment";
-
 
 const BurnoutAssessment: React.FC = () => {
   const navigate = useNavigate();
@@ -17,7 +15,9 @@ const BurnoutAssessment: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [responses, setResponses] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
+  const [setResultsLoading] = useState<boolean>(false);
   const [error] = useState<string | null>(null);
+  const [finalResult, setFinalResult] = useState<any>(null);
 
   const requestId = useRef(uuidv4());
   const { isConnected, messages, sendMessage } = useWebSocket(
@@ -30,7 +30,7 @@ useEffect(() => {
   if (!isConnected) return;
   console.log("[BurnoutAssessment] WebSocket open, sending start-burnout");
   sendMessage(
-    JSON.stringify({ type: "start-burnout", requestId: requestId.current })
+    JSON.stringify({ type: "start-burnout", requestId: requestId.current, userId: localStorage.getItem("userId") })
   );
 }, [isConnected]);
 
@@ -41,13 +41,22 @@ useEffect(() => {
         const data = msg as any;
         setSessionId(data.sessionId);
         setQuestions(data.questions as BurnoutQuestion[]);
-        setCurrentIndex(0);          // start at first question
         setLoading(false);
-        break;
       }
-      // NOTE: we no longer treat 'system' messages as fatal errors here
+      if (msg.type === "assessment-result") {
+        console.log("[BurnoutAssessment] Received assessment result:", msg);
+        const { score, summary } = msg as any;
+        setFinalResult({ score, summary });
+      }
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (finalResult != null) {
+      console.log("[BurnoutAssessment] Final result received:", finalResult);
+      navigate("/burnout-summary", { state: { result: finalResult } });
+    }
+  }, [finalResult, navigate]);
 
   // 3) Local answer store
   const handleAnswer = (questionId: number, answer: string) => {
@@ -108,12 +117,16 @@ useEffect(() => {
       );
     }
 
-    // advance or done
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex((i) => i + 1);
-    } else {
-      navigate("/burnout-summary", { state: { questions, responses } });
+    // if last question, signal completion
+    if (currentIndex === questions.length - 1) {
+      setResultsLoading(true);
+      sendMessage(
+        JSON.stringify({ type: "assessment-complete", sessionId })
+      );
+      return;
     }
+
+    setCurrentIndex(i => i + 1);
   };
 
   if (loading) {
