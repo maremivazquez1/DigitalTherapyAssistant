@@ -73,11 +73,22 @@ public class MessageWorker {
             throw new IllegalStateException("Session context not set");
         }
 
+        // Get or create chat memory for this session
+        ChatMemory chatMemory = sessionMemories.computeIfAbsent(sessionId, k -> {
+            logger.debug("Creating new chat memory for session {}", sessionId);
+            return MessageWindowChatMemory.builder()
+                    .maxMessages(20)
+                    .build();
+        });
+
+        // Get the last user message
         String lastUserMessage = "";
         for (int i = messages.size() - 1; i >= 0; i--) {
             if (messages.get(i) instanceof UserMessage) {
                 lastUserMessage = ((UserMessage) messages.get(i)).singleText();
                 logger.debug("Found last user message, length: {}", lastUserMessage.length());
+                // Add this message to chat memory
+                chatMemory.add(messages.get(i));
                 break;
             }
         }
@@ -85,26 +96,6 @@ public class MessageWorker {
         logger.debug("Finding similar sessions for userId: {}", userId);
         Map<String, String> sessionHistory = vectorDatabaseService.findSimilarSessions(userId, lastUserMessage, 25);
         logger.debug("Found {} similar sessions", sessionHistory.size());
-
-        if (userId != null && sessionId != null && !lastUserMessage.isEmpty()) {
-            logger.debug("Building context for prompt");
-            String relevantContext = vectorDatabaseService.buildContextForPrompt(
-                    sessionId, userId, lastUserMessage, 3);
-            if (!relevantContext.isEmpty()) {
-                logger.debug("Adding relevant context to chat memory");
-            }
-
-            List<String> cognitiveDistortions = extractDistortionsFromMessages(messages);
-            if (!cognitiveDistortions.isEmpty()) {
-                logger.debug("Found {} cognitive distortions", cognitiveDistortions.size());
-                List<String> relevantInterventions =
-                        vectorDatabaseService.findRelevantInterventions(cognitiveDistortions, 2);
-
-                if (!relevantInterventions.isEmpty()) {
-                    logger.debug("Adding {} therapeutic approaches", relevantInterventions.size());
-                }
-            }
-        }
 
         List<ChatMessage> context = new ArrayList<>();
         int messageCount = sessionMessageCounter.getOrDefault(sessionId, 0);
@@ -114,21 +105,29 @@ public class MessageWorker {
             context = promptBuilder.buildIntroductoryPrompt(lastUserMessage, sessionHistory, context);
         } else if (messageCount >= 5 && messageCount < 15) {
             logger.debug("Using core CBT prompt");
-            context = promptBuilder.buildCoreCBTPrompt(lastUserMessage, sessionHistory,context);
+            context = promptBuilder.buildCoreCBTPrompt(lastUserMessage, sessionHistory, context);
         } else if (messageCount >= 15 && messageCount < 20) {
             logger.debug("Using conclusion CBT prompt");
-            context = promptBuilder.buildConclusionCBTPrompt(lastUserMessage, sessionHistory,context);
+            context = promptBuilder.buildConclusionCBTPrompt(lastUserMessage, sessionHistory, context);
         } else {
             logger.debug("Using summary CBT prompt");
-            context = promptBuilder.buildSummaryCBTPrompt(lastUserMessage, sessionHistory,context);
+            context = promptBuilder.buildSummaryCBTPrompt(lastUserMessage, sessionHistory, context);
         }
 
+        // Add conversation history from chat memory
+        List<ChatMessage> fullContext = new ArrayList<>(context);
+        fullContext.addAll(chatMemory.messages());
+
         logger.debug("Generating chat response");
-        ChatResponse response = chatModel.chat(context);
+        ChatResponse response = chatModel.chat(fullContext);
         String responseText = response.aiMessage().text();
+
         logger.debug("Adding response to chat memory");
+        chatMemory.add(response.aiMessage());
+
         logger.debug("Indexing response in vector database");
         vectorDatabaseService.indexSessionMessage(sessionId, userId, responseText, false);
+
         logger.info("Response generated successfully for session: {}", sessionId);
         return responseText;
     }
@@ -156,4 +155,3 @@ public class MessageWorker {
         return Collections.emptyList();
     }
 }
-

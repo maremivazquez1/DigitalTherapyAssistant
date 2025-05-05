@@ -1,6 +1,7 @@
 package harvard.capstone.digitaltherapy.cbt.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
@@ -62,6 +63,9 @@ public class OrchestrationService {
             throw new IllegalArgumentException("Invalid session ID: " + sessionId);
         }
         List<ChatMessage> messages = sessionMessages.get(sessionId);
+        // Add user message to the conversation
+        UserMessage userMessage = UserMessage.from(input_transcript);
+        messages.add(userMessage);
         List<CompletableFuture<Object>> analysisFutures = new ArrayList<>();
         Map<String, CompletableFuture<Object>> modalityToFuture = new HashMap<>();  // To track which result belongs to which modality
 
@@ -146,6 +150,8 @@ public class OrchestrationService {
         // 5. Generate the subsequent prompt using the MessageWorker
         messages.add(UserMessage.from(analysis.toString()));
         String response = messageWorker.generateResponse(messages);
+        // Add AI response to the conversation history
+        messages.add(AiMessage.from(response));
         vectorDatabaseService.indexSessionMessage(sessionId, userId, response, false);
         return response;
     }
