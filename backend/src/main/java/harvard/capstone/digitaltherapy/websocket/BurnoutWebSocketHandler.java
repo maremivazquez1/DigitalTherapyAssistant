@@ -81,7 +81,7 @@ public class BurnoutWebSocketHandler extends TextWebSocketHandler {
         PendingUploadContext context = pendingUploads.remove(sessionKey);
 
         if (context == null) {
-            logger.warn("No pending upload context for session {}", sessionKey);
+            logger.error("No pending upload context for session {}", sessionKey);
             return;
         }
 
