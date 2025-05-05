@@ -65,7 +65,7 @@ public class MessageWorker {
         });
     }
 
-    public String generateResponse(List<ChatMessage> messages) {
+    public String generateResponse(String analysisMessage, String inputTranscript) {
         logger.info("Generating response for session: {}", sessionId);
 
         if (sessionId == null || userId == null) {
@@ -73,82 +73,116 @@ public class MessageWorker {
             throw new IllegalStateException("Session context not set");
         }
 
-        String lastUserMessage = "";
-        for (int i = messages.size() - 1; i >= 0; i--) {
-            if (messages.get(i) instanceof UserMessage) {
-                lastUserMessage = ((UserMessage) messages.get(i)).singleText();
-                logger.debug("Found last user message, length: {}", lastUserMessage.length());
-                break;
-            }
-        }
-
         logger.debug("Finding similar sessions for userId: {}", userId);
-        Map<String, String> sessionHistory = vectorDatabaseService.findSimilarSessions(userId, lastUserMessage, 25);
+        Map<String, String> sessionHistory = vectorDatabaseService.findSimilarSessions(userId, analysisMessage, 25);
         logger.debug("Found {} similar sessions", sessionHistory.size());
-
-        if (userId != null && sessionId != null && !lastUserMessage.isEmpty()) {
+        
+        List<String> relevantInterventions = List.of("No recommended approaches at this time");
+        String relevantContext = "No relevant context found";
+        if (userId != null && sessionId != null && !analysisMessage.isEmpty()) {
             logger.debug("Building context for prompt");
-            String relevantContext = vectorDatabaseService.buildContextForPrompt(
-                    sessionId, userId, lastUserMessage, 3);
-            if (!relevantContext.isEmpty()) {
-                logger.debug("Adding relevant context to chat memory");
+            String hasrelevantContext = vectorDatabaseService.buildContextForPrompt(
+                    sessionId, userId, analysisMessage, 3);
+            if (hasrelevantContext != null) {
+                logger.debug("Found relevant context: {}", hasrelevantContext);
+                relevantContext = hasrelevantContext;
             }
 
-            List<String> cognitiveDistortions = extractDistortionsFromMessages(messages);
+            List<String> cognitiveDistortions = extractDistortions(analysisMessage);
             if (!cognitiveDistortions.isEmpty()) {
                 logger.debug("Found {} cognitive distortions", cognitiveDistortions.size());
-                List<String> relevantInterventions =
+                List<String> foundInterventions =
                         vectorDatabaseService.findRelevantInterventions(cognitiveDistortions, 2);
 
-                if (!relevantInterventions.isEmpty()) {
+                if (!foundInterventions.isEmpty()) {
+                    relevantInterventions = foundInterventions;
                     logger.debug("Adding {} therapeutic approaches", relevantInterventions.size());
                 }
             }
         }
 
         List<ChatMessage> context = new ArrayList<>();
+        String systemPrompt = String.format("""
+            You are an experienced CBT therapist.
+            • Keep replies to 2-3 sentences unless asked for more.
+            • Use Socratic questions to explore the client's current thoughts and emotions.
+            • Briefly connect to any relevant patterns from past sessions.           
+            """);
+        context.add(SystemMessage.from(systemPrompt));
+
         int messageCount = sessionMessageCounter.getOrDefault(sessionId, 0);
         logger.debug("Building prompt for message count: {}", messageCount);
+        String stage;
         if (messageCount < 5) {
             logger.debug("Using introductory prompt");
-            context = promptBuilder.buildIntroductoryPrompt(lastUserMessage, sessionHistory, context);
+            stage = "INTRODUCTION - Establish rapport and safety";
         } else if (messageCount >= 5 && messageCount < 15) {
             logger.debug("Using core CBT prompt");
-            context = promptBuilder.buildCoreCBTPrompt(lastUserMessage, sessionHistory,context);
+            stage = "CORE - Active CBT work with focus on cognitive distortions";
         } else if (messageCount >= 15 && messageCount < 20) {
             logger.debug("Using conclusion CBT prompt");
-            context = promptBuilder.buildConclusionCBTPrompt(lastUserMessage, sessionHistory,context);
+            stage = "CONCLUSION - Wind-down and consolidation";
         } else {
             logger.debug("Using summary CBT prompt");
-            context = promptBuilder.buildSummaryCBTPrompt(lastUserMessage, sessionHistory,context);
+            stage = "SUMMARY - Session recap and next steps";
         }
 
+        ChatMemory chatMemory = sessionMemories.get(sessionId);
+        String chatMemoryStr;
+        if (chatMemory == null) {
+            logger.warn("No chat memory found for session: {}", sessionId);
+            chatMemoryStr = "No Previous History";
+        }
+        else {
+            chatMemoryStr = chatMemory.messages().toString();
+        }
+
+        String cbtPrompt = promptBuilder.buildCoreCBTPrompt(
+                stage, analysisMessage, inputTranscript, relevantInterventions.toString(), chatMemoryStr);
+
+        context.add(UserMessage.from(cbtPrompt));
+
+        // **Dump it** before you call the model:
+        logger.debug("=== THERAPIST CONTEXT MESSAGES ===");
+        for (ChatMessage m : context) {
+            String content;
+            if (m instanceof UserMessage) {
+                // only UserMessage has singleText()
+                content = ((UserMessage) m).singleText();
+            } else if (m instanceof SystemMessage) {
+                // SystemMessage (and AiMessage) expose .text()
+                content = ((SystemMessage) m).text();
+            } else {
+                // fallback for any other ChatMessage subtype
+                content = m.toString();
+            }
+            logger.debug("  [{}] {}", m.getClass().getSimpleName(), content);
+        }
+        // **END DUMP**
         logger.debug("Generating chat response");
         ChatResponse response = chatModel.chat(context);
+
+        // Store resulting messages in chat memory (mutated in-map so already storing in sessionMemories)
+        chatMemory.add(UserMessage.from("Analysis of user response: " + analysisMessage));
+        chatMemory.add(UserMessage.from("User Reponse: " + inputTranscript));
+        chatMemory.add(response.aiMessage());
         String responseText = response.aiMessage().text();
-        logger.debug("Adding response to chat memory");
         logger.debug("Indexing response in vector database");
         vectorDatabaseService.indexSessionMessage(sessionId, userId, responseText, false);
         logger.info("Response generated successfully for session: {}", sessionId);
         return responseText;
     }
 
-    private List<String> extractDistortionsFromMessages(List<ChatMessage> messages) {
-        logger.debug("Extracting cognitive distortions from {} messages", messages.size());
-        for (ChatMessage message : messages) {
-            if (message instanceof SystemMessage) {
-                String text = ((SystemMessage) message).text();
-                if (text.contains("cognitive distortions")) {
-                    int start = text.indexOf("cognitive distortions: ");
-                    if (start != -1) {
-                        start += "cognitive distortions: ".length();
-                        int end = text.indexOf(".", start);
-                        if (end != -1) {
-                            List<String> distortions = Arrays.asList(text.substring(start, end).split(", "));
-                            logger.debug("Found {} cognitive distortions", distortions.size());
-                            return distortions;
-                        }
-                    }
+    private List<String> extractDistortions(String cognitiveDistortions) {
+        if (cognitiveDistortions.contains("cognitive distortions")) {
+            int start = cognitiveDistortions.indexOf("cognitive distortions: ");
+            if (start != -1) {
+                start += "cognitive distortions: ".length();
+                int end = cognitiveDistortions.indexOf(".", start);
+                if (end != -1) {
+                    List<String> distortions = Arrays.asList(cognitiveDistortions.substring(start, end).split(", "));
+                    logger.debug("Found {} cognitive distortions", distortions.size());
+                    return distortions;
                 }
             }
         }

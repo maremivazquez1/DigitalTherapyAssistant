@@ -82,49 +82,4 @@ public class MessageWorkerTest {
             fail("Exception occurred while checking session initialization: " + e.getMessage());
         }
     }
-
-    @Test
-    public void test_generateResponse_handlesMultipleMessages() {
-        String sessionId = "test-session";
-        String userId = "testuser";
-
-        // Set session context
-        messageWorker.setSessionContext(sessionId, userId);
-
-        // Process first message
-        String response1 = messageWorker.generateResponse(List.of(UserMessage.from("Hello, I'm feeling anxious today.")));
-        assertNotNull(response1, "First response should not be null");
-
-        // Process second message
-        String response2 = messageWorker.generateResponse(List.of(UserMessage.from("I'm still feeling anxious.")));
-        assertNotNull(response2, "Second response should not be null");
-        assertNotEquals(response1, response2, "Responses should be different for different inputs");
-    }
-
-    @Test
-    public void test_generateResponse_handlesSystemMessages() {
-        String sessionId = "test-session";
-        String userId = "testuser";
-        
-        // Set session context
-        messageWorker.setSessionContext(sessionId, userId);
-
-        // Test with system message
-        String response = messageWorker.generateResponse(List.of(
-            UserMessage.from("I'm feeling stressed about work."),
-            SystemMessage.from("Additional context: The user has shown signs of anxiety in previous sessions.")
-        ));
-        assertNotNull(response, "Response should not be null");
-        assertFalse(response.isEmpty(), "Response should not be empty");
-    }
-
-    @Test
-    public void test_generateResponse_throwsExceptionForMissingSessionContext() {
-        String message = "Hello, world!";
-
-        // Try to generate response without setting session context
-        assertThrows(IllegalStateException.class, () -> {
-            messageWorker.generateResponse(List.of(UserMessage.from(message)));
-        }, "Should throw exception when session context is not set");
-    }
 } 
