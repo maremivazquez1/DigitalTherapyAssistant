@@ -61,6 +61,8 @@ public class BurnoutAssessmentOrchestrator {
         // Store the session
         activeSessions.put(sessionId, session);
 
+        System.out.println("Created session " + sessionId + " for user " + userId + " with " + assessment.getQuestions().size() + " questions.");
+
         return new BurnoutSessionCreationResponse(
                 sessionId,
                 assessment.getQuestions()
@@ -78,6 +80,9 @@ public class BurnoutAssessmentOrchestrator {
      * @return True if the response was successfully recorded
      */
     public boolean recordResponse(String sessionId, String questionId, String response, String videoUrl, String audioUrl) {
+        System.out.println("Recording response for session " + sessionId + ", question " + questionId);
+        System.out.println("Audio URL: " + audioUrl + ", Video URL: " + videoUrl);
+
         BurnoutAssessmentSession session = getSession(sessionId);
         if (session == null) {
             return false;
@@ -90,6 +95,7 @@ public class BurnoutAssessmentOrchestrator {
                 .orElse(null);
 
         if (question == null) {
+            System.err.println("Question " + questionId + " not found in session " + sessionId);
             return false;
         }
 
@@ -149,6 +155,7 @@ public class BurnoutAssessmentOrchestrator {
      * Updates a recorded response with video analysis results
      */
     private void updateResponseWithVideoAnalysis(String sessionId, String questionId, String analysisJson) {
+        System.out.println("Applying video analysis results to session " + sessionId + ", question " + questionId);
         BurnoutAssessmentSession session = getSession(sessionId);
         if (session != null && session.getResponses().containsKey(questionId)) {
             BurnoutUserResponse response = session.getResponses().get(questionId);
@@ -161,6 +168,7 @@ public class BurnoutAssessmentOrchestrator {
      * Updates a recorded response with audio analysis results
      */
     private void updateResponseWithAudioAnalysis(String sessionId, String questionId, String analysisJson) {
+        System.out.println("Applying audio analysis results to session " + sessionId + ", question " + questionId);
         BurnoutAssessmentSession session = getSession(sessionId);
         if (session != null && session.getResponses().containsKey(questionId)) {
             BurnoutUserResponse response = session.getResponses().get(questionId);
@@ -195,6 +203,8 @@ public class BurnoutAssessmentOrchestrator {
             formattedInput.append("---\n");
         }
 
+        System.out.println("Formatted input for worker: \n" + formattedInput.substring(0, Math.min(200, formattedInput.length())) + "...");
+
         return formattedInput.toString();
     }
 
@@ -205,6 +215,7 @@ public class BurnoutAssessmentOrchestrator {
      * @return A BurnoutScore object with domain scores and overall score
      */
     private BurnoutScore calculateScore(String sessionId) {
+        System.out.println("Calculating burnout score for session " + sessionId);
         BurnoutAssessmentSession session = getSession(sessionId);
         if (session == null || session.getResponses().isEmpty()) {
             throw new IllegalStateException("No session found or no responses recorded");
@@ -225,6 +236,7 @@ public class BurnoutAssessmentOrchestrator {
         );
 
         session.setScore(score);
+        System.out.println("Score calculated: " + scoreValue + ", Explanation: " + explanation);
         return score;
     }
 
@@ -235,6 +247,7 @@ public class BurnoutAssessmentOrchestrator {
      * @return A BurnoutSummary object with insights and recommendations
      */
     private BurnoutSummary generateSummary(String sessionId) {
+        System.out.println("Generating burnout summary for session " + sessionId);
         BurnoutAssessmentSession session = getSession(sessionId);
 
         if (session == null || session.getScore() == null) {
@@ -250,6 +263,7 @@ public class BurnoutAssessmentOrchestrator {
         // Save the summary to the session
         session.setSummary(summary);
 
+        System.out.println("Summary generated: " + overallInsight);
         return summary;
     }
 
@@ -260,6 +274,7 @@ public class BurnoutAssessmentOrchestrator {
      * @return A BurnoutResult object with all assessment results
      */
     public BurnoutAssessmentResult completeAssessment(String sessionId) {
+        System.out.println("Completing assessment for session " + sessionId);
         BurnoutAssessmentSession session = getSession(sessionId);
 
         if (session == null) {
@@ -293,6 +308,7 @@ public class BurnoutAssessmentOrchestrator {
         session.setCompleted(true);
         session.setCompletedAt(LocalDateTime.now());
 
+        System.out.println("Assessment completed at " + session.getCompletedAt());
         return result;
     }
 
