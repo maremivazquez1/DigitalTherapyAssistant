@@ -18,7 +18,7 @@ public class PromptBuilder {
         StringBuilder contextBuilder = buildContextString(previousSessions);
 
         String systemPrompt = String.format("""
-            You are an experienced therapist in the Introduction Phase. Your main goal is to establish rapport and create a safe space.
+            You are an experienced therapist in the Introduction Phase of the therapy session. Your main goal is to establish rapport and create a safe space.
             Keep responses brief (2-3 sentences) unless the user asks for more detail.
 
             Guidelines:
