@@ -123,12 +123,12 @@ public class BurnoutController {
     }
 
     private void sendErrorMessage(WebSocketSession session, String origin, Exception exception){
-        String execptionMsg = (exception == null) ? "unknown" : exception.getMessage();
-        logger.error("BurnoutController_{} Error: {}", origin, execptionMsg);
+        String exceptionMsg = (exception == null) ? "unknown" : exception.getMessage();
+        logger.error("BurnoutController_{} Error: {}", origin, exceptionMsg);
         try {
             ObjectNode errorJson = objectMapper.createObjectNode();
             errorJson.put("requestId", "BurnoutController_" + origin);
-            errorJson.put("error", execptionMsg);
+            errorJson.put("error", exceptionMsg);
             session.sendMessage(new TextMessage(errorJson.toString()));
         } catch (Exception e) {
             logger.error("BurnoutController sendErrorMessage failed: {}", e.getMessage(), e);
