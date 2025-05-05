@@ -79,7 +79,7 @@ public class BurnoutController {
         if (recorded) {
             logger.info("Response recorded for session {}, question {}", burnoutSessionId, questionId);
         } else {
-            logger.error("Failed to record response for session {}, question {}", burnoutSessionId, questionId);
+            sendErrorMessage(session, "handleUserAnswer_recordResponse", null);
         }
     }
 
@@ -90,7 +90,7 @@ public class BurnoutController {
             burnoutAssessmentOrchestrator.recordResponse(sessionId, questionId, "", null, audioUrl);
             logger.info("Audio uploaded and recorded for session {}, question {}", sessionId, questionId);
         } catch (Exception e) {
-            logger.error("Failed to handle audio upload: {}", e.getMessage(), e);
+            sendErrorMessage(session, "handleAudioMessage", e);
         }
     }
 
@@ -101,7 +101,7 @@ public class BurnoutController {
             burnoutAssessmentOrchestrator.recordResponse(sessionId, questionId, "", videoUrl, null);
             logger.info("Video uploaded and recorded for session {}, question {}", sessionId, questionId);
         } catch (Exception e) {
-            logger.error("Failed to handle video upload: {}", e.getMessage(), e);
+            sendErrorMessage(session, "handleVideoMessage", e);
         }
     }
 
@@ -118,15 +118,20 @@ public class BurnoutController {
 
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
         } catch (Exception e) {
-            logger.error("Failed to complete assessment: {}", e.getMessage(), e);
+            sendErrorMessage(session, "handleCompleteAssessment", e);
         }
     }
 
-    private void sendErrorMessage(WebSocketSession session, String message, int code, String requestId) throws IOException {
-        ObjectNode errorJson = objectMapper.createObjectNode();
-        errorJson.put("error", message);
-        errorJson.put("code", code);
-        errorJson.put("requestId", requestId);
-        session.sendMessage(new TextMessage(errorJson.toString()));
+    private void sendErrorMessage(WebSocketSession session, String origin, Exception exception){
+        String execptionMsg = (exception == null) ? "unknown" : exception.getMessage();
+        logger.error("BurnoutController_{} Error: {}", origin, execptionMsg);
+        try {
+            ObjectNode errorJson = objectMapper.createObjectNode();
+            errorJson.put("requestId", "BurnoutController_" + origin);
+            errorJson.put("error", execptionMsg);
+            session.sendMessage(new TextMessage(errorJson.toString()));
+        } catch (Exception e) {
+            logger.error("BurnoutController sendErrorMessage failed: {}", e.getMessage(), e);
+        }
     }
 }
