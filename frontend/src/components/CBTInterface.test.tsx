@@ -1,6 +1,7 @@
+import '@testing-library/jest-dom';  
 /// <reference types="vitest" />
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, type Mock } from 'vitest';
 import CBTInterface from './CBTInterface';
 
 // Mock the WebSocket hook
@@ -50,7 +51,7 @@ describe('CBTInterface Component', () => {
     } as unknown as MediaStream;
 
     // Mock successful getUserMedia call
-    (navigator.mediaDevices.getUserMedia as vi.Mock).mockResolvedValueOnce(
+    (navigator.mediaDevices.getUserMedia as Mock).mockResolvedValueOnce(
       dummyStream
     );
 
@@ -73,7 +74,9 @@ describe('CBTInterface Component', () => {
     // Check that the video element received the stream
     const videoElem = container.querySelector('video');
     expect(videoElem).toBeTruthy();
-    expect((videoElem as HTMLVideoElement).srcObject).toBe(dummyStream);
+    const src = (videoElem as HTMLVideoElement).srcObject;
+    expect(src).toBeInstanceOf(MediaStream);
+    expect((src as MediaStream).getVideoTracks()[0]).toBe(videoTrack);
 
     // Stop session
     fireEvent.click(screen.getByText('End Session'));
