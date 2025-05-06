@@ -8,7 +8,6 @@ import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
-import harvard.capstone.digitaltherapy.cbt.service.PromptBuilder;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
 import java.util.HashMap;
 import java.util.List;
@@ -28,7 +27,6 @@ public class MessageWorkerTest {
     private MessageWorker messageWorker;
     private ChatLanguageModel model;
     private ChatMemory chatMemory;
-    private PromptBuilder promptBuilder;
 
     @BeforeEach
     public void setup() {

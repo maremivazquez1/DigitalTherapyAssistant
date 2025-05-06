@@ -9,7 +9,6 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
-import harvard.capstone.digitaltherapy.cbt.service.PromptBuilder;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
 import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
@@ -29,7 +28,6 @@ public class MessageWorker {
     private final ChatLanguageModel chatModel;
     private final VectorDatabaseService vectorDatabaseService;
     private final Map<String, ChatMemory> sessionMemories;
-    private final PromptBuilder promptBuilder;
 
     private String sessionId;
     private String userId;
@@ -37,7 +35,6 @@ public class MessageWorker {
 
     public MessageWorker() {
         logger.info("Initializing MessageWorker");
-        this.promptBuilder = new PromptBuilder();
         this.vectorDatabaseService = new VectorDatabaseService();
         this.sessionMemories = new ConcurrentHashMap<>();
         this.chatModel = GoogleAiGeminiChatModel.builder()
