@@ -15,8 +15,8 @@ const BurnoutAssessment: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [responses, setResponses] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
-  const [setResultsLoading] = useState<boolean>(false);
-  const [error] = useState<string | null>(null);
+  const [ ,setResultsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [finalResult, setFinalResult] = useState<any>(null);
 
   const requestId = useRef(uuidv4());
@@ -37,6 +37,11 @@ useEffect(() => {
   // 2) Receive questions
   useEffect(() => {
     for (const msg of messages) {
+      if ((msg as any).error) {
+        setError((msg as any).error);
+        setLoading(false);
+        return;
+    }
       if (msg.type === "burnout-questions") {
         const data = msg as any;
         setSessionId(data.sessionId);
@@ -137,8 +142,12 @@ useEffect(() => {
       </div>
     );
   }
-  if (error) return <div className="text-red-500">{error}</div>;
-  if (!questions.length) return <div>No questions available.</div>;
+  if (error) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <p className="text-red-500">{error}</p>
+    </div>
+  );
+  if (!questions.length) return <div>No questions available.</div>
 
   const q = questions[currentIndex];
   return (
