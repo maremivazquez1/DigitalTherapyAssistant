@@ -9,7 +9,7 @@ const RegistrationPage: React.FC = () => {
 
   const handleRegisterSuccess = (token: string) => {
     login(token);
-    navigate("/cbt");
+    navigate("/");
   };
 
   return (
