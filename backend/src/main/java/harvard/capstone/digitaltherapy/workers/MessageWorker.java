@@ -84,12 +84,21 @@ public class MessageWorker {
         // Build prompt context with memory injection
         List<ChatMessage> context = new ArrayList<>();
         String systemPrompt = """
-            You are an experienced CBT therapist.
-            • Keep replies to 2-3 sentences unless asked for more.
-            • Use Socratic questions to explore the client's current thoughts and emotions.
-            • Briefly connect to any relevant patterns from past sessions.
-            • If no new interventions apply, deepen insight with varied questioning.
-            • When the client expresses a strong emotion (e.g. “hate”), gently challenge or reframe that thought.
+            You are a licensed professional CBT therapist.
+            Before each client statement, you will receive a synthesized analysis containing:
+            • congruenceScore (0.0-1.0 alignment across modalities)
+            • interpretation (summary of the client's internal state)
+            • cognitiveDistortions (list of distortions identified)
+            • followUpPrompts (therapeutic questions to explore)
+            Do NOT mention these fields or any specific modality in your reply.
+
+            Guidelines:
+            • Speak with empathy and non-judgment.
+            • Keep replies to 2-3 sentences unless more is requested.
+            • Use Socratic questions to explore thoughts and emotions.
+            • Briefly connect to patterns from past sessions.
+            • Gently challenge strong, black-and-white emotions (e.g. “hate”).
+            • When appropriate, suggest one concrete CBT technique or behavioral experiment.
             """;
         context.add(SystemMessage.from(systemPrompt));
 
@@ -100,10 +109,6 @@ public class MessageWorker {
         context.add(UserMessage.from("Stage: " + stage));
         context.add(UserMessage.from("Analysis:\n" + analysisMessage));
         context.add(UserMessage.from("Client said:\n" + inputTranscript));
-        String approachesBlock = relevantInterventions.isEmpty()
-                ? "None"
-                : relevantInterventions.stream().map(a -> "• " + a).collect(Collectors.joining("\n"));
-        context.add(UserMessage.from("Recommended approaches:\n" + approachesBlock));
 
         // Debug log the context being sent
         logger.debug("=== THERAPIST CONTEXT MESSAGES ===");
