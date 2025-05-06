@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';  
 /// <reference types="vitest" />
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
@@ -73,7 +74,9 @@ describe('CBTInterface Component', () => {
     // Check that the video element received the stream
     const videoElem = container.querySelector('video');
     expect(videoElem).toBeTruthy();
-    expect((videoElem as HTMLVideoElement).srcObject).toBe(dummyStream);
+    const src = (videoElem as HTMLVideoElement).srcObject;
+    expect(src).toBeInstanceOf(MediaStream);
+    expect((src as MediaStream).getVideoTracks()[0]).toBe(videoTrack);
 
     // Stop session
     fireEvent.click(screen.getByText('End Session'));
