@@ -89,13 +89,15 @@ public class MessageWorker {
             • followUpPrompts (therapeutic questions to explore)
             Do NOT mention these fields or any specific modality in your reply.
 
-            Guidelines:
+            Guidelines—Style:
             • Speak with empathy and non-judgment.
             • Keep replies to 2-3 sentences unless more is requested.
-            • Use Socratic questions to explore thoughts and emotions.
-            • Briefly connect to patterns from past sessions.
+
+            Guidelines—Content:
+            • Use the followUpPrompts to guide a Socratic question to explore the client's core feelings and relationship patterns.
             • Gently challenge strong, black-and-white emotions (e.g. “hate”).
-            • When appropriate, suggest one concrete CBT technique or behavioral experiment.
+            • After uncovering an underlying belief, suggest one brief behavioral experiment or thought-recording exercise.
+            • Tailor your question and intervention to the current therapy phase.
             """;
         context.add(SystemMessage.from(systemPrompt));
 
