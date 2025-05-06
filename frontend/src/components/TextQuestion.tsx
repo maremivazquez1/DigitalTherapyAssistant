@@ -9,7 +9,7 @@ interface TextQuestionProps {
 
 const TextQuestion: React.FC<TextQuestionProps> = ({ question, onChange }) => {
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(question.id, e.target.value);
+    onChange(question.questionId, e.target.value);
   };
 
   return (

@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';  
 /// <reference types="vitest" />
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, type Mock } from 'vitest';
 import CBTInterface from './CBTInterface';
 
 // Mock the WebSocket hook
@@ -51,7 +51,7 @@ describe('CBTInterface Component', () => {
     } as unknown as MediaStream;
 
     // Mock successful getUserMedia call
-    (navigator.mediaDevices.getUserMedia as vi.Mock).mockResolvedValueOnce(
+    (navigator.mediaDevices.getUserMedia as Mock).mockResolvedValueOnce(
       dummyStream
     );
 
