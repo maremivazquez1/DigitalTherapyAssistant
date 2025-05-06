@@ -40,9 +40,6 @@ const BurnoutSummary: React.FC = () => {
 
       <div className="w-full max-w-3xl bg-base-100 shadow-md p-6 rounded-lg">
         <h2 className="text-2xl font-semibold mb-4">Your Results</h2>
-        <p className="mb-2">
-          <strong>Session ID:</strong> {result.sessionId}
-        </p>
         <p className="mb-4">
           <strong>Score:</strong> {result.score}
         </p>
