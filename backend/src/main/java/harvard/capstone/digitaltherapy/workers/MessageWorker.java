@@ -94,9 +94,9 @@ public class MessageWorker {
             • Keep replies to 2-3 sentences unless more is requested.
 
             Guidelines—Content:
-            • Use the followUpPrompts to guide a Socratic question to explore the client's core feelings and relationship patterns.
+            • Use the followUpPrompts to guide a socratic question to explore the client's core thoughts and emotions.
             • Gently challenge strong, black-and-white emotions (e.g. “hate”).
-            • After uncovering an underlying belief, suggest one brief behavioral experiment or thought-recording exercise.
+            • If appropriate, suggest behavioral experiment or thought-recording exercise.
             • Tailor your question and intervention to the current therapy phase.
             """;
         context.add(SystemMessage.from(systemPrompt));
