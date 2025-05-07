@@ -8,6 +8,7 @@ import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
+import harvard.capstone.digitaltherapy.cbt.service.PromptBuilder;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +28,7 @@ public class MessageWorkerTest {
     private MessageWorker messageWorker;
     private ChatLanguageModel model;
     private ChatMemory chatMemory;
+    private PromptBuilder promptBuilder;
 
     @BeforeEach
     public void setup() {
@@ -124,17 +126,5 @@ public class MessageWorkerTest {
         assertThrows(IllegalStateException.class, () -> {
             messageWorker.generateResponse(List.of(UserMessage.from(message)));
         }, "Should throw exception when session context is not set");
-    }
-
-    @Test
-    public void test_buildPrompt() {
-        String analysis = "User shows signs of anxiety and stress";
-        Map<String, Double> previousSessions = null;
-        String prompt = messageWorker.buildPrompt(analysis, previousSessions);
-        
-        assertNotNull(prompt, "Prompt should not be null");
-        assertTrue(prompt.contains(analysis), "Prompt should include the analysis");
-        assertTrue(prompt.contains("therapeutic assistant"), "Prompt should include role description");
-        assertTrue(prompt.contains("cognitive behavioral therapy"), "Prompt should mention CBT");
     }
 } 

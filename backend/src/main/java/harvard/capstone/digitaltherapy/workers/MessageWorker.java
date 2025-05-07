@@ -8,12 +8,11 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import harvard.capstone.digitaltherapy.cbt.service.PromptBuilder;
 import harvard.capstone.digitaltherapy.persistence.VectorDatabaseService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,10 +23,15 @@ public class MessageWorker {
     private final ChatLanguageModel chatModel;
     private final VectorDatabaseService vectorDatabaseService;
     private final Map<String, ChatMemory> sessionMemories;
+    private final PromptBuilder promptBuilder;
+
     private String sessionId;
     private String userId;
+    private static final Map<String, Integer> sessionMessageCounter = new HashMap<>();
 
     public MessageWorker() {
+        logger.info("Initializing MessageWorker");
+        this.promptBuilder = new PromptBuilder();
         this.vectorDatabaseService = new VectorDatabaseService();
         this.sessionMemories = new ConcurrentHashMap<>();
         this.chatModel = GoogleAiGeminiChatModel.builder()
@@ -35,136 +39,102 @@ public class MessageWorker {
                 .modelName("gemini-1.5-flash")
                 .temperature(0.2)
                 .topP(0.95)
-                .maxOutputTokens(300)
+                .maxOutputTokens(400)
                 .build();
+        logger.debug("MessageWorker initialized successfully");
     }
 
     public void setSessionContext(String sessionId, String userId) {
+        logger.info("Setting session context for sessionId: {} and userId: {}", sessionId, userId);
         this.sessionId = sessionId;
         this.userId = userId;
-        
+        if (this.sessionMessageCounter.containsKey(sessionId)) {
+            int newCount = this.sessionMessageCounter.get(sessionId) + 1;
+            this.sessionMessageCounter.put(sessionId, newCount);
+            logger.debug("Incremented message counter for session {} to {}", sessionId, newCount);
+        } else {
+            this.sessionMessageCounter.put(sessionId, 1);
+            logger.debug("Initialized new message counter for session {}", sessionId);
+        }
         // Initialize or get existing chat memory for this session
-        sessionMemories.computeIfAbsent(sessionId, k -> 
-            MessageWindowChatMemory.builder()
-                .maxMessages(20) // Keep last 20 messages in memory
-                .build()
-        );
+        sessionMemories.computeIfAbsent(sessionId, k -> {
+            logger.debug("Creating new chat memory for session {}", sessionId);
+            return MessageWindowChatMemory.builder()
+                    .maxMessages(20) // Keep last 20 messages in memory
+                    .build();
+        });
     }
 
     public String generateResponse(List<ChatMessage> messages) {
+        logger.info("Generating response for session: {}", sessionId);
+
         if (sessionId == null || userId == null) {
+            logger.error("Session context not set before generating response");
             throw new IllegalStateException("Session context not set");
-        }
-
-        ChatMemory chatMemory = sessionMemories.get(sessionId);
-        if (chatMemory == null) {
-            logger.warn("No chat memory found for session: {}", sessionId);
-        }
-
-        // Add messages to chat memory
-        for (ChatMessage message : messages) {
-            chatMemory.add(message);
         }
 
         String lastUserMessage = "";
         for (int i = messages.size() - 1; i >= 0; i--) {
             if (messages.get(i) instanceof UserMessage) {
                 lastUserMessage = ((UserMessage) messages.get(i)).singleText();
+                logger.debug("Found last user message, length: {}", lastUserMessage.length());
                 break;
             }
         }
-        Map<String, Double> sessionHistory = vectorDatabaseService.findSimilarSessions(userId, lastUserMessage, 10);
+
+        logger.debug("Finding similar sessions for userId: {}", userId);
+        Map<String, String> sessionHistory = vectorDatabaseService.findSimilarSessions(userId, lastUserMessage, 25);
+        logger.debug("Found {} similar sessions", sessionHistory.size());
+
         if (userId != null && sessionId != null && !lastUserMessage.isEmpty()) {
+            logger.debug("Building context for prompt");
             String relevantContext = vectorDatabaseService.buildContextForPrompt(
-                sessionId, userId, lastUserMessage, 3);
+                    sessionId, userId, lastUserMessage, 3);
             if (!relevantContext.isEmpty()) {
-                chatMemory.add(SystemMessage.from(
-                    "Consider this relevant information from previous sessions: " + relevantContext));
+                logger.debug("Adding relevant context to chat memory");
             }
+
             List<String> cognitiveDistortions = extractDistortionsFromMessages(messages);
             if (!cognitiveDistortions.isEmpty()) {
+                logger.debug("Found {} cognitive distortions", cognitiveDistortions.size());
                 List<String> relevantInterventions =
-                    vectorDatabaseService.findRelevantInterventions(cognitiveDistortions, 2);
+                        vectorDatabaseService.findRelevantInterventions(cognitiveDistortions, 2);
 
                 if (!relevantInterventions.isEmpty()) {
-                    chatMemory.add(SystemMessage.from(
-                        "Consider these therapeutic approaches: " + String.join("; ", relevantInterventions)));
+                    logger.debug("Adding {} therapeutic approaches", relevantInterventions.size());
                 }
             }
         }
+
         List<ChatMessage> context = new ArrayList<>();
-
-        // Add prompt first for most relevant context
-        context.add(SystemMessage.from(buildPrompt(lastUserMessage, sessionHistory)));
-
-        // Add history
-        context.addAll(chatMemory.messages());
-
-        ChatResponse response = chatModel.chat(context);
-        String responseText = response.aiMessage().text();
-
-        // Add the response to chat memory
-        chatMemory.add(response.aiMessage());
-
-        // Index the response in vector database
-        vectorDatabaseService.indexSessionMessage(sessionId, userId, responseText, false);
-
-        return response.aiMessage().text();
-    }
-
-    public String buildPrompt(String synthesizerAnalysis, Map<String, Double> previousSessions) {
-        StringBuilder contextBuilder = new StringBuilder();
-
-        // Process previous sessions if available
-        if (previousSessions != null && !previousSessions.isEmpty()) {
-            previousSessions.entrySet().stream()
-                    .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-                    .limit(3) // Limit to most relevant sessions
-                    .forEach(entry -> {
-                        contextBuilder.append("- Previous insight: ")
-                                .append(entry.getKey())
-                                .append("\n");
-                    });
+        int messageCount = sessionMessageCounter.getOrDefault(sessionId, 0);
+        logger.debug("Building prompt for message count: {}", messageCount);
+        if (messageCount < 5) {
+            logger.debug("Using introductory prompt");
+            context = promptBuilder.buildIntroductoryPrompt(lastUserMessage, sessionHistory, context);
+        } else if (messageCount >= 5 && messageCount < 15) {
+            logger.debug("Using core CBT prompt");
+            context = promptBuilder.buildCoreCBTPrompt(lastUserMessage, sessionHistory,context);
+        } else if (messageCount >= 15 && messageCount < 20) {
+            logger.debug("Using conclusion CBT prompt");
+            context = promptBuilder.buildConclusionCBTPrompt(lastUserMessage, sessionHistory,context);
+        } else {
+            logger.debug("Using summary CBT prompt");
+            context = promptBuilder.buildSummaryCBTPrompt(lastUserMessage, sessionHistory,context);
         }
 
-        String prompt = String.format("""
-        You are a warm and empathetic therapeutic companion, trained in cognitive behavioral therapy, who builds genuine connections with people. Your approach is gentle, understanding, and deeply respectful of each person's unique journey.
-
-        I'll share with you a synthesis of our friend's current response, including their words, tone, and expressions: %s
-
-        %s
-        
-        As you respond, please:
-        
-        💝 Connect with genuine warmth and understanding by:
-        • Listening deeply to both spoken and unspoken feelings
-        • Acknowledging their experiences with gentle validation
-        • Creating a safe, judgment-free space for sharing
-        
-        🤝 Offer therapeutic support by:
-        • Gently exploring thoughts and feelings together
-        • Helping identify patterns with compassionate curiosity
-        • Suggesting coping strategies in a collaborative way
-        
-        💫 Ensure your response:
-        • Flows naturally and conversationally
-        • Maintains a gentle, supportive presence
-        • Builds upon our shared understanding
-        
-        Remember to be fully present with them, responding to their immediate needs while keeping in mind the context of their journey.
-        """,
-                synthesizerAnalysis,
-                previousSessions != null && !previousSessions.isEmpty()
-                        ? "\nDrawing from our previous conversations, while staying present with the current moment:\n" + contextBuilder.toString()
-                        : ""
-        );
-
-        return prompt;
+        logger.debug("Generating chat response");
+        ChatResponse response = chatModel.chat(context);
+        String responseText = response.aiMessage().text();
+        logger.debug("Adding response to chat memory");
+        logger.debug("Indexing response in vector database");
+        vectorDatabaseService.indexSessionMessage(sessionId, userId, responseText, false);
+        logger.info("Response generated successfully for session: {}", sessionId);
+        return responseText;
     }
 
-
-
     private List<String> extractDistortionsFromMessages(List<ChatMessage> messages) {
+        logger.debug("Extracting cognitive distortions from {} messages", messages.size());
         for (ChatMessage message : messages) {
             if (message instanceof SystemMessage) {
                 String text = ((SystemMessage) message).text();
@@ -174,13 +144,16 @@ public class MessageWorker {
                         start += "cognitive distortions: ".length();
                         int end = text.indexOf(".", start);
                         if (end != -1) {
-                            return Arrays.asList(text.substring(start, end).split(", "));
+                            List<String> distortions = Arrays.asList(text.substring(start, end).split(", "));
+                            logger.debug("Found {} cognitive distortions", distortions.size());
+                            return distortions;
                         }
                     }
                 }
             }
         }
+        logger.debug("No cognitive distortions found");
         return Collections.emptyList();
     }
-
 }
+

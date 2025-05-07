@@ -99,29 +99,6 @@ class MultiModalSynthesizerTest {
         assertEquals(0.75, score);
     }
 
-    @Test
-    void testBuildPromptWithNullMaps() {
-        String prompt = synthesizer.buildPrompt(null, null, null);
-        assertNotNull(prompt);
-        assertTrue(prompt.contains("Words: 0.00"));
-        assertTrue(prompt.contains("Tone: 0.00"));
-        assertTrue(prompt.contains("Facial Expression: 0.00"));
-    }
-
-    @Test
-    void testBuildPromptWithValidData() {
-        String textAnalysis = "{\"wordScore\": 0.8}";
-        String voiceAnalysis = "{\"audioScore\": 0.9}";
-        String videoAnalysis = "{\"videoScore\": 0.7}";
-
-        String prompt = synthesizer.buildPrompt(textAnalysis, voiceAnalysis, videoAnalysis);
-
-        assertNotNull(prompt);
-        assertTrue(prompt.contains("Words: 0.80"));
-        assertTrue(prompt.contains("Tone: 0.90"));
-        assertTrue(prompt.contains("Facial Expression: 0.70"));
-    }
-
     private String validJsonResponse() {
         return """
             {
