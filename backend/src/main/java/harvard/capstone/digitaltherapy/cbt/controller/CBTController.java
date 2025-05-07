@@ -355,7 +355,6 @@ public class CBTController {
         String userId = getUserId(session);
         
         orchestrationService.setSessionContext(sessionId, userId);
-        orchestrationService.associateSession(sessionId);
         String transcribedText = "";
 
         String input_transcript_s3_url = transcribeService.startTranscriptionJob(s3Path,sessionId);

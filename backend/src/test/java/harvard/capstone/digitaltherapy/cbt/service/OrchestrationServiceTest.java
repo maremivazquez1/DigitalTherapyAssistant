@@ -65,20 +65,6 @@ public class OrchestrationServiceTest {
     }
 
     /**
-     * Test case for associateSession method.
-     * Verifies that the method returns the provided session ID and associates it with a new message list.
-     */
-    @Test
-    public void test_associateSession_returnsProvidedSessionId() {
-        OrchestrationService orchestrationService = new OrchestrationService();
-        String sessionId = "test_session_id";
-
-        String result = orchestrationService.associateSession(sessionId);
-
-        assertEquals(sessionId, result, "The associateSession method should return the provided session ID");
-    }
-
-    /**
      * Tests the processUserMessage method when an invalid session ID is provided.
      * This test verifies that an IllegalArgumentException is thrown when the session ID
      * is not found in the sessionMessages map.

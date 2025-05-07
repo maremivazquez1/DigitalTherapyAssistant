@@ -33,9 +33,6 @@ public class OrchestrationService {
     private final VectorDatabaseService vectorDatabaseService;
     private final VideoAnalysisWorker videoAnalysisWorker;
     private final AudioAnalysisWorker audioAnalysisWorker;
-
-    // Simple in-memory session tracking (would use Redis in production)
-    private final Map<String, List<ChatMessage>> sessionMessages = new HashMap<>();
     private String userId;
 
     public OrchestrationService(){
@@ -51,17 +48,7 @@ public class OrchestrationService {
         messageWorker.setSessionContext(sessionId, userId);
     }
 
-    public String associateSession(String sessionId) {
-        List<ChatMessage> messages = new ArrayList<>();
-        sessionMessages.put(sessionId, messages);
-        return sessionId;
-    }
-
     public String processUserMessage(String sessionId, Map<String, String> modalities, String input_transcript) {
-        if (!sessionMessages.containsKey(sessionId)) {
-            throw new IllegalArgumentException("Invalid session ID: " + sessionId);
-        }
-        List<ChatMessage> messages = sessionMessages.get(sessionId);
         List<CompletableFuture<Object>> analysisFutures = new ArrayList<>();
         Map<String, CompletableFuture<Object>> modalityToFuture = new HashMap<>();  // To track which result belongs to which modality
 
@@ -143,9 +130,8 @@ public class OrchestrationService {
         Map<String, Object> result = node.apply(state);
         // Retrieve and print the final Analysis
         AnalysisResult analysis = (AnalysisResult) result.get("multimodalAnalysis");
-        // 5. Generate the subsequent prompt using the MessageWorker
-        messages.add(UserMessage.from(analysis.toString()));
-        String response = messageWorker.generateResponse(messages);
+        // Send analysis and user response to the message worker
+        String response = messageWorker.generateResponse(analysis.toString(), input_transcript);
         vectorDatabaseService.indexSessionMessage(sessionId, userId, response, false);
         return response;
     }

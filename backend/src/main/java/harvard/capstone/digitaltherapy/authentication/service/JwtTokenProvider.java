@@ -14,7 +14,7 @@ public class JwtTokenProvider {
     private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     
     // Token expiration and refresh interval
-    public static final long TOKEN_REFRESH_INTERVAL_MINUTES = 10;
+    public static final long TOKEN_REFRESH_INTERVAL_MINUTES = 30;
     public static final long TOKEN_EXPIRATION_MINUTES = 60;
     public static final long TOKEN_EXPIRATION_MILLISECONDS = TOKEN_EXPIRATION_MINUTES * 60 * 1000;
 
