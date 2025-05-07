@@ -291,5 +291,78 @@ public class S3Utils {
                 throw new RuntimeException("Error processing audio binary message: " + e.getMessage(), e);
             }
         }
+
+    /**
+     * Upload file content from an InputStream with specified content type
+     *
+     * @param inputStream The input stream containing the file data
+     * @param keyName The key (path) where the file will be stored in S3
+     * @param contentType The content type (MIME type) of the file
+     * @return The S3 URI of the uploaded file
+     */
+    public String uploadFile(InputStream inputStream, String keyName, String contentType) {
+        try {
+            // Check if bucket exists
+            if (!doesBucketExist(bucketName)) {
+                createBucket(bucketName);
+            }
+
+            // Create the put request with content type metadata
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(keyName)
+                    .contentType(contentType)
+                    .build();
+
+            // Upload the content from the input stream
+            byte[] bytes = inputStream.readAllBytes();
+            PutObjectResponse response = s3Client.putObject(request, RequestBody.fromBytes(bytes));
+
+            if (response != null && response.sdkHttpResponse().isSuccessful()) {
+                logger.info("File successfully uploaded to S3: {}", keyName);
+                String s3Uri = String.format("s3://%s/%s", bucketName, keyName);
+                return s3Uri;
+            } else {
+                throw new RuntimeException("Failed to upload file to S3");
+            }
+        } catch (S3Exception | IOException e) {
+            logger.error("Error uploading file to S3: {}", e.getMessage());
+            throw new RuntimeException("Failed to upload file to S3: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Download a file from S3 and return its contents as a String
+     *
+     * @param keyName The key (path) of the file in S3
+     * @return The file contents as a String
+     */
+    public String downloadFileAsString(String keyName) {
+        try {
+            // Build the GetObjectRequest
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(keyName)
+                    .build();
+
+            // Retrieve the file from S3
+            ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(getObjectRequest);
+
+            // Read the content as a string
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(s3Object))) {
+                StringBuilder stringBuilder = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    stringBuilder.append(line);
+                }
+                return stringBuilder.toString();
+            }
+        } catch (S3Exception | IOException e) {
+            logger.error("Error downloading file from S3: {}", e.getMessage());
+            throw new RuntimeException("Failed to download file from S3: " + e.getMessage());
+        }
+    }
+
+
     }
 
