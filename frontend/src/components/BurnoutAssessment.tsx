@@ -21,7 +21,7 @@ const BurnoutAssessment: React.FC = () => {
 
   const requestId = useRef(uuidv4());
   const { isConnected, messages, sendMessage } = useWebSocket(
-    "ws://localhost:8080/ws/burnout",
+    'wss://' + import.meta.env.VITE_API_BASE_URL  + '/ws/burnout',
     true
   );
 
