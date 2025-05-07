@@ -1,6 +1,6 @@
 # 🧠 Digital Therapy Assistant
 
-A full-stack web application that provides Cognitive Behavioral Therapy (CBT) sessions using AI-driven interactions. The app includes multimodal analysis of voice, burnout assessments, AI-guided journaling, and daily check-ins.
+A full-stack web application that provides Cognitive Behavioral Therapy (CBT) sessions using AI-driven interactions. The app includes CBT sessions through multimodal analysis of voice, video and text, and burnout assessments.
 
 ## 🚀 Project Structure
 
@@ -32,7 +32,18 @@ DIGITALTHERAPYASSISTANT/
 
 ---
 
-## ⚙️ Setup Instructions
+## ⚙️ API Keys
+
+This project requires the use of **API keys**, specifically:
+- Gemini API key (https://ai.google.dev/gemini-api/docs/api-key)
+- Hume API key (https://dev.hume.ai/docs/introduction/api-key)
+- AWS API 'Access' and 'Secret' keys (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)
+- Github OAuth key, which is only needed for the deployment to pull the repo. Not needed for local runs.
+
+Before running the backend locally, make sure to add your keys to `variables.sh` and run `source variables.sh` on the same terminal (or add them to your profile environment variables). Just be careful not to commit the filled out file with access keys!
+See Deployments section for more information on how to deploy.
+
+## ⚙️ Quick Setup Instructions
 
 To quickly set up both the backend and frontend, run the provided `setup.sh` script:
 
