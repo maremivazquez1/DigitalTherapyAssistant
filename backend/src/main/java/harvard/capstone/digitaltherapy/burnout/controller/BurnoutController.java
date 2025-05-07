@@ -8,7 +8,6 @@ import harvard.capstone.digitaltherapy.burnout.orchestration.BurnoutAssessmentOr
 import harvard.capstone.digitaltherapy.utility.S3Utils;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutAssessmentResult;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutQuestion;
-import harvard.capstone.digitaltherapy.websocket.WebSocketSessionManager;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -19,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.http.WebSocket;
 import java.util.List;
 
 @Controller
@@ -31,9 +31,6 @@ public class BurnoutController {
     private final S3Utils s3Service;
 
     @Autowired
-    private WebSocketSessionManager sessionManager;
-
-    @Autowired
     public BurnoutController(ObjectMapper objectMapper,
                               BurnoutAssessmentOrchestrator burnoutAssessmentOrchestrator,
                               S3Utils s3Service) {
@@ -44,17 +41,17 @@ public class BurnoutController {
 
     public void handleMessage(WebSocketSession session, JsonNode requestJson) throws IOException {
         String messageType = requestJson.has("type") ? requestJson.get("type").asText() : "unknown";
-        String requestId = requestJson.has("requestId") ? requestJson.get("requestId").asText() : "unknown";
 
         switch (messageType) {
-            case "start-burnout" -> startBurnoutSession(session, requestId);
+            case "start-burnout" -> startBurnoutSession(session, requestJson);
             case "answer" -> handleUserAnswer(session, requestJson);
+            case "assessment-complete" -> handleCompleteAssessment(session, requestJson);
             default -> logger.warn("Unhandled message type: {}", messageType);
         }
     }
 
-    private void startBurnoutSession(WebSocketSession session, String requestId) throws IOException {
-        String userId = "TODO"; // You can connect this to auth later
+    private void startBurnoutSession(WebSocketSession session, JsonNode requestJson) throws IOException {
+        String userId = requestJson.has("userId") ? requestJson.get("userId").asText() : "unknown";
         BurnoutSessionCreationResponse responseData = burnoutAssessmentOrchestrator.createAssessmentSession(userId);
 
         // This will be used to track the session.
@@ -65,7 +62,6 @@ public class BurnoutController {
 
         ObjectNode response = objectMapper.createObjectNode();
         response.put("type", "burnout-questions");
-        response.put("requestId", requestId);
         response.put("sessionId", burnoutSessionId);
         response.set("questions", objectMapper.valueToTree(questions));
 
@@ -78,13 +74,12 @@ public class BurnoutController {
         String questionId = requestJson.get("questionId").asText();
         String response = requestJson.get("response").asText();
 
-        // TODO: Change to the sessionID
         boolean recorded = burnoutAssessmentOrchestrator.recordResponse(burnoutSessionId, questionId, response, null, null);
 
         if (recorded) {
             logger.info("Response recorded for session {}, question {}", burnoutSessionId, questionId);
         } else {
-            logger.error("Failed to record response for session {}, question {}", burnoutSessionId, questionId);
+            sendErrorMessage(session, "handleUserAnswer_recordResponse", null);
         }
     }
 
@@ -95,7 +90,7 @@ public class BurnoutController {
             burnoutAssessmentOrchestrator.recordResponse(sessionId, questionId, "", null, audioUrl);
             logger.info("Audio uploaded and recorded for session {}, question {}", sessionId, questionId);
         } catch (Exception e) {
-            logger.error("Failed to handle audio upload: {}", e.getMessage(), e);
+            sendErrorMessage(session, "handleAudioMessage", e);
         }
     }
 
@@ -106,38 +101,37 @@ public class BurnoutController {
             burnoutAssessmentOrchestrator.recordResponse(sessionId, questionId, "", videoUrl, null);
             logger.info("Video uploaded and recorded for session {}, question {}", sessionId, questionId);
         } catch (Exception e) {
-            logger.error("Failed to handle video upload: {}", e.getMessage(), e);
+            sendErrorMessage(session, "handleVideoMessage", e);
         }
     }
 
-
-    // TODO: Change to call the Orch method.
-    // Called by Orchestrator to send final results
-    public void forwardFinalBurnoutResult(String burnoutSessionId, BurnoutAssessmentResult burnoutResult) {
+    private void handleCompleteAssessment(WebSocketSession session, JsonNode requestJson){
         try {
-            WebSocketSession session = sessionManager.getSession(burnoutSessionId);
-            if (session == null || !session.isOpen()) {
-                logger.error("No active WebSocket session for sessionId: {}", burnoutSessionId);
-                return;
-            }
+            String sessionId = requestJson.get("sessionId").asText();
+            BurnoutAssessmentResult result = burnoutAssessmentOrchestrator.completeAssessment(sessionId);
 
-            ObjectNode finalMessage = objectMapper.createObjectNode();
-            finalMessage.put("type", "final-assessment-result");
-            finalMessage.put("sessionId", burnoutSessionId);
-            finalMessage.set("result", objectMapper.valueToTree(burnoutResult));
+            ObjectNode response = objectMapper.createObjectNode();
+            response.put("type", "assessment-result");
+            response.put("sessionId", sessionId);
+            response.put("score", result.getScore().getOverallScore());
+            response.put("summary", result.getSummary());
 
-            session.sendMessage(new TextMessage(finalMessage.toString()));
-            logger.info("Sent final burnout result to frontend for session {}", burnoutSessionId);
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
         } catch (Exception e) {
-            logger.error("Error sending final burnout result: {}", e.getMessage(), e);
+            sendErrorMessage(session, "handleCompleteAssessment", e);
         }
     }
 
-    private void sendErrorMessage(WebSocketSession session, String message, int code, String requestId) throws IOException {
-        ObjectNode errorJson = objectMapper.createObjectNode();
-        errorJson.put("error", message);
-        errorJson.put("code", code);
-        errorJson.put("requestId", requestId);
-        session.sendMessage(new TextMessage(errorJson.toString()));
+    private void sendErrorMessage(WebSocketSession session, String origin, Exception exception){
+        String exceptionMsg = (exception == null) ? "unknown" : exception.getMessage();
+        logger.error("BurnoutController_{} Error: {}", origin, exceptionMsg);
+        try {
+            ObjectNode errorJson = objectMapper.createObjectNode();
+            errorJson.put("requestId", "BurnoutController_" + origin);
+            errorJson.put("error", exceptionMsg);
+            session.sendMessage(new TextMessage(errorJson.toString()));
+        } catch (Exception e) {
+            logger.error("BurnoutController sendErrorMessage failed: {}", e.getMessage(), e);
+        }
     }
 }

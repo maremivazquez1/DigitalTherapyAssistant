@@ -26,9 +26,7 @@ const App: React.FC = () => {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/cbt" element={<CBTPage />} />
           <Route path="/burnout" element={<BurnoutAssessmentPage />} />
-          <Route 
-            path="/burnout-summary" 
-            element={<BurnoutSummaryPage initialQuestions={[]} initialResponses={[]} />} 
+          <Route path="/burnout-summary" element={<BurnoutSummaryPage/>} 
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

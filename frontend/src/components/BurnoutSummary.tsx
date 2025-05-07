@@ -1,51 +1,55 @@
+// src/components/BurnoutSummary.tsx
 import React from "react";
-import type { BurnoutQuestion } from "../types/burnout/assessment";
+import { useLocation, useNavigate } from "react-router-dom";
 
-interface BurnoutSummaryProps {
-  questions: BurnoutQuestion[];
-  responses: Record<number, string>;
-  onRestart: () => void;
+interface AssessmentResult {
+  type: string;
+  sessionId: string;
+  score: number;
+  summary: string;
 }
 
-const BurnoutSummary: React.FC<BurnoutSummaryProps> = ({
-  questions,
-  responses,
-  onRestart,
-}) => {
+/**
+ * This summary component now pulls its data from React Router's location.state
+ * directly, so you can just render it in a route without wrapping it.
+ */
+const BurnoutSummary: React.FC = () => {
+  const { state } = useLocation();
+  const navigate = useNavigate();
+  const result = (state as any)?.result as AssessmentResult | undefined;
+
+  // If no result was passed, redirect back to the assessment start
+  React.useEffect(() => {
+    if (!result) {
+      navigate("/burnout-assessment");
+    }
+  }, [result, navigate]);
+
+  if (!result) return null;
+
+  const handleRestart = () => {
+    navigate("/burnout-assessment");
+  };
+
   return (
     <div
       className="min-h-screen bg-base-200 flex flex-col items-center px-4 py-12"
       data-theme="calming"
     >
       <h1 className="text-4xl font-bold mb-8">Assessment Summary</h1>
-      <div className="w-full max-w-3xl space-y-6">
-        {questions.map((q) => {
-          const answer = responses[q.id];
-          return (
-            <div key={q.id} className="card bg-base-100 shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-2">{q.content}</h2>
-              {q.subtitle && (
-                <p className="text-sm text-gray-500 mb-4">{q.subtitle}</p>
-              )}
-              {q.type === "vlog" && answer && (
-                <video
-                  src={answer}
-                  controls
-                  className="w-full max-w-md rounded"
-                />
-              )}
-              {(q.type === "likert" || q.type === "open_text") && (
-                <p className="text-lg">
-                  {answer || (
-                    <span className="italic text-gray-400">No response</span>
-                  )}
-                </p>
-              )}
-            </div>
-          );
-        })}
+
+      <div className="w-full max-w-3xl bg-base-100 shadow-md p-6 rounded-lg">
+        <h2 className="text-2xl font-semibold mb-4">Your Results</h2>
+        <p className="mb-2">
+          <strong>Session ID:</strong> {result.sessionId}
+        </p>
+        <p className="mb-4">
+          <strong>Score:</strong> {result.score}
+        </p>
+        <p className="text-lg whitespace-pre-line">{result.summary}</p>
       </div>
-      <button onClick={onRestart} className="btn btn-primary mt-12">
+
+      <button onClick={handleRestart} className="btn btn-primary mt-12">
         Restart Assessment
       </button>
     </div>
