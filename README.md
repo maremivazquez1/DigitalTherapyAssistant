@@ -37,13 +37,13 @@ DIGITALTHERAPYASSISTANT/
 This project requires the use of **API keys**, specifically:
 - Gemini API key (https://ai.google.dev/gemini-api/docs/api-key)
 - Hume API key (https://dev.hume.ai/docs/introduction/api-key)
-- AWS API 'Access' and 'Secret' keys (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)
+- AWS API 'Access ID' and 'Secret' keys (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)
 - Github OAuth key, which is only needed for the deployment to pull the repo. Not needed for local runs.
 
 Before running the backend locally, make sure to add your keys to `variables.sh` and run `source variables.sh` on the same terminal (or add them to your profile environment variables). Just be careful not to commit the filled out file with access keys!
 See Deployments section for more information on how to deploy.
 
-## ⚙️ Quick Setup Instructions
+## ⚙️ Setup Instructions
 
 To quickly set up both the backend and frontend, run the provided `setup.sh` script:
 
@@ -63,14 +63,17 @@ If you prefer to install everything manually, follow the steps below.
 ### 1️⃣ Manual Backend Setup (if not using setup.sh)
 #### **Install Dependencies**
 # 1. Install via Homebrew
+```
 brew update
 brew install openjdk maven mysql redis ffmpeg
-
+```
 # 2. Start services
+```
 brew services start mysql
 brew services start redis
-
+```
 # 3. Configure MySQL schema
+```
 mysql -u root <<EOF
 CREATE DATABASE IF NOT EXISTS cbt;
 USE cbt;
@@ -87,27 +90,28 @@ CREATE TABLE users (
   updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 EOF
-
+```
 # 4. Build and run
-cd backend
-mvn clean install -Dnet.bytebuddy.experimental=true
-mvn spring-boot:run
----
+```
+cd backend 
+mvn spring-boot:run -Dnet.bytebuddy.experimental=true
+```
 
 ### 2️⃣ Manual Frontend Setup (if not using setup.sh)
 #### **Install Dependencies**
-cd frontend
+`cd frontend`
 
 # 1. Install Node.js if needed
-brew install node
+`brew install node`
 
 # 2. Install dependencies
+```
 npm install
 npm install tailwindcss @tailwindcss/vite daisyui vite --save-dev
-
+```
 # 3. Run dev server
-npm run dev
----
+```npm run dev```
+
 
 ## 🔥 Planned Features
 
