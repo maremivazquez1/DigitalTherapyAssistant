@@ -3,7 +3,7 @@ package harvard.capstone.digitaltherapy.burnout.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import harvard.capstone.digitaltherapy.burnout.fhir.BurnoutFhirService;
+import harvard.capstone.digitaltherapy.burnout.service.BurnoutFhirService;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutSessionCreationResponse;
 import harvard.capstone.digitaltherapy.burnout.orchestration.BurnoutAssessmentOrchestrator;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
@@ -29,7 +29,7 @@ public class BurnoutController {
     private final ObjectMapper objectMapper;
     private final BurnoutAssessmentOrchestrator burnoutAssessmentOrchestrator;
     private final S3Utils s3Service;
-    private final BurnoutFhirService burnoutFhirService;
+    private final BurnoutFhirService burnoutFhirService; // Keeping the service in the class
 
     @Autowired
     public BurnoutController(ObjectMapper objectMapper,
@@ -39,7 +39,7 @@ public class BurnoutController {
         this.objectMapper = objectMapper;
         this.burnoutAssessmentOrchestrator = burnoutAssessmentOrchestrator;
         this.s3Service = s3Service;
-        this.burnoutFhirService = burnoutFhirService;
+        this.burnoutFhirService = burnoutFhirService; // Still injecting it for future use
     }
 
     public void handleMessage(WebSocketSession session, JsonNode requestJson) throws IOException {
@@ -113,18 +113,24 @@ public class BurnoutController {
             String sessionId = requestJson.get("sessionId").asText();
             BurnoutAssessmentResult result = burnoutAssessmentOrchestrator.completeAssessment(sessionId);
 
-            // Convert to FHIR and store in S3
-            String fhirDocumentUrl = burnoutFhirService.processAndStoreAssessment(result);
+            // Comment out FHIR service usage but keep the code for future reference
+            // String fhirDocumentUrl = burnoutFhirService.processAndStoreAssessment(result);
+
+            // Use a placeholder instead
+            String fhirDocumentUrl = "fhir-document-not-stored"; // Placeholder value
+            logger.info("FHIR document storage skipped as requested");
 
             ObjectNode response = objectMapper.createObjectNode();
             response.put("type", "assessment-result");
             response.put("sessionId", sessionId);
             response.put("score", result.getScore().getOverallScore());
             response.put("summary", result.getSummary());
-            response.put("fhirDocumentUrl", fhirDocumentUrl);  // Add FHIR document URL to response
+
+            // uncomment to include in the response.
+//            response.put("fhirDocumentUrl", fhirDocumentUrl);
 
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
-            logger.info("Assessment completed and FHIR document stored at: {}", fhirDocumentUrl);
+            logger.info("Assessment completed. FHIR document storage skipped.");
         } catch (Exception e) {
             sendErrorMessage(session, "handleCompleteAssessment", e);
         }

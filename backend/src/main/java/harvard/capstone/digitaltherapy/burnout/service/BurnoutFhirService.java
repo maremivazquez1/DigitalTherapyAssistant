@@ -1,5 +1,6 @@
-package harvard.capstone.digitaltherapy.burnout.fhir;
+package harvard.capstone.digitaltherapy.burnout.service;
 
+import harvard.capstone.digitaltherapy.burnout.fhir.BurnoutAssessmentFhirConverter;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutAssessmentResult;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutQuestion;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutUserResponse;
