@@ -42,6 +42,14 @@ public class BurnoutController {
         this.burnoutFhirService = burnoutFhirService; // Still injecting it for future use
     }
 
+    /**
+     * Routes incoming WebSocket JSON messages to the appropriate handler
+     * based on the "type" field in the message.
+     *
+     * @param session the WebSocket session origin
+     * @param requestJson the parsed incoming JSON message
+     * @throws IOException if message sending fails
+     */
     public void handleMessage(WebSocketSession session, JsonNode requestJson) throws IOException {
         String messageType = requestJson.has("type") ? requestJson.get("type").asText() : "unknown";
 
@@ -53,6 +61,14 @@ public class BurnoutController {
         }
     }
 
+    /**
+     * Begins a new burnout assessment session, fetches all questions,
+     * and sends them back to the frontend client.
+     *
+     * @param session the WebSocket session origin
+     * @param requestJson the request payload containing user ID
+     * @throws IOException if response message sending fails
+     */
     private void startBurnoutSession(WebSocketSession session, JsonNode requestJson) throws IOException {
         String userId = requestJson.has("userId") ? requestJson.get("userId").asText() : "unknown";
         BurnoutSessionCreationResponse responseData = burnoutAssessmentOrchestrator.createAssessmentSession(userId);
@@ -72,6 +88,12 @@ public class BurnoutController {
         logger.info("Started burnout session: {}", burnoutSessionId);
     }
 
+    /**
+     * Records user input responses with the burnout assessment orchestrator
+     *
+     * @param session the WebSocket session oroign
+     * @param requestJson the request payload containing burnout session ID, question ID, and user response
+     */
     private void handleUserAnswer(WebSocketSession session, JsonNode requestJson) throws IOException {
         String burnoutSessionId = requestJson.get("sessionId").asText();
         String questionId = requestJson.get("questionId").asText();
@@ -86,6 +108,15 @@ public class BurnoutController {
         }
     }
 
+    /**
+     * Handles a binary audio message, uploads the file to S3,
+     * and records the audio URL in the assessment session.
+     *
+     * @param session the WebSocket session origin
+     * @param sessionId the assessment session ID
+     * @param questionId the question ID this audio relates to
+     * @param message the binary audio data
+     */
     public void handleAudioMessage(WebSocketSession session, String sessionId, String questionId, BinaryMessage message) {
         try {
             String s3Key = "audio_" + sessionId + "_" + questionId + ".mp3";
@@ -97,6 +128,15 @@ public class BurnoutController {
         }
     }
 
+    /**
+     * Handles a binary video message, uploads the file to S3,
+     * and records the video URL in the assessment session.
+     *
+     * @param session the WebSocket session origin
+     * @param sessionId the assessment session ID
+     * @param questionId the question ID this video relates to
+     * @param message the binary video data
+     */
     public void handleVideoMessage(WebSocketSession session, String sessionId, String questionId, BinaryMessage message) {
         try {
             String s3Key = "video_" + sessionId + "_" + questionId + ".mp4";
@@ -108,6 +148,13 @@ public class BurnoutController {
         }
     }
 
+    /**
+     * Finalizes the burnout assessment, calculates the results,
+     * and sends the final score and summary back to the frontend client.
+     *
+     * @param session the WebSocket session origin
+     * @param requestJson the request payload containing sessionId
+     */
     private void handleCompleteAssessment(WebSocketSession session, JsonNode requestJson) {
         try {
             String sessionId = requestJson.get("sessionId").asText();
@@ -136,6 +183,14 @@ public class BurnoutController {
         }
     }
 
+    /**
+     * Sends a structured error message to the client over WebSocket,
+     * including a reference to the method of origin and exception details.
+     *
+     * @param session the WebSocket session origin
+     * @param origin the name of the method where the error occurred
+     * @param exception the exception thrown (can be null)
+     */
     private void sendErrorMessage(WebSocketSession session, String origin, Exception exception) {
         String exceptionMsg = (exception == null) ? "unknown" : exception.getMessage();
         logger.error("BurnoutController_{} Error: {}", origin, exceptionMsg);
