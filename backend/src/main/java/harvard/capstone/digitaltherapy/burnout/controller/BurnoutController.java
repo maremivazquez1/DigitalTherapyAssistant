@@ -3,6 +3,7 @@ package harvard.capstone.digitaltherapy.burnout.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import harvard.capstone.digitaltherapy.burnout.service.BurnoutFhirService;
 import harvard.capstone.digitaltherapy.burnout.model.BurnoutSessionCreationResponse;
 import harvard.capstone.digitaltherapy.burnout.orchestration.BurnoutAssessmentOrchestrator;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
@@ -18,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.http.WebSocket;
 import java.util.List;
 
 @Controller
@@ -29,14 +29,17 @@ public class BurnoutController {
     private final ObjectMapper objectMapper;
     private final BurnoutAssessmentOrchestrator burnoutAssessmentOrchestrator;
     private final S3Utils s3Service;
+    private final BurnoutFhirService burnoutFhirService; // Keeping the service in the class
 
     @Autowired
     public BurnoutController(ObjectMapper objectMapper,
-                              BurnoutAssessmentOrchestrator burnoutAssessmentOrchestrator,
-                              S3Utils s3Service) {
+                             BurnoutAssessmentOrchestrator burnoutAssessmentOrchestrator,
+                             S3Utils s3Service,
+                             BurnoutFhirService burnoutFhirService) {
         this.objectMapper = objectMapper;
         this.burnoutAssessmentOrchestrator = burnoutAssessmentOrchestrator;
         this.s3Service = s3Service;
+        this.burnoutFhirService = burnoutFhirService; // Still injecting it for future use
     }
 
     public void handleMessage(WebSocketSession session, JsonNode requestJson) throws IOException {
@@ -105,10 +108,17 @@ public class BurnoutController {
         }
     }
 
-    private void handleCompleteAssessment(WebSocketSession session, JsonNode requestJson){
+    private void handleCompleteAssessment(WebSocketSession session, JsonNode requestJson) {
         try {
             String sessionId = requestJson.get("sessionId").asText();
             BurnoutAssessmentResult result = burnoutAssessmentOrchestrator.completeAssessment(sessionId);
+
+            // Comment out FHIR service usage but keep the code for future reference
+            // String fhirDocumentUrl = burnoutFhirService.processAndStoreAssessment(result);
+
+            // Use a placeholder instead
+            String fhirDocumentUrl = "fhir-document-not-stored"; // Placeholder value
+            logger.info("FHIR document storage skipped as requested");
 
             ObjectNode response = objectMapper.createObjectNode();
             response.put("type", "assessment-result");
@@ -116,13 +126,17 @@ public class BurnoutController {
             response.put("score", result.getScore().getOverallScore());
             response.put("summary", result.getSummary());
 
+            // uncomment to include in the response.
+//            response.put("fhirDocumentUrl", fhirDocumentUrl);
+
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+            logger.info("Assessment completed. FHIR document storage skipped.");
         } catch (Exception e) {
             sendErrorMessage(session, "handleCompleteAssessment", e);
         }
     }
 
-    private void sendErrorMessage(WebSocketSession session, String origin, Exception exception){
+    private void sendErrorMessage(WebSocketSession session, String origin, Exception exception) {
         String exceptionMsg = (exception == null) ? "unknown" : exception.getMessage();
         logger.error("BurnoutController_{} Error: {}", origin, exceptionMsg);
         try {
