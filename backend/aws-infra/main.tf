@@ -155,7 +155,7 @@ resource "aws_lb_target_group_attachment" "springboot_attachment" {
 module "ec2" {
   source                = "./modules/ec2"
   ami                   = data.aws_ami.latest_amazon_linux.id
-  instance_type         = "t3.medium"
+  instance_type         = "t3.small"
   key_name              = var.key_name
   repo_url              = var.repo_url
   oauth_token           = var.oauth_token
