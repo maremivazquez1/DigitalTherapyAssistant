@@ -8,7 +8,7 @@ export const useCBTWebSocket = () => {
         socketRef.current = socket;
 
         socket.onopen = () => {
-            console.log('✅ Connected to CBT WebSocket');
+            console.log('Connected to CBT WebSocket');
             setTimeout(() => {
                 if (socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({
@@ -17,21 +17,21 @@ export const useCBTWebSocket = () => {
                         requestId: "req-123" // this can be any unique string
                     }));
                 } else {
-                    console.warn('⚠️ WebSocket not open, message not sent');
+                    console.warn('WebSocket not open, message not sent');
                 }
             }, 250); // delay to ensure backend is ready
         };
 
         socket.onmessage = (event) => {
-            console.log('📨 Server message:', event.data);
+            console.log('Server message:', event.data);
         };
 
         socket.onerror = (error) => {
-            console.error('❌ WebSocket error:', error);
+            console.error('WebSocket error:', error);
         };
 
         socket.onclose = () => {
-            console.log('🔌 WebSocket disconnected');
+            console.log('WebSocket disconnected');
         };
 
         return () => {
