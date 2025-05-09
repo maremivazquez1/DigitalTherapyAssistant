@@ -80,6 +80,8 @@ resource "aws_instance" "springboot_backend" {
     # Build and run the Spring Boot application
     cd /home/ec2-user/app/backend
     sed -i "s/localhost/$(curl -s https://169.254.169.254/latest/meta-data/public-ipv4)/g" src/main/resources/static/websocket-cbt-audio.html
+    source ~/.bashrc
+    sleep 3
     mvn spring-boot:run
   EOF
 
