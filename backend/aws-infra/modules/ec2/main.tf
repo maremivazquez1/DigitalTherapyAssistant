@@ -57,7 +57,6 @@ resource "aws_instance" "springboot_backend" {
     export HUME_API_KEY="${var.hume_key}"
     export GEMINI_API_KEY="${var.gemini_key}"
     export PUBLIC_IP=$${PUBLIC_IP}
-    export JAVA_TOOL_OPTIONS="-Xmx1g" # prevents running out of heap (or use image with more RAM)
     export FFMPEG_PATH=$${FFMPEG_PATH}
     EOL
 
