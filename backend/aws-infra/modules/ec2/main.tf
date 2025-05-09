@@ -63,6 +63,7 @@ resource "aws_instance" "springboot_backend" {
     # Source to include variables in current run
     sudo chmod +x /etc/profile.d/springboot_env.sh
     source /etc/profile.d/springboot_env.sh
+    cat /etc/profile.d/springboot_env.sh >> ~/.bashrc
 
     host="$${DB_HOST%:*}"
     # Wait for the RDS instance to be available
