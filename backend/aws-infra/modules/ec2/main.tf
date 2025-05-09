@@ -48,6 +48,7 @@ resource "aws_instance" "springboot_backend" {
     cat <<EOL | sudo tee /etc/profile.d/springboot_env.sh
     export AWS_ACCESS_KEY_ID="${var.aws_key}"
     export AWS_SECRET_ACCESS_KEY="${var.aws_secret}"
+    export AWS_REGION=us-east-1
     export AWS_DEFAULT_REGION=us-east-1
     export DB_HOST="${var.db_endpoint}"
     export DB_PORT="${var.db_port}"
