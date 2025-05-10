@@ -21,10 +21,6 @@ public class BurnoutWebSocketHandler extends TextWebSocketHandler {
 
     private final ObjectMapper objectMapper;
     private final BurnoutController burnoutController;
-
-    @Autowired
-    private WebSocketSessionManager sessionManager;
-
     private static class PendingUploadContext {
         public String type;
         public String sessionId;
@@ -41,18 +37,12 @@ public class BurnoutWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        sessionManager.registerSession(session.getId(), session);
         logger.info("WebSocket connected: {}", session.getId());
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        sessionManager.unregisterSession(session.getId());
         logger.info("WebSocket disconnected: {}", session.getId());
-    }
-
-    public WebSocketSession getSession(String sessionId) {
-        return sessionManager.getSession(sessionId);
     }
 
     @Override
