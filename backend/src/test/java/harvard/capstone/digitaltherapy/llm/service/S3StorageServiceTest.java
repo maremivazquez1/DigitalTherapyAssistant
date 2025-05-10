@@ -1,6 +1,5 @@
-package harvard.capstone.digitaltherapy.llm;
+package harvard.capstone.digitaltherapy.llm.service;
 
-import harvard.capstone.digitaltherapy.llm.service.S3StorageService;
 import harvard.capstone.digitaltherapy.utility.S3Utils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
