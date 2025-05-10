@@ -59,7 +59,7 @@ public class CBTController {
     private final LLMProcessingService llmProcessingService;
     private final PollyService pollyService;
     private final RekognitionService rekognitionService;
-    private String currentModality = "";
+    String currentModality = "";
     private final OrchestrationService orchestrationService;
     Map<String, String> input = new HashMap<>();
     private String  audio_s3_path ="";
@@ -350,7 +350,7 @@ public class CBTController {
         }
     }
 
-    private void processFinalMessage(WebSocketSession session, String s3Path) throws IOException {
+    public void processFinalMessage(WebSocketSession session, String s3Path) throws IOException {
         String sessionId = session.getId();
         String userId = getUserId(session);
         

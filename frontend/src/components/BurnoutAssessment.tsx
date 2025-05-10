@@ -86,7 +86,7 @@ useEffect(() => {
   
       // 2a) audio
       sendMessage(JSON.stringify({
-        type: "audio-upload",
+        type: "audio_upload",
         sessionId,
         questionId: q.questionId,
       }));
@@ -99,7 +99,7 @@ useEffect(() => {
   
       // 2b) video
       sendMessage(JSON.stringify({
-        type: "video-upload",
+        type: "video_upload",
         sessionId,
         questionId: q.questionId,
       }));

@@ -41,7 +41,7 @@ public class VectorDatabaseService {
     // Configuration parameters
     private final int maxTokensPerChunk;
     private final double relevanceThreshold;
-    private final int defaultMaxResults;
+    final int defaultMaxResults;
 
     /**
      * Constructor with default configuration
