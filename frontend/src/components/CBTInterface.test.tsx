@@ -84,7 +84,7 @@ vi.stubGlobal('MediaRecorder',
     stop  = vi.fn();
     ondataavailable: ((e: any) => void) | null = null;
     onstop: (() => void) | null = null;
-    constructor(stream: any, options?: any) {
+    constructor() {
       createdRecorders.push(this);
     }
   } as any
