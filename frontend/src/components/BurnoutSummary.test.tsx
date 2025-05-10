@@ -47,7 +47,7 @@ describe('BurnoutSummary', () => {
     // Expect header
     expect(await screen.findByText('Assessment Summary')).toBeInTheDocument();
     // Score displayed
-    expect(screen.getByText('Score: 42')).toHaveTextContent(/score: 42/i);;
+    expect(screen.getByText('Score: 42')).toHaveTextContent(/score: 42/i);
     // Summary text
     expect(screen.getByText('You did great')).toBeInTheDocument();
 
