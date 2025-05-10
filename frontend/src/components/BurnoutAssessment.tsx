@@ -124,10 +124,12 @@ useEffect(() => {
 
     // if last question, signal completion
     if (currentIndex === questions.length - 1) {
-      setResultsLoading(true);
-      sendMessage(
-        JSON.stringify({ type: "assessment-complete", sessionId })
-      );
+      if (!finalResult) { // Ensure assessment-complete is sent only once
+        setResultsLoading(true);
+        sendMessage(
+          JSON.stringify({ type: "assessment-complete", sessionId })
+        );
+      }
       return;
     }
 
@@ -155,12 +157,13 @@ useEffect(() => {
       <div className="max-w-3xl w-full text-center py-10">
         <h1 className="text-3xl font-bold mb-2">{q.question}</h1>
 
-        <div className="mb-10">
+        <div className="mb-10" >
           {q.multimodal === false && <LikertQuestion question={q} onChange={handleAnswer} />}
           {q.multimodal == true && <VlogQuestion question={q} onChange={handleAnswer} />}
         </div>
 
         <button
+          data-testid="next-button"
           onClick={handleNext}
           disabled={responses[q.questionId] == null}
           className="btn btn-primary btn-circle btn-lg"
