@@ -139,7 +139,11 @@ const CBTInterface: React.FC = () => {
   // --------------------- SCROLL CHAT ---------------------
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      }, 0);
     }
   }, [chatMessages]);
 
@@ -228,7 +232,11 @@ const CBTInterface: React.FC = () => {
       audioRecorderRef.current = audioRecorder;
 
       // Setup Hark for speech detection
-      const harkInstance = hark(audioOnlyStream, { interval: 50, threshold: -50 });
+      const harkInstance = hark(audioOnlyStream, {
+        interval: 10,    // check volume every 100 ms
+        threshold: -40,   // dB threshold for “speech” vs “silence”
+        history: 1000       // silent intervals before “stopped_speaking”
+      });
       harkInstance.on("speaking", () => {
         // Use the ref to block new recording if awaiting a response.
         if (isAwaitingResponseRef.current) {
@@ -313,13 +321,52 @@ const CBTInterface: React.FC = () => {
   // --------------------- STOP SESSION ---------------------
   const stopSession = () => {
     console.log("[stopSession] Ending session...");
-    setSessionActive(false);
+  
+    // 1. Prevent further Hark events
+    if (harkRef.current) {
+      console.log("[stopSession] Removing Hark listeners and stopping...");
+      // remove any 'speaking' / 'stopped_speaking' handlers
+      harkRef.current.removeAllListeners?.();
+      harkRef.current.stop();
+      harkRef.current = null;
+    }
+  
+    // 2. Stop running MediaRecorders
+    if (audioRecorderRef.current) {
+      if (audioRecorderRef.current.state === "recording") {
+        console.log("[stopSession] Stopping audio recorder...");
+        audioRecorderRef.current.stop();
+      }
+      audioRecorderRef.current = null;
+    }
+    if (videoRecorderRef.current) {
+      if (videoRecorderRef.current.state === "recording") {
+        console.log("[stopSession] Stopping video recorder...");
+        videoRecorderRef.current.stop();
+      }
+      videoRecorderRef.current = null;
+    }
+  
+    // 3. Stop all media tracks (mic + camera)
+    if (combinedStreamRef.current) {
+      console.log("[stopSession] Stopping all media tracks...");
+      combinedStreamRef.current.getTracks().forEach(track => track.stop());
+      combinedStreamRef.current = null;
+    }
+  
+    // 4. Pause & clear the video element
+    if (videoRef.current) {
+      console.log("[stopSession] Clearing video element...");
+      videoRef.current.pause();
+      videoRef.current.srcObject = null;
+    }
+  
+    // 5. Tear down any playing TTS audio
     if (ttsAudioRef.current) {
-      console.log("[stopSession] Forcing complete audio shutdown...");
+      console.log("[stopSession] Cleaning up TTS audio...");
       try {
         ttsAudioRef.current.pause();
         if (ttsAudioRef.current.src?.startsWith("blob:")) {
-          console.log("[stopSession] Revoking audio URL:", ttsAudioRef.current.src);
           URL.revokeObjectURL(ttsAudioRef.current.src);
         }
         ttsAudioRef.current.src = "";
@@ -327,61 +374,45 @@ const CBTInterface: React.FC = () => {
         ttsAudioRef.current.onended = null;
         ttsAudioRef.current.onerror = null;
         ttsAudioRef.current.onpause = null;
-        ttsAudioRef.current = null;
       } catch (err) {
-        console.warn("[stopSession] Error during audio shutdown:", err);
+        console.warn("[stopSession] Error during TTS cleanup:", err);
       }
       ttsAudioRef.current = new Audio();
     }
-    if (audioRecorderRef.current && audioRecorderRef.current.state !== "inactive") {
-      console.log("[stopSession] Stopping audio recorder...");
-      audioRecorderRef.current.stop();
-      audioRecorderRef.current = null;
-    }
-    if (videoRecorderRef.current && videoRecorderRef.current.state !== "inactive") {
-      console.log("[stopSession] Stopping video recorder...");
-      videoRecorderRef.current.stop();
-      videoRecorderRef.current = null;
-    }
-    if (videoRef.current) {
-      console.log("[stopSession] Clearing video element...");
-      videoRef.current.pause();
-      videoRef.current.srcObject = null;
-    }
-    if (combinedStreamRef.current) {
-      console.log("[stopSession] Stopping all tracks...");
-      combinedStreamRef.current.getTracks().forEach((track) => track.stop());
-      combinedStreamRef.current = null;
-    }
-    if (harkRef.current) {
-      console.log("[stopSession] Stopping Hark...");
-      harkRef.current.stop();
-      harkRef.current = null;
-    }
+  
+    // 6. Finally, update UI state
+    setSessionActive(false);
+    setMicMuted(false);
+    setCameraOn(false);
   };
 
   // --------------------- TOGGLE MIC ---------------------
   const toggleMic = () => {
-    console.log("[toggleMic] Toggling mic");
-    if (!audioRecorderRef.current) return;
     const track = combinedStreamRef.current?.getAudioTracks()[0];
-    if (track) {
-      track.enabled = !track.enabled;
-      console.log("[toggleMic]", track.enabled ? "unmuted" : "muted");
-    }
-    setMicMuted(!micMuted);
+    if (!track) return;
+  
+    // 1. flip our “muted” state
+    const newMuted = !micMuted;
+  
+    // 2. apply it to the MediaStreamTrack
+    track.enabled = !newMuted;
+  
+    // 3. store it
+    setMicMuted(newMuted);
+  
+    console.log("[toggleMic]", newMuted ? "muted" : "unmuted");
   };
 
   // --------------------- TOGGLE CAMERA ---------------------
   const handleCamClick = () => {
-    console.log("[handleCamClick] Toggling camera");
-    if (!combinedStreamRef.current) return;
-    const videoTrack = combinedStreamRef.current.getVideoTracks()[0];
-    if (videoTrack) {
-      videoTrack.enabled = !videoTrack.enabled;
-      console.log("[handleCamClick]", videoTrack.enabled ? "Camera ON" : "Camera OFF");
-    }
-    setCameraOn(!cameraOn);
+    const track = combinedStreamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+  
+    const newCameraOn = !cameraOn;
+    track.enabled = newCameraOn;
+    setCameraOn(newCameraOn);
+  
+    console.log("[handleCamClick]", newCameraOn ? "Camera ON" : "Camera OFF");
   };
 
   // --------------------- RENDER ---------------------
@@ -394,7 +425,7 @@ const CBTInterface: React.FC = () => {
       <div className="hero-overlay bg-neutral opacity-75"></div>
       <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
         <div className="w-4/5">
-          <div ref={chatContainerRef} className="chat-container max-h-[60vh] overflow-y-auto px-4 pr-10">
+          <div ref={chatContainerRef} className="chat-container max-h-[60vh] overflow-y-auto px-4 pr-12">
             {chatMessages.map((msg) => (
               <div
                 key={msg.id}
@@ -441,6 +472,7 @@ const CBTInterface: React.FC = () => {
       {/* MIC & CAMERA CONTROLS */}
       <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 flex items-center gap-4">
         <button
+          data-testid="mic-toggle"
           onClick={toggleMic}
           className={`btn btn-circle btn-sm ${micMuted ? "bg-warning" : "bg-neutral"}`}
         >
@@ -449,6 +481,7 @@ const CBTInterface: React.FC = () => {
           </span>
         </button>
         <button
+          data-testid="cam-toggle"
           onClick={handleCamClick}
           className={`btn btn-circle btn-sm ${cameraOn ? "bg-neutral" : "bg-warning"}`}
         >

@@ -10,7 +10,7 @@ const Dashboard = () => {
             Dashboard
           </h1>
           <p className="mt-4 text-xl text-base-content/80">
-            Welcome back, [Username]. Select an option below to continue.
+            Welcome back! Select an option below to continue.
           </p>
         </header>
 
