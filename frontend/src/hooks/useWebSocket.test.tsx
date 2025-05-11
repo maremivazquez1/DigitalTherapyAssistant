@@ -1,8 +1,8 @@
 import '@testing-library/jest-dom';
 /// <reference types="vitest" />
-import React, { useEffect, useRef } from 'react';
-import { render, screen, act, waitFor } from '@testing-library/react';
-import { useWebSocket, WebSocketMessage } from './useWebSocket';
+import { useEffect} from 'react';
+import { render, screen, act, } from '@testing-library/react';
+import { useWebSocket } from './useWebSocket';
 import { describe, it, expect, vi, beforeEach, type Mock  } from 'vitest';
 
 // Holder for hook return values
