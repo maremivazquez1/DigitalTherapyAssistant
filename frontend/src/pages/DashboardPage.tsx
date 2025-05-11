@@ -1,9 +1,13 @@
 import React from "react";
 import Dashboard from "../components/Dashboard";
+import NavBar from "../components/NavBar";
 
 const DashboardPage: React.FC = () => {
   return (
-    <Dashboard />
+    <>
+      <NavBar />
+      <Dashboard />
+    </>
   );
 };
 
