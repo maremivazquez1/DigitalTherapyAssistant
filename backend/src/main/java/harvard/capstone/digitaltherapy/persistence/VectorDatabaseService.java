@@ -41,7 +41,7 @@ public class VectorDatabaseService {
     // Configuration parameters
     private final int maxTokensPerChunk;
     private final double relevanceThreshold;
-    private final int defaultMaxResults;
+    final int defaultMaxResults;
 
     /**
      * Constructor with default configuration
@@ -360,72 +360,6 @@ public class VectorDatabaseService {
         return false;
     }
 
-    /**
-     * Updates an embedding with new content
-     *
-     * @param documentId The document ID to update
-     * @param newContent The new content
-     * @param metadata The updated metadata
-     * @return True if updated, false otherwise
-     */
-    public boolean updateEmbedding(String documentId, String newContent, Map<String, Object> metadata) {
-        // For in-memory store, we'd delete and re-add
-        // With a persistent store, we'd update directly
-
-        // First attempt to delete (not supported in in-memory store)
-        deleteEmbedding(documentId);
-
-        // Then add the new content
-        storeEmbedding(documentId, newContent, metadata);
-
-        return true;
-    }
-
-    /**
-     * Process and store a document by splitting it into chunks
-     *
-     * @param documentId Base document ID (chunks will get ID + chunk number)
-     * @param content Document content to split and embed
-     * @param metadata Metadata for the document
-     * @return List of generated document IDs for the chunks
-     */
-    public List<String> processDocument(String documentId, String content, Map<String, Object> metadata) {
-        if (documentId == null) {
-            documentId = UUID.randomUUID().toString();
-        }
-
-        if (metadata == null) {
-            metadata = new HashMap<>();
-        }
-
-        // Create document
-        Document document = Document.from(content, Metadata.from(metadata));
-
-        // Split document into segments
-        List<TextSegment> segments = documentSplitter.split(document);
-
-        List<String> chunkIds = new ArrayList<>();
-
-        // Process each segment
-        for (int i = 0; i < segments.size(); i++) {
-            TextSegment segment = segments.get(i);
-
-            // Create a copy of the metadata and add chunk information
-            Map<String, Object> chunkMetadata = new HashMap<>(metadata);
-            chunkMetadata.put("documentId", documentId);
-            chunkMetadata.put("chunkIndex", i);
-            chunkMetadata.put("totalChunks", segments.size());
-
-            // Generate chunk ID
-            String chunkId = documentId + "_chunk_" + i;
-
-            // Store the chunk
-            storeEmbedding(chunkId, segment.text(), chunkMetadata);
-            chunkIds.add(chunkId);
-        }
-
-        return chunkIds;
-    }
 
     // Get stored items
     public List<TextSegment> getAllStoredSegments() {

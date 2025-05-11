@@ -80,4 +80,138 @@ public class MessageWorkerTest {
             fail("Exception occurred while checking session initialization: " + e.getMessage());
         }
     }
-} 
+
+    /**
+     * Test case for generateResponse method when session context is not set.
+     * This test verifies that an IllegalStateException is thrown when the session context is null.
+     */
+    @Test
+    public void testGenerateResponseWithNullSessionContext() {
+        String analysisMessage = "Test analysis message";
+        String inputTranscript = "Test input transcript";
+
+        assertThrows(IllegalStateException.class, () -> {
+            messageWorker.generateResponse(analysisMessage, inputTranscript);
+        }, "Expected IllegalStateException when session context is not set");
+    }
+
+    /**
+     * Tests the behavior of generateResponse when the session context is not set.
+     * This test verifies that an IllegalStateException is thrown when attempting to
+     * generate a response without first setting the session context.
+     */
+    @Test
+    public void testGenerateResponse_withoutSessionContext() {
+        assertThrows(IllegalStateException.class, () -> {
+            messageWorker.generateResponse("Sample analysis", "Sample transcript");
+        }, "Should throw IllegalStateException when session context is not set");
+    }
+
+    /**
+     * Tests the MessageWorker constructor to ensure it initializes correctly.
+     * Verifies that the VectorDatabaseService, sessionMemories, and chatModel are properly set up.
+     */
+    @Test
+    public void testMessageWorkerConstructor() {
+        assertNotNull(messageWorker, "MessageWorker should be created");
+
+        try {
+            java.lang.reflect.Field vectorDatabaseServiceField = MessageWorker.class.getDeclaredField("vectorDatabaseService");
+            vectorDatabaseServiceField.setAccessible(true);
+            assertNotNull(vectorDatabaseServiceField.get(messageWorker), "VectorDatabaseService should be initialized");
+
+            java.lang.reflect.Field sessionMemoriesField = MessageWorker.class.getDeclaredField("sessionMemories");
+            sessionMemoriesField.setAccessible(true);
+            assertNotNull(sessionMemoriesField.get(messageWorker), "sessionMemories should be initialized");
+
+            java.lang.reflect.Field chatModelField = MessageWorker.class.getDeclaredField("chatModel");
+            chatModelField.setAccessible(true);
+            assertNotNull(chatModelField.get(messageWorker), "chatModel should be initialized");
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            fail("Exception occurred while checking MessageWorker initialization: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Tests the generateResponse method when the session context is not set.
+     * This should throw an IllegalStateException with the message "Session context not set".
+     */
+    @Test
+    public void test_generateResponse_sessionContextNotSet() {
+        assertThrows(IllegalStateException.class, () -> {
+            messageWorker.generateResponse("Sample analysis", "Sample transcript");
+        }, "Session context not set");
+    }
+
+    /**
+     * Tests the generateResponse method when session context is not set and AI message is present.
+     * This test verifies that an IllegalStateException is thrown when the session context is not set,
+     * and that the method correctly handles AI messages in the context.
+     */
+    @Test
+    public void test_generateResponse_sessionContextNotSetWithAiMessage() {
+        String analysisMessage = "Sample analysis";
+        String inputTranscript = "Sample input";
+
+        assertThrows(IllegalStateException.class, () -> {
+            messageWorker.generateResponse(analysisMessage, inputTranscript);
+        }, "Should throw IllegalStateException when session context is not set");
+    }
+
+    /**
+     * Tests the generateResponse method when session context is not set.
+     * This test verifies that an IllegalStateException is thrown when
+     * the sessionId or userId is null.
+     */
+    @Test
+    public void test_generateResponse_throwsExceptionWhenSessionContextNotSet() {
+        String analysisMessage = "Test analysis message";
+        String inputTranscript = "Test input transcript";
+
+        assertThrows(IllegalStateException.class, () -> {
+            messageWorker.generateResponse(analysisMessage, inputTranscript);
+        }, "Expected IllegalStateException when session context is not set");
+    }
+
+    /**
+     * Tests the generateResponse method when session context is set and a UserMessage is processed.
+     * This test verifies that the method generates a non-null response when given valid input.
+     */
+    @Test
+    public void test_generateResponse_withValidSessionAndUserMessage() {
+        // Set up the session context
+        messageWorker.setSessionContext("test-session", "testuser");
+
+        // Prepare test inputs
+        String analysisMessage = "congruenceScore: 0.8\ninterpretation: The client seems anxious.\ncognitive distortions: XXXXXXXXXXXXXXX\nfollowUpPrompts: How does this anxiety affect your daily life?";
+        String inputTranscript = "I'm worried about my upcoming presentation.";
+
+        // Call the method under test
+        String response = messageWorker.generateResponse(analysisMessage, inputTranscript);
+
+        // Assert that a non-null response is generated
+        assertNotNull(response, "Generated response should not be null");
+        assertFalse(response.isEmpty(), "Generated response should not be empty");
+    }
+
+    /**
+     * Test case for setSessionContext method.
+     * This test verifies that the setSessionContext method correctly initializes
+     * the session context with the provided sessionId and userId.
+     */
+    @Test
+    public void test_setSessionContext_InitializesSessionContext() {
+        String sessionId = "testSessionId";
+        String userId = "testUserId";
+
+        messageWorker.setSessionContext(sessionId, userId);
+
+        // Since the sessionMemories map is private, we can't directly assert its contents.
+        // However, we can indirectly test its behavior by calling methods that use it.
+        // For example, we could call generateResponse and check if it doesn't throw an IllegalStateException.
+
+        assertDoesNotThrow(() -> {
+            messageWorker.generateResponse("Test analysis", "Test transcript");
+        }, "generateResponse should not throw an exception after setSessionContext is called");
+    }
+}

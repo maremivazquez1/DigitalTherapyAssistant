@@ -7,6 +7,11 @@ on:
 env:
   MAVEN_CLI_OPTS: "-B -e -V"
   NODE_ENV: ci
+  AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  HUME_API_KEY: ${{ secrets.HUME_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
 jobs:
   build-backend:

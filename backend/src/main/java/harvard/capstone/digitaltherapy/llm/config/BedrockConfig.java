@@ -1,10 +1,3 @@
-/**
- * Configuration class for setting up the AWS BedrockRuntimeClient bean.
- * This client is used to interact with the AWS Bedrock service, allowing text generation and other
- * model inference operations. The region can be configured via the `aws.region` property, defaulting to `us-east-1`.
- *
- * Credentials are automatically sourced from the AWS default credentials provider chain.
- */
 package harvard.capstone.digitaltherapy.llm.config;
 
 import org.springframework.context.annotation.Bean;

@@ -35,7 +35,7 @@ public class BedrockService {
 
     // System prompt with default value if not specified in application.properties
     @Value("${bedrock.system-prompt:You are a helpful AI assistant powered by AWS Bedrock. Provide concise, accurate information in a friendly tone.}")
-    private String systemPrompt;
+    public String systemPrompt;
 
     @Autowired
     public BedrockService(BedrockRuntimeClient bedrockRuntimeClient) {
