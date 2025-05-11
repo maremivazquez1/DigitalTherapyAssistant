@@ -141,10 +141,9 @@ npm install tailwindcss @tailwindcss/vite daisyui vite --save-dev
 
 Using Terraform to deploy on AWS. Terraform deploys backend on EC2 instance and React on Amplify with a load balancer in between to redirect HTTPs traffic from the frontend to the backend. The terraform configuration is located in the 'pipeline' branch and updates to the remote will trigger a pipeline deployment (you can also trigger a deployment by rerunning the Terraform pipeline in actions). This 'pipeline' branch contains additional changes from main related to http requests and environment variables for applications.properties.
 The 'pipeline' branch contains Terraform .yml that will need the following AWS and LLM keys:
-'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION', 'GEMINI_API_KEY' and 'HUME_API_KEY'.
-These keys are stored as Github secrets.
-
-Deploying requires the use of Amazon Certificate Manager (ACM) and a domain. These two as well as the load balancer need to be registered together on Route53.
+'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION', 'GEMINI_API_KEY', 'HUME_API_KEY' and 'OAUTH_TOKEN_GITHUB' (oauth token for pulling repo). These keys are stored as Github secrets.
+Additionally, within the `aws-infra/terraform.tfvars` Terraform needs to contain variables like 'certificate_arn', 'VPC', 'db_name' (RDS db name, can be defaulted to 'cbt'), and 'key_name' (set in EC2, helps to create an EC2 instance). These variables only need to be set once for the AWS account.
+Deploying requires the use of Amazon Certificate Manager (ACM) to set the 'certificate_arn', a 'VPC' (AWS network, can set in VPC section from the AWS console) and a registered domain (can be set in Route 53) to redirect the traffic to. The ACM and load balancer need to be registered together with the domain on Route53 so that traffic can flow from the frontend running on Amplify to the backend in an EC2 instance.
 
 There are no issues with clean deployment (no apps are currently running), but re-deploying requires the following steps:
 1. Login to AWS console (https://aws.amazon.com/console/)
