@@ -2,6 +2,7 @@ import '@testing-library/jest-dom';
 /// <reference types="vitest" />
 import { render, screen } from '@testing-library/react';
 import { describe, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 // Stub the actual summary component
 vi.mock('../components/BurnoutSummary', () => ({
@@ -12,7 +13,11 @@ import BurnoutSummaryPage from './BurnoutSummaryPage';
 
 describe('BurnoutSummaryPage', () => {
   it('renders the BurnoutSummary component', () => {
-    render(<BurnoutSummaryPage />);
+    render(
+      <MemoryRouter>
+        <BurnoutSummaryPage />
+      </MemoryRouter>
+    );
 
     // Verify that our stubbed summary appears
     const summary = screen.getByTestId('burnout-summary');
