@@ -9,6 +9,10 @@ It powers the core logic for a digital therapy assistant application.
 - **Database:** MySQL
 - **Cache:** Redis
 - **AI Integration:** LangChain4j + LLMs (for dialogue, sentiment, and burnout analysis)
+   - **AWS Polly:** TTS service to transcribe LLM response to user as audio
+   - **AWS Rekognition:** Video facial analysis service
+   - **HUME:** Audio intonation analysis service
+   - **GEMINI:** CBT message worker, CBT multi-modal synthesizer, Burnout assessment
 
 ## Folder Structure
 src
