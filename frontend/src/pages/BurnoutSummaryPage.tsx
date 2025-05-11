@@ -1,7 +1,13 @@
 import BurnoutSummary from "../components/BurnoutSummary";
+import NavBar from "../components/NavBar";
 
 const BurnoutSummaryPage: React.FC = () => {
-  return <BurnoutSummary />;
+  return (
+    <>
+      <NavBar />
+      <BurnoutSummary />
+    </>
+  );
 };
 
 export default BurnoutSummaryPage;
