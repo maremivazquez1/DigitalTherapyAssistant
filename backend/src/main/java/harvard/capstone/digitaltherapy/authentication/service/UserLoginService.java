@@ -1,14 +1,10 @@
 package harvard.capstone.digitaltherapy.authentication.service;
 
-import harvard.capstone.digitaltherapy.authentication.exception.UserAlreadyExistsException;
 import harvard.capstone.digitaltherapy.authentication.model.Users;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service

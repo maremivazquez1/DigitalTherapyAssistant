@@ -9,15 +9,12 @@ import CBTPage from "./pages/CBTPage";
 import BurnoutAssessmentPage from "./pages/BurnoutAssessmentPage";
 import BurnoutSummaryPage from "./pages/BurnoutSummaryPage";
 import { ProtectedRoute } from './components/ProtectedRoute';
-import NavBar from "./components/NavBar";
 
 
 
 const App: React.FC = () => {
   return (
     <div data-theme="calming">
-      <NavBar />
-      
       <Routes>
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />

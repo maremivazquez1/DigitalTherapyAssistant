@@ -1,129 +1,265 @@
 package harvard.capstone.digitaltherapy.persistence;
 
-import dev.langchain4j.data.document.Metadata;
-import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
-import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
-import dev.langchain4j.store.embedding.EmbeddingStore;
-import java.util.*;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+
+import java.util.*;
 
 public class VectorDatabaseServiceTest {
 
     /**
-     * Tests the behavior of findSimilarContent when provided with empty metadata filters.
+     * Test that storeEmbedding generates a UUID when documentId is null
      */
     @Test
-    public void testFindSimilarContentWithEmptyMetadataFilters() {
+    public void testStoreEmbeddingGeneratesUuid() {
         // Arrange
         VectorDatabaseService service = new VectorDatabaseService();
-        String query = "test query";
-        Map<String, Object> emptyMetadataFilters = new HashMap<>();
-        int maxResults = 5;
-
-        // Store some test data with mutable maps
-        Map<String, Object> metadata1 = new HashMap<>();
-        metadata1.put("key1", "value1");
-        service.storeEmbedding("doc1", "Test content 1", metadata1);
-
-        Map<String, Object> metadata2 = new HashMap<>();
-        metadata2.put("key2", "value2");
-        service.storeEmbedding("doc2", "Test content 2", metadata2);
+        String content = "Test content";
+        Map<String, Object> metadata = new HashMap<>();
 
         // Act
-        List<EmbeddingMatch<TextSegment>> result = service.findSimilarContent(query, emptyMetadataFilters, maxResults);
-        List<EmbeddingMatch<TextSegment>> expectedResult = service.findSimilarContent(query, maxResults);
+        String documentId = service.storeEmbedding(null, content, metadata);
 
         // Assert
-        assertNotNull(result, "Result should not be null");
-        assertEquals(expectedResult.size(), result.size(), "Result size should be the same as without filters");
+        assertNotNull(documentId, "Document ID should be generated when null is provided");
+        assertFalse(documentId.isEmpty(), "Generated Document ID should not be empty");
+
+        // Verify the content was stored
+        List<TextSegment> segments = service.getAllStoredSegments();
+        assertEquals(1, segments.size(), "There should be one stored segment");
+        assertEquals(content, segments.get(0).text(), "Content should match in stored segment");
     }
 
-
     /**
-     * Tests the behavior of findSimilarContent when provided with null metadata filters.
+     * Test that storeEmbedding creates an empty HashMap when metadata is null
      */
     @Test
-    public void testFindSimilarContentWithNullMetadataFilters() {
+    public void testStoreEmbeddingWithNullMetadata() {
         // Arrange
         VectorDatabaseService service = new VectorDatabaseService();
-        String query = "test query";
-        Map<String, Object> nullMetadataFilters = null;
-        int maxResults = 5;
-
-        // Store some test data
-        service.storeEmbedding("doc1", "Test content 1", createMutableMetadata("key1", "value1"));
-        service.storeEmbedding("doc2", "Test content 2", createMutableMetadata("key2", "value2"));
+        String content = "Test content";
+        String docId = "test-doc-id";
 
         // Act
-        List<EmbeddingMatch<TextSegment>> result = service.findSimilarContent(query, nullMetadataFilters, maxResults);
-        List<EmbeddingMatch<TextSegment>> expectedResult = service.findSimilarContent(query, maxResults);
+        String resultId = service.storeEmbedding(docId, content, null);
 
         // Assert
-        assertNotNull(result, "Result should not be null");
-        assertEquals(expectedResult.size(), result.size(), "Result size should be the same as without filters");
+        assertEquals(docId, resultId, "Document ID should match the provided ID");
+
+        // Verify metadata was created and contains default fields
+        List<TextSegment> segments = service.getAllStoredSegments();
+        assertEquals(1, segments.size(), "There should be one stored segment");
+
+        Map<String, Object> storedMetadata = segments.get(0).metadata().toMap();
+        assertNotNull(storedMetadata, "Metadata should be created when null is provided");
+        assertEquals(docId, storedMetadata.get("documentId"), "Document ID should be in metadata");
+        assertNotNull(storedMetadata.get("timestamp"), "Timestamp should be added to metadata");
     }
 
     /**
-     * Helper method to create a mutable metadata map
-     */
-    private Map<String, Object> createMutableMetadata(String key, Object value) {
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put(key, value);
-        return metadata;
-    }
-
-
-    /**
-     * Tests updating an embedding with null content throws IllegalArgumentException.
+     * Test that indexSessionMessage stores a message with correct metadata
      */
     @Test
-    public void testUpdateEmbeddingWithNullContent() {
+    public void testIndexSessionMessage() {
         // Arrange
         VectorDatabaseService service = new VectorDatabaseService();
-        String documentId = "test-doc-id";
+        String sessionId = "session-123";
+        String userId = "user-456";
+        String message = "This is a test message";
+        boolean isUserMessage = true;
+
+        // Act
+        String docId = service.indexSessionMessage(sessionId, userId, message, isUserMessage);
+
+        // Assert
+        assertNotNull(docId, "Document ID should be generated");
+
+        // Verify metadata is correct
+        List<TextSegment> segments = service.getAllStoredSegments();
+        assertEquals(1, segments.size(), "There should be one stored segment");
+
+        Map<String, Object> metadata = segments.get(0).metadata().toMap();
+        assertEquals(sessionId, metadata.get("sessionId"), "Session ID should match");
+        assertEquals(userId, metadata.get("userId"), "User ID should match");
+        assertEquals("user", metadata.get("messageType"), "Message type should be user");
+        assertEquals("message", metadata.get("contentType"), "Content type should be message");
+    }
+
+    /**
+     * Test that indexSessionAnalysis stores analysis with correct metadata and format
+     */
+    @Test
+    public void testIndexSessionAnalysis() {
+        // Arrange
+        VectorDatabaseService service = new VectorDatabaseService();
+        String sessionId = "session-123";
+        String userId = "user-456";
+        String sourceMessageId = "msg-789";
+
+        Map<String, Object> analysisResults = new HashMap<>();
+        analysisResults.put("emotion", "sad");
+        analysisResults.put("cognitiveDistortions", Arrays.asList("catastrophizing", "black-and-white thinking"));
+        analysisResults.put("keyThemes", Arrays.asList("work stress", "relationships"));
+        analysisResults.put("otherMetric", 0.85);
+
+        // Act
+        String docId = service.indexSessionAnalysis(sessionId, userId, analysisResults, sourceMessageId);
+
+        // Assert
+        assertNotNull(docId, "Document ID should be generated");
+
+        // Verify the content and metadata
+        List<TextSegment> segments = service.getAllStoredSegments();
+        assertEquals(1, segments.size(), "There should be one stored segment");
+
+        TextSegment segment = segments.get(0);
+        String content = segment.text();
+        assertTrue(content.contains("emotion: sad"), "Content should contain emotion");
+        assertTrue(content.contains("cognitiveDistortions: catastrophizing, black-and-white thinking"),
+                "Content should contain cognitive distortions");
+        assertTrue(content.contains("keyThemes: work stress, relationships"),
+                "Content should contain key themes");
+        assertTrue(content.contains("otherMetric: 0.85"), "Content should contain other metrics");
+
+        Map<String, Object> metadata = segment.metadata().toMap();
+        assertEquals(sessionId, metadata.get("sessionId"), "Session ID should match");
+        assertEquals(userId, metadata.get("userId"), "User ID should match");
+        assertEquals("analysis", metadata.get("contentType"), "Content type should be analysis");
+        assertEquals(sourceMessageId, metadata.get("sourceMessageId"), "Source message ID should match");
+        assertEquals("sad", metadata.get("emotion"), "Emotion should be in metadata");
+        assertEquals("catastrophizing, black-and-white thinking", metadata.get("cognitiveDistortions"),
+                "Cognitive distortions should be in metadata");
+        assertEquals("work stress, relationships", metadata.get("keyThemes"),
+                "Key themes should be in metadata");
+    }
+
+    /**
+     * Test findSimilarSessions returns a map of session texts
+     */
+    @Test
+    public void testFindSimilarSessions() {
+        // Arrange
+        VectorDatabaseService service = new VectorDatabaseService();
+        String userId = "user-123";
+        String currentSessionId = "session-current";
+        String otherSessionId = "session-other";
+
+        // Store messages from current session
+        service.indexSessionMessage(currentSessionId, userId, "Current session message", true);
+
+        // Store messages from other session
+        service.indexSessionMessage(otherSessionId, userId, "Other session message about anxiety", true);
+
+        // Act
+        Map<String, String> similarSessions = service.findSimilarSessions(
+                userId,
+                "Let's talk about my anxiety",
+                5);
+
+        // Assert
+        assertNotNull(similarSessions, "Result should not be null");
+        assertTrue(similarSessions.containsKey(otherSessionId),
+                "Other session should be in results");
+        assertFalse(similarSessions.containsKey(currentSessionId),
+                "Current session should not be in results");
+        assertEquals("Other session message about anxiety", similarSessions.get(otherSessionId),
+                "Session text should match");
+    }
+
+    /**
+     * Test findRelevantInterventions returns interventions for cognitive distortions
+     */
+    @Test
+    public void testFindRelevantInterventions() {
+        // Arrange
+        VectorDatabaseService service = new VectorDatabaseService();
+
+        // Store some interventions
         Map<String, Object> metadata = new HashMap<>();
+        metadata.put("contentType", "intervention");
+        service.storeEmbedding("int1", "Intervention for catastrophizing: Challenge your thoughts by examining evidence", metadata);
+
+        // Act
+        List<String> interventions = service.findRelevantInterventions(
+                Arrays.asList("catastrophizing", "black-and-white thinking"),
+                2);
+
+        // Assert
+        assertNotNull(interventions, "Result should not be null");
+        assertFalse(interventions.isEmpty(), "Result should not be empty");
+        assertTrue(interventions.get(0).contains("catastrophizing"),
+                "Intervention should match the requested distortions");
+    }
+
+    /**
+     * Test that findRelevantInterventions returns empty list for null or empty distortions
+     */
+    @Test
+    public void testFindRelevantInterventionsWithNullOrEmpty() {
+        // Arrange
+        VectorDatabaseService service = new VectorDatabaseService();
 
         // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> service.updateEmbedding(documentId, null, metadata),
-                "Should throw IllegalArgumentException when content is null");
+        List<String> result1 = service.findRelevantInterventions(null, 2);
+        assertTrue(result1.isEmpty(), "Result should be empty for null distortions");
 
-        assertTrue(exception.getMessage().contains("text cannot be null or blank"),
-                "Exception message should indicate that text cannot be null");
-
-        // Verify no segments were stored
-        List<TextSegment> segments = service.getAllStoredSegments();
-        assertTrue(segments.isEmpty(), "No segments should be stored when content is null");
+        List<String> result2 = service.findRelevantInterventions(new ArrayList<>(), 2);
+        assertTrue(result2.isEmpty(), "Result should be empty for empty distortions list");
     }
 
 
     /**
-     * Tests updating an embedding with a null document ID.
+     * Test buildContextForPrompt constructs context from relevant content
      */
     @Test
-    public void testUpdateEmbeddingWithNullDocumentId() {
+    public void testBuildContextForPrompt() {
         // Arrange
         VectorDatabaseService service = new VectorDatabaseService();
-        String newContent = "Updated content";
-        Map<String, Object> metadata = new HashMap<>();
+        String currentSessionId = "session-current";
+        String previousSessionId = "session-previous";
+        String userId = "user-123";
+
+        // Store a message from previous session
+        service.indexSessionMessage(previousSessionId, userId,
+                "I've been feeling anxious about work", true);
 
         // Act
-        boolean result = service.updateEmbedding(null, newContent, metadata);
+        String context = service.buildContextForPrompt(
+                currentSessionId,
+                userId,
+                "My anxiety at work is getting worse",
+                5);
 
         // Assert
-        assertTrue(result, "Updating with null document ID should succeed");
-
-        // Verify the update
-        List<TextSegment> segments = service.getAllStoredSegments();
-        assertFalse(segments.isEmpty(), "Segments should not be empty after update");
-        TextSegment segment = segments.get(0);
-        assertNotNull(segment.metadata().getString("documentId"),
-                "Document ID should be generated automatically");
-        assertEquals(newContent, segment.text(),
-                "Content should match in stored segment");
+        assertNotNull(context, "Context should not be null");
+        assertTrue(context.contains("Relevant historical context"),
+                "Context should have the expected header");
+        assertTrue(context.contains(previousSessionId),
+                "Context should reference the previous session");
+        assertTrue(context.contains("feeling anxious about work"),
+                "Context should include the previous message");
+        assertFalse(context.contains(currentSessionId),
+                "Context should not include current session");
     }
+
+    /**
+     * Test deleteEmbedding returns false for in-memory store
+     */
+    @Test
+    public void testDeleteEmbedding() {
+        // Arrange
+        VectorDatabaseService service = new VectorDatabaseService();
+        String docId = "test-doc";
+        service.storeEmbedding(docId, "Test content", null);
+
+        // Act
+        boolean result = service.deleteEmbedding(docId);
+
+        // Assert
+        assertFalse(result, "Delete should return false for in-memory store");
+    }
+
+
 }
