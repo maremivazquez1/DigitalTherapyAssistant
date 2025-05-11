@@ -41,7 +41,7 @@ const BurnoutSummary: React.FC = () => {
       <div className="w-full max-w-3xl bg-base-100 shadow-md p-6 rounded-lg">
         <h2 className="text-2xl font-semibold mb-4">Your Results</h2>
         <p className="mb-4">
-          <strong>Score:</strong> {result.score}
+          <strong>Score: {result.score}</strong>
         </p>
         <p className="text-lg whitespace-pre-line">{result.summary}</p>
       </div>
