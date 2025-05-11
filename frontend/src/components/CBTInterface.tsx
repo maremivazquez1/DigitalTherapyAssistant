@@ -233,9 +233,9 @@ const CBTInterface: React.FC = () => {
 
       // Setup Hark for speech detection
       const harkInstance = hark(audioOnlyStream, {
-        interval: 10,    // check volume every 100 ms
-        threshold: -40,   // dB threshold for “speech” vs “silence”
-        history: 1000       // silent intervals before “stopped_speaking”
+        interval: 30,    // check volume every x ms
+        threshold: -45,   // dB threshold for “speech” vs “silence”
+        history: 150       // silent intervals before “stopped_speaking”
       });
       harkInstance.on("speaking", () => {
         // Use the ref to block new recording if awaiting a response.

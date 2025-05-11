@@ -341,7 +341,4 @@ it('stops all media tracks when session ends', async () => {
     expect(camBtn).toHaveClass('bg-warning');
   });
 
-
-  
-
 });
