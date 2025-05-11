@@ -1,7 +1,6 @@
 import '@testing-library/jest-dom';
 /// <reference types="vitest" />
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Dashboard from './Dashboard';
 
@@ -38,7 +37,7 @@ describe('Dashboard Component', () => {
     expect(burnLink).toHaveAttribute('href', '/burnout');
   });
 
-  it('renders disabled mood card', () => {
+  /* it('renders disabled mood card', () => {
     const moodHeading = screen.getByText(/Check on Your Mood/i);
     // The card container has opacity-50 and cursor-not-allowed
     const moodCard = moodHeading.closest('div')!.closest('div')!;
@@ -59,5 +58,5 @@ describe('Dashboard Component', () => {
     expect(
       screen.queryByRole('link', { name: /Write a Guided Journal Entry/i })
     ).toBeNull();
-  });
+  }); */
 });

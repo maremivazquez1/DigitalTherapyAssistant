@@ -41,7 +41,7 @@ const Dashboard = () => {
           </Link>
 
           {/* Check on Your Mood Card */}
-          <div className="group">
+          {/* <div className="group">
             <div className="flex flex-col justify-center p-8 bg-base-200 rounded-3xl shadow-lg opacity-50 cursor-not-allowed min-h-[200px] border border-gray-200">
               <h2 className="text-3xl font-semibold text-base-content mb-4">
                 Check on Your Mood
@@ -50,10 +50,10 @@ const Dashboard = () => {
                 Coming soon: Monitor and log your mood.
               </p>
             </div>
-          </div>
+          </div> */}
 
           {/* Write a Guided Journal Entry Card */}
-          <div className="group">
+          {/* <div className="group">
             <div className="flex flex-col justify-center p-8 bg-base-200 rounded-3xl shadow-lg opacity-50 cursor-not-allowed min-h-[200px] border border-gray-200">
               <h2 className="text-3xl font-semibold text-base-content mb-4">
                 Write a Guided Journal Entry
@@ -62,7 +62,7 @@ const Dashboard = () => {
                 Coming soon: Reflect with guided journaling prompts.
               </p>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
