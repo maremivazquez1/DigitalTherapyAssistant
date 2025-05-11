@@ -139,13 +139,21 @@ npm install tailwindcss @tailwindcss/vite daisyui vite --save-dev
 
 ## 🚀 Deployment
 
-Using Terraform to deploy on AWS. Terraform deploys backend on EC2 instance and React on Amplify with a load balancer in between to redirect HTTPs traffic from the frontend to the backend. The terraform configuration is located in the 'pipeline' branch and updates to it will trigger a pipeline to deploy.
-Github contains the Terraform .yml that will need the following AWS and LLM keys:
+Using Terraform to deploy on AWS. Terraform deploys backend on EC2 instance and React on Amplify with a load balancer in between to redirect HTTPs traffic from the frontend to the backend. The terraform configuration is located in the 'pipeline' branch and updates to the remote will trigger a pipeline deployment (you can also trigger a deployment by rerunning the Terraform pipeline in actions). This 'pipeline' branch contains additional changes from main related to http requests and environment variables for applications.properties.
+The 'pipeline' branch contains Terraform .yml that will need the following AWS and LLM keys:
 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION', 'GEMINI_API_KEY' and 'HUME_API_KEY'.
+These keys are stored as Github secrets.
 
-Deploying requires the use of Amazon Certificate Manager (ACM).
+Deploying requires the use of Amazon Certificate Manager (ACM) and a domain. These two as well as the load balancer need to be registered together on Route53.
 
-There are no issues with initial deployment, but re-deploying requires removing the 'target' that the load balancer is targetting. This can be done by de-registering the target in the AWS load balancer page (in EC2 section) and removing the target.
+There are no issues with clean deployment (no apps are currently running), but re-deploying requires the following steps:
+1. Login to AWS console (https://aws.amazon.com/console/)
+2. Go to EC2, followed by Load Balancers, then select the 'app-alb' load balancer and remove the listener target group rule that is redirecting traffic.
+3. Within EC2 again, go to 'target groups' and delete the target group created there (should be something like tg-1).
+4. Go to Amplify and remove the apps deployed. This is done by clicking on the apps, going to 'App Settings', then 'General Settings', and there should be a 'Delete app' button.
+5. Now you can trigger the Github Terraform pipeline (either by rerunning one in Actions or pushing an update to the 'pipeline' branch).
+6. You'll see that an EC2 instance is created, the load balancer has a new target group registered as listener and Amplify has a new App. In the Amplify section, click on the App, then select pipeline, and click 'Run job'.
+7. Once the job is complieted just click on the URL provided (should look like: https ://pipeline.d38wotromdgihh.amplifyapp.com/). If you get a 'Network Error', make sure to wait 10 minutes for EC2 instance to start the backend server.
 
 ---
 
