@@ -137,13 +137,50 @@ npm install tailwindcss @tailwindcss/vite daisyui vite --save-dev
 
 ---
 
-## 🚀 Deployment
+## 🚀 Deployment with Terraform on AWS
 
-Using Terraform to deploy on AWS. Terraform deploys backend on EC2 instance and React on Amplify with a load balancer in between to redirect HTTPs traffic from the frontend to the backend. The terraform configuration is located in the 'pipeline' branch and updates to the remote will trigger a pipeline deployment (you can also trigger a deployment by rerunning the Terraform pipeline in actions). This 'pipeline' branch contains additional changes from main related to http requests and environment variables for applications.properties.
-The 'pipeline' branch contains Terraform .yml that will need the following AWS and LLM keys:
-'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION', 'GEMINI_API_KEY', 'HUME_API_KEY' and 'OAUTH_TOKEN_GITHUB' (oauth token for pulling repo). These keys are stored as Github secrets.
-Additionally, within the `aws-infra/terraform.tfvars` Terraform needs to contain variables like 'certificate_arn', 'VPC', 'db_name' (RDS db name, can be defaulted to 'cbt'), and 'key_name' (set in EC2, helps to create an EC2 instance). These variables only need to be set once for the AWS account.
-Deploying requires the use of Amazon Certificate Manager (ACM) to set the 'certificate_arn', a 'VPC' (AWS network, can set in VPC section from the AWS console) and a registered domain (can be set in Route 53) to redirect the traffic to. The ACM and load balancer need to be registered together with the domain on Route53 so that traffic can flow from the frontend running on Amplify to the backend in an EC2 instance.
+### Deployment Overview
+- Terraform deploys the backend on an **EC2 instance** and the React frontend on **Amplify**.
+- A **load balancer** is set up to redirect HTTPS traffic from the frontend to the backend.
+
+### Terraform Configuration
+- The Terraform configuration is located in the `pipeline` branch.
+- Updates to this branch trigger a **pipeline deployment**.  
+  Alternatively, you can manually trigger a deployment by rerunning the Terraform pipeline in **GitHub Actions**.
+
+### Pipeline Branch Details
+The `pipeline` branch contains:  
+- Terraform `.yml` files.  
+- Additional changes from the `main` branch related to:
+  - HTTP requests.
+  - Environment variables for `applications.properties`.
+
+### Required AWS and LLM Keys
+The following keys are required and are stored as **GitHub secrets**:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `GEMINI_API_KEY`
+- `HUME_API_KEY`
+- `OAUTH_TOKEN_GITHUB` (GitHub OAuth token for pulling the repository)
+
+### Terraform Variables
+Within `aws-infra/terraform.tfvars`, Terraform requires the following variables:
+- `certificate_arn`: Provided by **Amazon Certificate Manager (ACM)**.
+- `VPC`: AWS Virtual Private Cloud, configurable in the AWS console.
+- `db_name`: RDS database name, defaulted to `cbt`.
+- `key_name`: Key created in EC2, and used to create the EC2 instance.
+
+> **Note**: These variables only need to be set once for the AWS account.
+
+### Additional Deployment Requirements
+To redirect traffic and complete the setup:
+1. Use **Amazon Certificate Manager (ACM)** to set the `certificate_arn`.
+2. Register a **VPC** in the AWS console.
+3. Register a **domain** in **Route 53**.
+4. Ensure ACM and the load balancer are registered together with the domain in Route 53 so that traffic can flow from the frontend to the backend.
+
+---
 
 There are no issues with clean deployment (no apps are currently running), but re-deploying requires the following steps:
 1. Login to AWS console (https://aws.amazon.com/console/)
