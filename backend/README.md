@@ -108,3 +108,8 @@ src
 │       │   └── websocket-cbt-audio.html
 │       └── application.properties
 └── test
+
+
+## Testing
+To run the tests, use the following command from the backend directory:
+'mvn test'
