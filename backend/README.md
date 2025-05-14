@@ -110,6 +110,7 @@ src
 └── test
 
 ## File Details
+### src\main\java\harvard\capstone\digitaltherapy\
 - **CbtApplication.java**: Main Spring Boot application entry point that starts the service.
 #### authentication\
 ##### controller\
