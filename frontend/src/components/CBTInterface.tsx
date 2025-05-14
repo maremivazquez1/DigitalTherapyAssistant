@@ -193,7 +193,7 @@ const CBTInterface: React.FC = () => {
         setIsAwaitingResponse(true);
         isAwaitingResponseRef.current = true;
 
-        // Optionally send a header.
+        // Send a header.
         const headerMessageAudio: WebSocketHeaderMessage = {
           type: "header",
           session_id: localStorage.getItem('sessionId') || sessionIdRef.current,
@@ -255,7 +255,7 @@ const CBTInterface: React.FC = () => {
           audioChunksRef.current = [];
           audioRecorderRef.current?.start(500);
         }
-        // Optionally, start the video recorder if not already started.
+        // Start the video recorder if not already started.
         if (!videoRecorderRef.current) {
           let options: { mimeType?: string } = {};
           if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) {
@@ -380,7 +380,7 @@ const CBTInterface: React.FC = () => {
       ttsAudioRef.current = new Audio();
     }
   
-    // 6. Finally, update UI state
+    // 6. Update UI state
     setSessionActive(false);
     setMicMuted(false);
     setCameraOn(false);

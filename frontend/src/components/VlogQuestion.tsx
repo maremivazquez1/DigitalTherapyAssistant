@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import type { BurnoutQuestion } from "../types/burnout/assessment";
 
-// pick a reasonable MIME
+// pick MIME
 function blobType(chunks: Blob[]): string {
   if (!chunks.length) return "video/webm";
   return chunks[0].type || "video/webm";

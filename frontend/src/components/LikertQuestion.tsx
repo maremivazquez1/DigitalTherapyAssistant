@@ -18,7 +18,7 @@ const LikertQuestion: React.FC<LikertQuestionProps> = ({ question, onChange }) =
     }
   }, [question]);
 
-  // 2) **reset** when we actually move to a different question
+  // 2) **reset** when move to a different question
   useEffect(() => {
     setSelected(null);
   }, [question.questionId]);

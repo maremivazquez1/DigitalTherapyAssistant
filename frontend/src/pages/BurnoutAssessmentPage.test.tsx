@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';             // ← add this import
+import '@testing-library/jest-dom';
 import { describe, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
-// Stub out the actual assessment—we’ve already tested it thoroughly
+// Stub out the assessment
 vi.mock('../components/BurnoutAssessment', () => ({
   default: () => <div data-testid="burnout-assessment">Mock Assessment</div>,
 }));
@@ -18,10 +18,8 @@ describe('BurnoutAssessmentPage', () => {
       </MemoryRouter>
     );
 
-    // or if you really want to use a class selector:
     expect(document.querySelector('.page-container')).not.toBeNull();
 
-    // fix the matcher name and syntax here:
     expect(screen.getByTestId('burnout-assessment')).toHaveTextContent('Mock Assessment');
   });
 });

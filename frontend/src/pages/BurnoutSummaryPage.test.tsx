@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
-// Stub the actual summary component
+// Stub the summary component
 vi.mock('../components/BurnoutSummary', () => ({
   default: () => <div data-testid="burnout-summary">Mock Summary</div>,
 }));
@@ -19,7 +19,7 @@ describe('BurnoutSummaryPage', () => {
       </MemoryRouter>
     );
 
-    // Verify that our stubbed summary appears
+    // Verify that stubbed summary appears
     const summary = screen.getByTestId('burnout-summary');
     expect(summary).toBeInTheDocument();
     expect(summary).toHaveTextContent('Mock Summary');
