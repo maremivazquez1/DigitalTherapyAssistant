@@ -14,8 +14,7 @@ export interface LoginData {
     username: string;
     password: string;
 }
-  
-// Response payloads (adjust based on your API contract)
+
 export interface AuthResponse {
     status: string;
     message: string;
@@ -27,5 +26,4 @@ export interface AuthResponse {
 // In case errors are structured:
 export interface ApiError {
     message: string;
-    // Add more fields if your API returns more info
 }

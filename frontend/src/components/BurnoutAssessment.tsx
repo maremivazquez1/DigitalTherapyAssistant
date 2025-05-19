@@ -68,7 +68,7 @@ useEffect(() => {
     setResponses((prev) => ({ ...prev, [questionId]: answer }));
   };
 
-  // 4) Next: send current answer then advance or finish
+  // 4) Send current answer then advance or finish
   const handleNext = async () => {
     const q = questions[currentIndex];
     const answer = responses[q.questionId];

@@ -7,7 +7,6 @@ const NavBar: React.FC = () => {
   const handleLogout = () => {
     // Clear authentication data here (e.g., remove tokens)
     localStorage.removeItem("authToken");
-    // Optionally clear other user data, reset state, etc.
     
     // Redirect to login page after logging out
     navigate("/login");

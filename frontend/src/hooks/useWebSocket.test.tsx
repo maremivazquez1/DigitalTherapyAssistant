@@ -12,8 +12,7 @@ declare global {
 
 interface Message {
   type: string;
-  text?: string; // Make text optional
-  // optional audio URL
+  text?: string;
   audio?: string;
 }
 

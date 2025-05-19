@@ -4,7 +4,6 @@ export interface WebSocketMessage {
   type: string;
   text?: string;
   audio?: string;
-  // add additional fields as needed
 }
 
 export const useWebSocket = (url: string, connect: boolean) => {
@@ -50,7 +49,7 @@ export const useWebSocket = (url: string, connect: boolean) => {
             setMessages((prev) => [
               ...prev,
               {
-                type: "audio", // or leave out if not needed
+                type: "audio",
                 text: 
                   "Sorry, something went wrong while processing your audio. Please try again later.",
                 audio: undefined,
